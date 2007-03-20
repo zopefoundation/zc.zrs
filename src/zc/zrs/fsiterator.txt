@@ -1,0 +1,71 @@
+File Storage Iterator
+=====================
+
+The file-storage iterator defined here is similar to the normal
+iteator provided with FileStorage, with two important exceptions:
+
+1. The iterator described here remains connected to the file storage.
+   It blocks waiting for input and generates data as input are written
+   to the file storage.
+
+2. The iterator is a bit smarter about initialization with a
+   transaction. In particular, it will search from the end of the file
+   if the requested transaction is closer to the last transaction than
+   to the first transaction.
+
+To see this in action, We'll create a FileStorage and add some data to
+it. We're going to mess with time a bit so that we can have some
+control over transactions that are generated:
+
+    >>> now = 0
+    >>> import time
+    >>> oldtime = time.time
+    >>> time.time = lambda : now
+
+    >>> import ZODB.FileStorage
+    >>> from ZODB.DB import DB
+    >>> from transaction import commit
+
+    >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
+    >>> db = DB(fs)
+    >>> conn = db.open()
+
+    >>> for i in range(10):
+    ...     now += 1
+    ...     conn.root()['i'] = i
+    ...     commit()
+
+We'll create a simple program that iterates over a file storage
+printing some information.
+
+    >>> import zc.zrs.fsiterator
+    >>> from ZODB import TimeStamp
+    >>> from ZODB import utils
+    >>> def list(fs):
+    ...     print 'ttt'
+    ...     for trans in zc.zrs.fsiterator(fs):
+    ...         print 'www', TimeStamp(trans.id), [utils.i64(r.oid) for r in trans]
+
+ Because this is going to block when it gets to the enf of the file,
+ we'll run it in a thread.
+
+    >>> import thread
+    >>> _ = thread.start_new_thread(list, (fs,))
+
+    >>> time.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    >>> time.time = oldtime
