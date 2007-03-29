@@ -14,5 +14,5 @@ setup(
     include_package_data = True,
     package_dir = {'':'src'},
     namespace_packages = ['zc'],
-    install_requires = ['setuptools', 'zope.testing', 'ZODB3'],
+    install_requires = ['setuptools', 'zope.testing', 'ZODB3', 'zc.twisted'],
     )

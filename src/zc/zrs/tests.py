@@ -11,34 +11,90 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-import os, shutil, tempfile, threading, time, unittest
+import os, shutil, sys, tempfile, threading, time, unittest
 import transaction
-from zope.testing import doctest
+from zope.testing import doctest, setupstack
 import zc.zrs.fsiterator
 from ZODB.TimeStamp import TimeStamp
+import ZODB.utils
+
+class TestReactor:
+
+    def __init__(self):
+        self._factories = {}
+            
+    def listenTCP(self, port, factory, backlog=50, interface=''):
+        addr = interface, port
+        assert addr not in self._factories
+        self._factories[addr] = factory
+
+    def connect(self, addr):
+        proto = self._factories[addr].buildProtocol(addr)
+        transport = MessageTransport()
+        transport.reactor = self
+        proto.makeConnection(transport)
+        return proto
+
+    def callFromThread(self, f, *a, **k):
+        f(*a, **k)
+
+class MessageTransport:
+
+    def __init__(self):
+        self.data = ''
+        self.cond = threading.Condition()
+        self.closed = False
+
+    def write(self, data):
+        self.cond.acquire()
+        self.data += data
+        self.cond.notifyAll()
+        self.cond.release()
+
+    def writeSequence(self, data):
+        self.write(''.join(data))
+
+    def read(self):
+        self.cond.acquire()
+        if len(self.data) < 4:
+            self.cond.wait(5)
+            assert len(self.data) >= 4
+        l = ZODB.utils.u64(self.data[:4])
+        self.data = self.data[4:]
+        self.cond.release()
+        
+        if len(self.data) < l:
+            self.cond.wait(5)
+            assert len(self.data) >= l
+        result = self.data[:l]
+        self.data = self.data[l:]
+        self.cond.release()
+
+        return result
+
+    def loseConnection(self):
+        print 'Transport closed!'
+        self.closed = True
+
+    def registerProducer(self, producer, streaming):
+        pass # XXX
 
 
 def setUp(test):
+    setupstack.setUpDirectory(test)
     global now
     now = time.mktime((2007, 3, 21, 15, 32, 57, 2, 80, 0))
-    td = test.globs['__tear_down__'] = []
     oldtime = time.time
-    td.append(lambda : setattr(time, 'time', oldtime))
+    setupstack.register(test, lambda : setattr(time, 'time', oldtime))
     time.time = lambda : now
     def commit():
         global now
         now += 1
         transaction.commit()
     test.globs['commit'] = commit
-    here = os.getcwd()
-    td.append(lambda : os.chdir(here))
-    tmp = tempfile.mkdtemp('test')
-    td.append(lambda : shutil.rmtree(tmp))
-    os.chdir(tmp)
+
+    test.globs['reactor'] = TestReactor()
     
-def tearDown(test):
-    for f in test.globs['__tear_down__']:
-        f()
 
 def scan_from_back():
     r"""
@@ -109,10 +165,10 @@ But, if we iterate from near the end, we'll be OK:
 def test_suite():
     return unittest.TestSuite((
         doctest.DocFileSuite(
-            'fsiterator.txt',
-            setUp=setUp, tearDown=tearDown),
+            'fsiterator.txt', 'primary.txt', 
+            setUp=setUp, tearDown=setupstack.tearDown),
         doctest.DocTestSuite(
-            setUp=setUp, tearDown=tearDown),
+            setUp=setUp, tearDown=setupstack.tearDown),
         ))
 
 if __name__ == '__main__':

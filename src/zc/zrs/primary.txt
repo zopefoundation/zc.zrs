@@ -1,0 +1,78 @@
+ZRS Primary Storages
+====================
+
+A ZRS primary storage is a wrapper of a file storage that also
+provides a network service to support replication.  Let's create a
+primart storage.  We'll first create a File Storage:
+
+    >>> import ZODB.FileStorage
+    >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
+
+Then we'll create a primary storage using this.  A primary storage
+takes the following arguments:
+
+- The underlying storage
+
+- The address to listen on, and
+
+- The Twisted reactor to register with.
+
+We'll use a test reactor that voids network connections:
+
+    >>> import zc.zrs.primary
+    >>> ps = zc.zrs.primary.Primary(fs, ('', 8000), reactor)
+
+Now, we can use this just like any other storage:
+
+    >>> from ZODB.DB import DB
+    >>> import persistent.dict
+    >>> db = DB(ps)
+    >>> conn = db.open()
+    >>> ob = conn.root()
+    >>> for i in range(2):
+    ...    ob.x = persistent.dict.PersistentDict()
+    ...    commit()
+
+We can connect to it to get data that have been committed.  We're
+going to connect using the test reactor:
+
+    >>> protocol = reactor.connect(('', 8000))
+
+The procotol represents the server.  It accepts two sized messages.
+The sizedmessage module has a marshal function that computes sized
+messages. The first message is the protocol, which mist be "zrs2.0".
+The second message is the starting transaction.  We'll send the
+messages by calling the dataReceived method on the protocol:
+
+    >>> import zc.zrs.sizedmessage
+    >>> protocol.dataReceived(zc.zrs.sizedmessage.marshal("zrs2.0"))
+
+We'll pass an initial transaction of all zeros, which will give us all
+of the transactions.
+
+    >>> protocol.dataReceived(zc.zrs.sizedmessage.marshal("\0"*8))
+
+The server will send back a numer of sized messages.  Each message
+will be a pickle.  The testing reactor set up a transpoer with a read
+method that takes care of reading each message and unpickling it for us.
+This will let us look at the server output as data.
+
+The first message is the transaction header for the first transaction
+in the database, which is the one that creates the root object.
+
+let's look at the first message:
+
+    >>> message_type, data = protocol.transport.read()
+    >>> message_type
+    'T'
+    >>> tid, status, user, description, extension = data
+
+The transaction id is a time stamp.  We can use the the ZODB TimeStamp
+module to display it.  The other data is pretty boring in this
+case. :)
+
+    >>> from ZODB.TimeStamp import TimeStamp
+    >>> print TimeStamp(tid), status, user, description, extension
+
+
+
