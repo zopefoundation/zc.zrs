@@ -36,9 +36,11 @@ printing some information.
     >>> import zc.zrs.fsiterator
     >>> from ZODB.TimeStamp import TimeStamp
     >>> from ZODB import utils
-    >>> def list(*iterator_args):
-    ...     for trans in zc.zrs.fsiterator.FileStorageIterator(*iterator_args):
+    >>> def list(iterator, event):
+    ...     for trans in iterator:
     ...         print TimeStamp(trans.tid), [utils.u64(r.oid) for r in trans]
+    ...     print 'iteration stopped!'
+    ...     event.set()
 
  Because this is going to block when it gets to the end of the file,
  we'll run it in a thread.  We're also going to use a special test
@@ -58,30 +60,23 @@ printing some information.
     ...         self.should_stop = False
     ... 
     ...     def wait(self):
-    ...         if self.should_stop:
-    ...             raise StopIteration
     ...         self.event.set()
     ...         self.condition.wait()
-    ... 
-    ...     def stop(self):
-    ...         self.should_stop = True
-    ...         self.acquire()
-    ...         self.condition.notifyAll()
-    ...         self.release()
     ...
     ...     def notify_and_wait(self):
     ...         self.event.clear()
     ...         self.acquire()
     ...         self.notifyAll()
     ...         self.release()
-    ...         self.event.wait()
+    ...         self.event.wait(5)
 
     >>> event = threading.Event()
     >>> condition = Condition(event)
-    >>> thread = threading.Thread(target=list, args = (fs, condition))
+    >>> iterator = zc.zrs.fsiterator.FileStorageIterator(fs, condition)
+    >>> thread = threading.Thread(target=list, args=(iterator, event))
     >>> thread.setDaemon(True)
 
-    >>> thread.start(); event.wait()
+    >>> thread.start(); event.wait(5)
     2007-03-21 20:32:57.000000 [0L]
     2007-03-21 20:32:58.000000 [0L, 1L]
     2007-03-21 20:32:59.000000 [0L, 2L]
@@ -94,8 +89,7 @@ printing some information.
     2007-03-21 20:33:06.000000 [0L, 9L]
     2007-03-21 20:33:07.000000 [0L, 10L]
 
-
-We can write addition al data to the file storage:
+We can write additional data to the file storage:
 
     >>> conn.root()[10] = persistent.dict.PersistentDict()
     >>> commit()
@@ -120,6 +114,11 @@ storage is now using a new file:
     >>> condition.notify_and_wait()
     2007-03-21 20:33:09.000000 [0L, 12L]
 
+Iterators have a stop method that causes iteration to end:
+
+    >>> event.clear(); iterator.stop(); event.wait(5)
+    iteration stopped!
+
 When we create iterators, we can pass a starting transaction id. This
 must be less than or equal to any transaction in the database, or
 ZODB.utils.z64 (all nulls) if the database is empty.  Passing an ltid
@@ -134,7 +133,7 @@ that is too high, will cause an error:
     ...
     TidTooHigh: '\x03lk\x91*\xaa\xaa\xaa'
 
-If the tis is lower than any tid in the file, then iteration will
+If the tid is lower than any tid in the file, then iteration will
 start at the beginning:
 
     >>> tid = tid_from_time(time.time()-100)
@@ -164,5 +163,4 @@ there:
 
 .. Clean up
 
-    >>> condition.stop()
     >>> thread.join()

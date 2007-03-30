@@ -37,6 +37,7 @@ class FileStorageIterator(ZODB.FileStorage.format.FileStorageFormatter):
         self._fs = fs
         self._open()
         self._condition = condition
+        self._stopped = False
 
     def _open(self):
         self._old_file = self._fs._file
@@ -82,8 +83,7 @@ class FileStorageIterator(ZODB.FileStorage.format.FileStorageFormatter):
                     self._scan_backward(pos, ltid)
 
     def _ltid_too_high(self, ltid):
-        raise ValueErr
-        
+        raise ValueError("Transaction id too high", repr(ltid))
 
     def _scan_forward(self, pos, ltid):
         file = self._file
@@ -130,14 +130,24 @@ class FileStorageIterator(ZODB.FileStorage.format.FileStorageFormatter):
     def __iter__(self):
         return self
 
+    def stop(self):
+        self._condition.acquire()
+        self._stopped = True
+        self._condition.notifyAll()
+        self._condition.release()
+
     def next(self):
         self._condition.acquire()
         try:
+            if self._stopped:
+                raise StopIteration
             while 1:
                 r = self._next()
                 if r is not None:
                     return r
                 self._condition.wait()
+                if self._stopped:
+                    raise StopIteration
         finally:
             self._condition.release()
 
