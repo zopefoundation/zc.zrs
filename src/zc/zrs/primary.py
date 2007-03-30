@@ -46,6 +46,7 @@ class Primary:
             setattr(self, name, getattr(storage, name))
 
         self._factory = PrimaryFactory(storage, self._changed)
+        self._addr = addr
         interface, port = addr
         reactor.callFromThread(reactor.listenTCP, port, self._factory,
                                interface=interface)
@@ -57,7 +58,7 @@ class Primary:
         self._changed.release()
 
     def close(self):
-        # XXX Need to stop servers too.
+        logger.info('Closing %s %s', self._storage._file_name, self._addr)
         self._factory.close()
         self._storage.close()
 
@@ -70,10 +71,16 @@ class PrimaryProtocol(twisted.internet.protocol.Protocol):
     def connectionMade(self):
         self.__stream = zc.zrs.sizedmessage.Stream(self.messageReceived, 8)
         self.__peer = str(self.transport.getPeer()) + ': '
+        self.factory.instances.append(self)
         self.info("Connected")
 
     def connectionLost(self, reason):
-        self.info("DisConnected %r", reason)
+        self.factory.instances.remove(self)
+        self.info("Disconnected %r", reason)
+
+    def close(self):
+        self.producer.close()
+        self.info('Closed')
 
     def error(self, message, *args):
         logger.error(self.__peer + message, *args)
@@ -103,9 +110,8 @@ class PrimaryProtocol(twisted.internet.protocol.Protocol):
             self.info("start %r (%s)", data, ZODB.TimeStamp.TimeStamp(data))
             iterator = zc.zrs.fsiterator.FileStorageIterator(
                 self.factory.storage, self.factory.changed, self.__start)
-            producer = PrimaryProducer(iterator, self.transport)
-            self.transport.registerProducer(producer, True)
-            thread = threading.Thread(target=producer.run)
+            self.producer = PrimaryProducer(iterator, self.transport)
+            thread = threading.Thread(target=self.producer.run)
             thread.setDaemon(True)
             thread.start()
  
@@ -116,6 +122,11 @@ class PrimaryFactory(twisted.internet.protocol.Factory):
     def __init__(self, storage, changed):
         self.storage = storage
         self.changed = changed
+        self.instances = []
+
+    def close(self):
+        while self.instances:
+            self.instances.pop().close()
 
 class PrimaryProducer:
 
@@ -126,6 +137,7 @@ class PrimaryProducer:
     def __init__(self, iterator, transport):
         self.iterator = iterator
         self.transport = transport
+        transport.registerProducer(self, True)
         self.callFromThread = transport.reactor.callFromThread
         self.event = threading.Event()
         # XXX Need pause/resumt test
@@ -133,6 +145,13 @@ class PrimaryProducer:
         self.resumeProducing = self.event.set
         self.wait = self.event.wait
         self.resumeProducing()
+        self.close_event = threading.Event()
+
+    def close(self):
+        self.stopProducing()
+        self.transport.unregisterProducer()
+        self.transport.loseConnection()
+        self.close_event.wait()
     
     def stopProducing(self):
         self.iterator.stop()
@@ -161,6 +180,7 @@ class PrimaryProducer:
                 self.write(cPickle.dumps(('C', ())))
                 if self.stopped:
                     break
+            self.close_event.set()
         except:
             logger.exception(str(self.transport.getPeer()))
             self.transport.loseConnection()

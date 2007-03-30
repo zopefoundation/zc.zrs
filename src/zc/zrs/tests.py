@@ -94,6 +94,9 @@ class MessageTransport:
     def registerProducer(self, producer, streaming):
         self.producer = producer
 
+    def unregisterProducer(self):
+        self.producer = None
+
     def close(self):
         self.producer.stopProducing()
         self.proto.connectionLost('closed')

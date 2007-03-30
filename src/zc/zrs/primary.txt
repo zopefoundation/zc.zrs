@@ -218,12 +218,15 @@ after the saved transaction:
     ()
 
 The servers will spew data for ever, or until their connections are
-closed. :)
+closed:
 
     >>> connection.transport.close()
-    IPv4Address(TCP, '127.0.0.1', 47245): DisConnected 'closed'
+    IPv4Address(TCP, '127.0.0.1', 47245): Disconnected 'closed'
 
-    >>> connection2.transport.close()
-    IPv4Address(TCP, '127.0.0.1', 47246): DisConnected 'closed'
+Or until the storage is closed:
 
+    >>> ps.close()
+    Closing Data.fs ('', 8000)
+    Transport closed!
+    IPv4Address(TCP, '127.0.0.1', 47246): Closed
 
