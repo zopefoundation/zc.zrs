@@ -3,7 +3,7 @@ ZRS Primary Storages
 
 A ZRS primary storage is a wrapper of a file storage that also
 provides a network service to support replication.  Let's create a
-primart storage.  We'll first create a File Storage:
+primary storage.  We'll first create a File Storage:
 
     >>> import ZODB.FileStorage
     >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
@@ -17,7 +17,8 @@ takes the following arguments:
 
 - The Twisted reactor to register with.
 
-We'll use a test reactor that voids network connections:
+We're going to use a special reactor that lets us demonstrate primary
+storages without actually creating network connections.
 
     >>> import zc.zrs.primary
     >>> ps = zc.zrs.primary.Primary(fs, ('', 8000), reactor)
@@ -29,28 +30,33 @@ Now, we can use this just like any other storage:
     >>> db = DB(ps)
     >>> conn = db.open()
     >>> ob = conn.root()
-    >>> for i in range(2):
-    ...    ob.x = persistent.dict.PersistentDict()
-    ...    commit()
+    >>> ob.x = persistent.dict.PersistentDict()
+    >>> commit()
 
 We can connect to it to get data that have been committed.  We're
 going to connect using the test reactor:
 
-    >>> protocol = reactor.connect(('', 8000))
+    >>> connection = reactor.connect(('', 8000))
+    IPv4Address(TCP, '127.0.0.1', 47245): Connected
 
-The procotol represents the server.  It accepts two sized messages.
+(We see logging output.)
+
+The connection represents the server.  It accepts two sized messages.
 The sizedmessage module has a marshal function that computes sized
-messages. The first message is the protocol, which mist be "zrs2.0".
+messages. The first message is the protocol, which must be "zrs2.0".
 The second message is the starting transaction.  We'll send the
-messages by calling the dataReceived method on the protocol:
+messages by calling the dataReceived method on the connection:
 
     >>> import zc.zrs.sizedmessage
-    >>> protocol.dataReceived(zc.zrs.sizedmessage.marshal("zrs2.0"))
+    >>> connection.dataReceived(zc.zrs.sizedmessage.marshal("zrs2.0"))
 
 We'll pass an initial transaction of all zeros, which will give us all
 of the transactions.
 
-    >>> protocol.dataReceived(zc.zrs.sizedmessage.marshal("\0"*8))
+    >>> connection.dataReceived(zc.zrs.sizedmessage.marshal("\0"*8))
+    ... # doctest: +NORMALIZE_WHITESPACE
+    IPv4Address(TCP, '127.0.0.1', 47245): 
+       start '\x00\x00\x00\x00\x00\x00\x00\x00' (1900-01-01 00:00:00.000000)
 
 The server will send back a numer of sized messages.  Each message
 will be a pickle.  The testing reactor set up a transpoer with a read
@@ -62,7 +68,7 @@ in the database, which is the one that creates the root object.
 
 let's look at the first message:
 
-    >>> message_type, data = protocol.transport.read()
+    >>> message_type, data = connection.transport.read()
     >>> message_type
     'T'
     >>> tid, status, user, description, extension = data
@@ -72,7 +78,152 @@ module to display it.  The other data is pretty boring in this
 case. :)
 
     >>> from ZODB.TimeStamp import TimeStamp
-    >>> print TimeStamp(tid), status, user, description, extension
+    >>> def ts(v): 
+    ...     return str(TimeStamp(v))
+    >>> ts(tid), status, user, description, extension
+    ('2007-03-21 20:32:57.000000', ' ', '', 'initial database creation', {})
 
+The next message is a store message for object 0:
+
+    >>> message_type, data = connection.transport.read()
+    >>> message_type
+    'S'
+
+    >>> oid, serial, version, data, data_txn = data
+    >>> from ZODB.utils import u64
+    >>> u64(oid), ts(serial), version, len(data), data_txn
+    (0L, '2007-03-21 20:32:57.000000', '', 66, None)
+
+Finally, there will be a commit record marking the end of the
+transaction:
+
+    >>> connection.transport.read()
+    ('C', ())
+
+We can continue reading any additional transactions. In this case
+there is only one:
+
+    >>> def next():
+    ...     return connection.transport.read()[1]
+
+    >>> tid, status, user, description, extension = next()
+    >>> ts(tid), status, user, description, extension
+    ('2007-03-21 20:32:58.000000', ' ', '', '', {})
+
+    >>> for i in range(2):
+    ...     oid, serial, version, data, data_txn = next()
+    ...     print (u64(oid), ts(serial), version, len(data), data_txn)
+    (0L, '2007-03-21 20:32:58.000000', '', 116, None)
+    (1L, '2007-03-21 20:32:58.000000', '', 51, None)
+
+    >>> next()
+    ()
+
+    >>> connection.transport.have_data()
+    False
+
+If we commit more data, however, the additional data will be made
+available:
+
+    >>> ob = ob.x
+    >>> ob.x = persistent.dict.PersistentDict()
+    >>> commit()
+
+    >>> tid, status, user, description, extension = next()
+    >>> ts(tid), status, user, description, extension
+    ('2007-03-21 20:32:59.000000', ' ', '', '', {})
+
+    >>> for i in range(2):
+    ...     oid, serial, version, data, data_txn = next()
+    ...     print (u64(oid), ts(serial), version, len(data), data_txn)
+    (1L, '2007-03-21 20:32:59.000000', '', 72, None)
+    (2L, '2007-03-21 20:32:59.000000', '', 51, None)
+
+    >>> next()
+    ()
+
+In all of the examples we've seen, the data_txn is None.  Let's undo
+the last transaction:
+
+    >>> db.undo(ps.undoLog()[0]['id'])
+    >>> commit()
+
+Now, the undo transaction will be available:
+
+    >>> tid, status, user, description, extension = next()
+    >>> ts(tid), status, user, description, extension
+    ('2007-03-21 20:33:00.000000', ' ', '', '', {})
+
+    >>> for i in range(2):
+    ...     oid, serial, version, data, data_txn = next()
+    ...     print (u64(oid), ts(serial), version, data and len(data),
+    ...            data_txn and ts(data_txn))
+    (1L, '2007-03-21 20:33:00.000000', '', 51, '2007-03-21 20:32:58.000000')
+    (2L, '2007-03-21 20:33:00.000000', '', None, None)
+
+    >>> next()
+    ()
+
+Let's save the transaction id and then commit some new data:
+
+    >>> saved_tid = tid
+    >>> ob = conn.root()
+    >>> ob.y = persistent.dict.PersistentDict()
+    >>> commit()
+
+Of course, we'll see this new data:
+
+    >>> tid, status, user, description, extension = next()
+    >>> ts(tid), status, user, description, extension
+    ('2007-03-21 20:33:01.000000', ' ', '', '', {})
+
+    >>> for i in range(2):
+    ...     oid, serial, version, data, data_txn = next()
+    ...     print (u64(oid), ts(serial), version, len(data), data_txn)
+    (0L, '2007-03-21 20:33:01.000000', '', 136, None)
+    (3L, '2007-03-21 20:33:01.000000', '', 51, None)
+
+    >>> next()
+    ()
+
+Let's create another connection.  This time though, we'll send our
+saved transaction as the starting transaction:
+
+    >>> connection2 = reactor.connect(('', 8000))
+    IPv4Address(TCP, '127.0.0.1', 47246): Connected
+
+    >>> connection2.dataReceived(zc.zrs.sizedmessage.marshal("zrs2.0"))
+    >>> connection2.dataReceived(zc.zrs.sizedmessage.marshal(saved_tid))
+    ... # doctest: +NORMALIZE_WHITESPACE
+    IPv4Address(TCP, '127.0.0.1', 47246):
+        start '\x03lk\x91\x00\x00\x00\x00' (2007-03-21 20:33:00.000000)
+
+    >>> def next2():
+    ...     return connection2.transport.read()[1]
+
+When we get data from this connection, we'll only get the data written
+after the saved transaction:
+
+    >>> tid, status, user, description, extension = next2()
+    >>> ts(tid), status, user, description, extension
+    ('2007-03-21 20:33:01.000000', ' ', '', '', {})
+
+    >>> for i in range(2):
+    ...     oid, serial, version, data, data_txn = next2()
+    ...     print (u64(oid), ts(serial), version, len(data), data_txn)
+    (0L, '2007-03-21 20:33:01.000000', '', 136, None)
+    (3L, '2007-03-21 20:33:01.000000', '', 51, None)
+
+    >>> next2()
+    ()
+
+The servers will spew data for ever, or until their connections are
+closed. :)
+
+    >>> connection.transport.close()
+    IPv4Address(TCP, '127.0.0.1', 47245): DisConnected 'closed'
+
+    >>> connection2.transport.close()
+    IPv4Address(TCP, '127.0.0.1', 47246): DisConnected 'closed'
 
 

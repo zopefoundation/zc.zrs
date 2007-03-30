@@ -11,7 +11,9 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-import os, shutil, sys, tempfile, threading, time, unittest
+import cPickle, logging, os, shutil, struct, sys
+import tempfile, threading, time, unittest
+
 import transaction
 from zope.testing import doctest, setupstack
 import zc.zrs.fsiterator
@@ -22,6 +24,7 @@ class TestReactor:
 
     def __init__(self):
         self._factories = {}
+        self.client_port = 47245
             
     def listenTCP(self, port, factory, backlog=50, interface=''):
         addr = interface, port
@@ -30,7 +33,9 @@ class TestReactor:
 
     def connect(self, addr):
         proto = self._factories[addr].buildProtocol(addr)
-        transport = MessageTransport()
+        transport = MessageTransport(
+            proto, "IPv4Address(TCP, '127.0.0.1', %s)" % self.client_port)
+        self.client_port += 1
         transport.reactor = self
         proto.makeConnection(transport)
         return proto
@@ -40,11 +45,16 @@ class TestReactor:
 
 class MessageTransport:
 
-    def __init__(self):
+    def __init__(self, proto, peer):
         self.data = ''
         self.cond = threading.Condition()
         self.closed = False
+        self.proto = proto
+        self.peer = peer
 
+    def getPeer(self):
+        return self.peer
+        
     def write(self, data):
         self.cond.acquire()
         self.data += data
@@ -56,31 +66,55 @@ class MessageTransport:
 
     def read(self):
         self.cond.acquire()
+
         if len(self.data) < 4:
             self.cond.wait(5)
             assert len(self.data) >= 4
-        l = ZODB.utils.u64(self.data[:4])
+        l, = struct.unpack(">I", self.data[:4])
         self.data = self.data[4:]
-        self.cond.release()
         
         if len(self.data) < l:
             self.cond.wait(5)
-            assert len(self.data) >= l
+            assert len(self.data) >= l, (l, len(self.data))
         result = self.data[:l]
         self.data = self.data[l:]
+
         self.cond.release()
 
-        return result
+        return cPickle.loads(result)
+
+    def have_data(self):
+        return bool(self.data)
 
     def loseConnection(self):
         print 'Transport closed!'
         self.closed = True
 
+    producer = None
     def registerProducer(self, producer, streaming):
-        pass # XXX
+        self.producer = producer
 
+    def close(self):
+        self.producer.stopProducing()
+        self.proto.connectionLost('closed')
+
+
+class Stdout:
+    def write(self, data):
+        sys.stdout.write(data)
+    def flush(self):
+        sys.stdout.flush()
+
+stdout_handler = logging.StreamHandler(Stdout())
+
+def join(old):
+    # Wait for any new threads created during a test to die.
+    for thread in threading.enumerate():
+        if thread not in old:
+            thread.join(1.0)
 
 def setUp(test):
+    setupstack.register(test, join, threading.enumerate())
     setupstack.setUpDirectory(test)
     global now
     now = time.mktime((2007, 3, 21, 15, 32, 57, 2, 80, 0))
@@ -94,7 +128,13 @@ def setUp(test):
     test.globs['commit'] = commit
 
     test.globs['reactor'] = TestReactor()
-    
+
+    logger = logging.getLogger('zc.zrs.primary')
+    logger.setLevel(1)
+    setupstack.register(test, logger.setLevel, 0)
+    logger.addHandler(stdout_handler)
+    setupstack.register(test, logger.removeHandler, stdout_handler)
+
 
 def scan_from_back():
     r"""

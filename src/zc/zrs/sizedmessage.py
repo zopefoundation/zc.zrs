@@ -18,6 +18,8 @@ import struct
 def marshal(message):
     return struct.pack(">I", len(message)) + message
 
+
+
 class LimitExceeded(Exception):
     """Too much data
     """
