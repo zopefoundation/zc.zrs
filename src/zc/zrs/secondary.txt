@@ -1,0 +1,138 @@
+ZRS Secondary Storages
+======================
+
+ZRS Secondary storages are "read-only" storages that get their data by
+downloading data from ZRS primary storages.  They manage downlaoded
+data by "wrapping" other storages.
+
+In this demonstration, we'll create a file storage to hold out
+secondary data:
+
+    >>> import ZODB.FileStorage
+    >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
+
+To create a secondary storage, we supply:
+
+- The underlying storage
+
+- The address to connect to, and
+
+- An optional Twisted reactor to register with.  Normally, ZRS manages
+  it's own reactor, but for demonstration/test purposes, we can pass
+  in a special reactor that lets us demonstrate primary
+  storages without actually creating network connections.
+
+Let's create a primary storage:
+
+    >>> import zc.zrs.secondary
+    >>> ss = zc.zrs.secondary.Secondary(fs, ('', 8000), reactor)
+
+We can't use a secondary storage until it has gotten some data.  Our
+demo reactor doesn't make any network connections, so of course, the
+storage doesn't have any data yet.  The demo storagesimulates
+connections by creatiing client connections when a secondary server
+tries to connect to it.  Let's get the client connection created for
+this server:
+
+    >>> connection = reactor.clients[('', 8000)].pop()
+
+The secondary server writes two messages to the connection to begin
+the interaction with the server.  The first is the ZRS protocol
+identifier:
+
+    >>> connection.read()
+    'zrs2.0'
+
+The second message is the identifier of the last transaction seen by
+the client.  This client doesn't have any data, so we'll get a
+transaction id consisting of all zeros:
+
+    >>> connection.read()
+    '\x00\x00\x00\x00\x00\x00\x00\x00'
+
+This is all the data sent by the client.  From this point on, the
+client passively waits for data sent by the server.  We'll pass it
+some data.  To do this, we'll get some help from a file-storage
+iterator that will give us the data we need to send.  We'll create a
+file storage and database that we can use for this:
+
+    >>> primary_fs = ZODB.FileStorage.FileStorage('primary.fs')
+
+    >>> primary_data = zc.zrs.fsiterator.FileStorageIterator(primary_fs)
+
+    >>> from ZODB.DB import DB
+    >>> primary_db = DB(primary_fs)
+
+The first transaction initializes the database.  Let's send that to
+the secondary.  
+
+    >>> trans = primary_data.next()
+
+Transactions are sent as a series of messages.  To make this easier
+for this demonstration, the connections let us pass data directly.
+The first message is a transaction message that starts the transaction
+and includes transaction meta data:
+
+    >>> connection.send(('T', (trans.tid, trans.status, trans.user,
+    ...                        trans.description, trans._extension)))
+
+This initial message is followed by a serious of messages, one for
+each object store:
+
+    >>> for record in trans:
+    ...     connection.send(('S', (record.oid, record.tid, record.version,
+    ...                            record.data, record.data_txn)))
+
+Finally, a commit message is sent marking the end of the transaction:
+
+    >>> connection.send(('C', ()))
+
+Now that we've created this minimal data, we can create a database for
+out secondary storage:
+
+    >>> db = DB(ss)
+    >>> conn = db.open()
+    >>> conn.root()
+    {}
+
+Let's send some more data.  
+ 
+    >>> primary_conn = primary_db.open()
+    >>> ob = primary_conn.root()
+    >>> import persistent.mapping
+    >>> ob['x'] = persistent.mapping.PersistentMapping()
+    >>> commit()
+
+    >>> trans = primary_data.next()
+    >>> connection.send(('T', (trans.tid, trans.status, trans.user,
+    ...                        trans.description, trans._extension)))
+    >>> for record in trans:
+    ...     connection.send(('S', (record.oid, record.tid, record.version,
+    ...                            record.data, record.data_txn)))
+    >>> connection.send(('C', ()))
+
+We'll see the data in the secondary database, and on the secondary
+connection, after a sync:
+
+    >>> conn.sync()
+    >>> conn.root()
+    {'x': {}}
+
+If we undo the transaction in the primary data:
+
+    >>> primary_db.undo(primary_fs.undoLog()[0]['id'])
+    >>> commit()
+
+    >>> trans = primary_data.next()
+    >>> connection.send(('T', (trans.tid, trans.status, trans.user,
+    ...                        trans.description, trans._extension)))
+    >>> for record in trans:
+    ...     connection.send(('S', (record.oid, record.tid, record.version,
+    ...                            record.data, record.data_txn)))
+    >>> connection.send(('C', ()))
+
+Then, as we expect, the data will be undone on the secondary:
+
+    >>> conn.sync()
+    >>> conn.root()
+    {}

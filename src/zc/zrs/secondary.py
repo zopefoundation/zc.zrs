@@ -15,112 +15,143 @@
 
 import cPickle
 import logging
-import threading
-import ngi.adapters
 
-logger = logging.getLogger('zc.zrs.secondary')
+import ZODB.POSException
 
-class Transaction:
+import twisted.internet.protocol
 
-    def __init__(self, id, status, user, description, _extension):
-        self.id = id
-        self.status = status
-        self.user = user
-        self.description = description
-        self._extension = _extension
-        self.oids = {}
+import zc.zrs.sizedmessage
+
+logger = logging.getLogger(__name__)
 
 class Secondary:
 
-    def __init__(self, addresses, storage, connector):
-        self._addresses = addresses
+    def __init__(self, storage, addr, reactor=None):
+        if reactor is None:
+            import zc.zrs.reactor
+            reactor = zc.zrs.reactor.reactor
+            
         self._storage = storage
-        for meth in (
-            'getSize', 'load', 'loadSerial', 'loadBefore', 'history',
-            'lastTransaction', pack
-            ):
-            setattr(self, meth, getattr(storage, meth))
 
-        
-        self._connection = None
-        self._connector = connector
-        self._transaction = None
-        self._db = None
-        self._closed = False
-        self._connect_lock = threading.Lock()
+        for name in ('getName', 'sortKey', 'getSize', 'load', 'loadSerial',
+                     'loadBefore', 'supportsUndo',
+                     'supportsVersions', 
+                     'history', 'lastTransaction',
+                     'iterator', 'undoLog', 'undoInfo', 'pack', 'versionEmpty',
+                     'modifiedInVersion', 'versions'):
+            setattr(self, name, getattr(storage, name))
 
-        self._connect()
+        self._factory = SecondaryFactory(storage)
+        self._addr = addr
+        host, port = addr
+        reactor.callFromThread(reactor.connectTCP, host, port, self._factory)
 
-    def registerDB(self, db):
-        self._db = db
-
-    def _connect(self):
-        for addr in self.addresses:
-            self._connector(addr, self)
-
-    def connected(self, connection):
-        self._connect_lock.acquire()
-        try:
-            if self._connection is not None or self._closed:
-                # We are already connected (or closed).  Close the new one
-                connection.close()
-                return
- 
-            connection = ngi.adapters.Sized(connection)
-            self._connection = connection
-            connection.write('zrs 2') # protocol
-            connection.write(self.lastTransaction())
-            connection.setHandler(self)
-        finally:
-            self._connect_lock.release()
-
-    def handle_input(self, connection, data):
-        rtype, record = cPickle.loads(data) # XXX prevent class loading
-        if rtype == 'T':
-            # start transaction
-            assert self._transaction is None
-            self._transaction = Transaction(*record)
-            self._storage.tpc_begin(self._transaction, id, status)
-        elif rtype == 'C':
-            # commit
-            self._storage.tpc_vote(self._transaction)
-            self._storage.tpc_finish(self._transaction)
-            if self._db is not None:
-                self._db.invalidate(self._transaction.id,
-                                    self._transaction.oids)
-            self._transaction = None
-        else:
-            # store
-            assert rtype == 'S'
-            oid, tid, data = record
-            self._transaction.oids[oid] = 1
-            self._storage.restore(oid, tid, data, '', None, trans)
-
-    def close(self):
-        self._connect_lock.acquire()
-        try:
-            self._closed = True
-            if self._connection is not None:
-                self._connection.close()
-        finally:
-            self._connect_lock.release()
-        
-        self._storage.close()
-
-    def handle_close(self, connnection, reason):
-        self._connect()
-
-    def getName(self):
-        return 'Secondary(%r)' % self._addrs
-
-    def sortKey(self):
-        return ''
-        
-    def supportsUndo(self):
-        return False
 
     def isReadOnly(self):
         return True
-        
 
-    
+    def write_method(*args, **kw):
+        raise ZODB.POSException.ReadOnlyError()
+    new_oid = tpc_begin = undo = write_method
+
+    def registerDB(self, db, limit=None):
+        self._factory.db = db
+
+    def close(self):
+        logger.info('Closing %s %s', self._storage._file_name, self._addr)
+        self._factory.close()
+        self._storage.close()
+
+
+class SecondaryProtocol(twisted.internet.protocol.Protocol):
+
+    __protocol = None
+    __start = None
+    __transaction = None
+
+    def connectionMade(self):
+        self.__stream = zc.zrs.sizedmessage.Stream(self.messageReceived)
+        self.__peer = str(self.transport.getPeer()) + ': '
+        self.factory.instance = self
+        self.transport.write(zc.zrs.sizedmessage.marshal("zrs2.0"))
+        tid = self.factory.storage.lastTransaction()
+        self.transport.write(zc.zrs.sizedmessage.marshal(tid))
+        self.info("Connected")
+
+    def connectionLost(self, reason):
+        self.factory.instance = None
+        self.info("Disconnected %r", reason)
+
+    def close(self):
+        self.transport.loseConnection()
+        self.info('Closed')
+
+    def error(self, message, *args):
+        logger.error(self.__peer + message, *args)
+        self.transport.loseConnection()
+
+    def info(self, message, *args):
+        logger.info(self.__peer + message, *args)
+
+    def dataReceived(self, data):
+        try:
+            self.__stream(data)
+        except zc.zrs.sizedmessage.LimitExceeded, v:
+            self.error(str(v))
+
+    def messageReceived(self, data):
+        message_type, data = cPickle.loads(data)
+        if message_type == 'T':
+            assert self.__transaction is None
+            transaction = self.__transaction = Transaction(*data)
+            self.__inval = {}
+            self.factory.storage.tpc_begin(
+                transaction, transaction.id, transaction.status)
+        elif message_type == 'S':
+            oid, serial, version, data, data_txn = data
+            key = serial, version
+            oids = self.__inval.get(key)
+            if oids is None:
+                oids = self.__inval[key] = {}
+            oids[oid] = 1
+            
+            self.factory.storage.restore(oid, serial, data, version, data_txn,
+                                         self.__transaction)
+        elif message_type == 'C':
+            assert self.__transaction is not None            
+            self.factory.storage.tpc_vote(self.__transaction)
+
+            def invalidate(tid):
+                if self.factory.db is not None:
+                    for (tid, version), oids in self.__inval.items():
+                        self.factory.db.invalidate(tid, oids, version=version)
+            
+            self.factory.storage.tpc_finish(self.__transaction, invalidate)
+            self.__transaction = None
+        else:
+            self.error("Invalid transacton type, %r", message_type)
+
+class Transaction:
+
+    def __init__(self, tid, status, user, description, extension):
+        self.id = tid
+        self.status = status
+        self.user = user
+        self.description = description
+        self._extension = extension
+
+ 
+class SecondaryFactory(twisted.internet.protocol.Factory):
+
+    protocol = SecondaryProtocol
+    db = None
+    instance = None
+
+    def __init__(self, storage):
+        self.storage = storage
+
+    def close(self):
+        if self.instance is not None:
+            instance.close()
+            self.instance = None
+

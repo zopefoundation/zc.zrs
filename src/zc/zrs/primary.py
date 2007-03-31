@@ -21,7 +21,6 @@ import ZODB.TimeStamp
 
 import zope.interface
 
-import twisted.internet
 import twisted.internet.protocol
 import twisted.internet.interfaces
 
@@ -32,7 +31,11 @@ logger = logging.getLogger(__name__)
 
 class Primary:
 
-    def __init__(self, storage, addr, reactor):
+    def __init__(self, storage, addr, reactor=None):
+        if reactor is None:
+            import zc.zrs.reactor
+            reactor = zc.zrs.reactor.reactor
+            
         self._storage = storage
         self._changed = threading.Condition()
 

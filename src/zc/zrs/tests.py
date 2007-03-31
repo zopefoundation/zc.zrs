@@ -15,15 +15,19 @@ import cPickle, logging, os, shutil, struct, sys
 import tempfile, threading, time, unittest
 
 import transaction
-from zope.testing import doctest, setupstack
-import zc.zrs.fsiterator
 from ZODB.TimeStamp import TimeStamp
 import ZODB.utils
+
+from zope.testing import doctest, setupstack
+
+import zc.zrs.fsiterator
+import zc.zrs.sizedmessage
 
 class TestReactor:
 
     def __init__(self):
         self._factories = {}
+        self.clients = {}
         self.client_port = 47245
             
     def listenTCP(self, port, factory, backlog=50, interface=''):
@@ -33,15 +37,25 @@ class TestReactor:
 
     def connect(self, addr):
         proto = self._factories[addr].buildProtocol(addr)
-        transport = MessageTransport(
+        transport = PrimaryTransport(
             proto, "IPv4Address(TCP, '127.0.0.1', %s)" % self.client_port)
         self.client_port += 1
         transport.reactor = self
         proto.makeConnection(transport)
-        return proto
+        return transport
 
     def callFromThread(self, f, *a, **k):
         f(*a, **k)
+
+    def connectTCP(self, host, port, factory, timeout=30):
+        addr = host, port
+        proto = factory.buildProtocol(addr)
+        transport = SecondaryTransport(
+            proto, "IPv4Address(TCP, '127.0.0.1', %s)" % self.client_port)
+        self.client_port += 1
+        transport.reactor = self
+        proto.makeConnection(transport)
+        self.clients.setdefault(addr, []).append(transport)
 
 class MessageTransport:
 
@@ -81,7 +95,10 @@ class MessageTransport:
 
         self.cond.release()
 
-        return cPickle.loads(result)
+        return result
+
+    def send(self, data):
+        self.proto.dataReceived(zc.zrs.sizedmessage.marshal(data))
 
     def have_data(self):
         return bool(self.data)
@@ -101,6 +118,15 @@ class MessageTransport:
         self.producer.stopProducing()
         self.proto.connectionLost('closed')
 
+class PrimaryTransport(MessageTransport):
+
+    def read(self):
+        return cPickle.loads(MessageTransport.read(self))
+
+class SecondaryTransport(MessageTransport):
+    
+    def send(self, data):
+        MessageTransport.send(self, cPickle.dumps(data))
 
 class Stdout:
     def write(self, data):
@@ -208,7 +234,7 @@ But, if we iterate from near the end, we'll be OK:
 def test_suite():
     return unittest.TestSuite((
         doctest.DocFileSuite(
-            'fsiterator.txt', 'primary.txt', 
+            'fsiterator.txt', 'primary.txt', 'secondary.txt',
             setUp=setUp, tearDown=setupstack.tearDown),
         doctest.DocTestSuite(
             setUp=setUp, tearDown=setupstack.tearDown),

@@ -15,10 +15,12 @@ takes the following arguments:
 
 - The address to listen on, and
 
-- The Twisted reactor to register with.
+- An optional Twisted reactor to register with.  Normally, ZRS manages
+  it's own reactor, but for demonstration/test purposes, we can pass
+  in a special reactor that lets us demonstrate primary
+  storages without actually creating network connections.
 
-We're going to use a special reactor that lets us demonstrate primary
-storages without actually creating network connections.
+Let's create a primary storage:
 
     >>> import zc.zrs.primary
     >>> ps = zc.zrs.primary.Primary(fs, ('', 8000), reactor)
@@ -41,20 +43,18 @@ going to connect using the test reactor:
 
 (We see logging output.)
 
-The connection represents the server.  It accepts two sized messages.
-The sizedmessage module has a marshal function that computes sized
-messages. The first message is the protocol, which must be "zrs2.0".
+The connection represents the server.  It accepts two string messages.
+The first message is the protocol, which must be "zrs2.0".
 The second message is the starting transaction.  We'll send the
 messages by calling the dataReceived method on the connection:
 
-    >>> import zc.zrs.sizedmessage
-    >>> connection.dataReceived(zc.zrs.sizedmessage.marshal("zrs2.0"))
+    >>> connection.send("zrs2.0")
 
-We'll pass an initial transaction of all zeros, which will give us all
-of the transactions.
+The second message is the identifier of the last transaction seen by
+the client.  We'll pass a transaction id of all zeros, indicating that
+we have no data and want all of the data the storage has:
 
-    >>> connection.dataReceived(zc.zrs.sizedmessage.marshal("\0"*8))
-    ... # doctest: +NORMALIZE_WHITESPACE
+    >>> connection.send("\0"*8) # doctest: +NORMALIZE_WHITESPACE
     IPv4Address(TCP, '127.0.0.1', 47245): 
        start '\x00\x00\x00\x00\x00\x00\x00\x00' (1900-01-01 00:00:00.000000)
 
@@ -68,7 +68,7 @@ in the database, which is the one that creates the root object.
 
 let's look at the first message:
 
-    >>> message_type, data = connection.transport.read()
+    >>> message_type, data = connection.read()
     >>> message_type
     'T'
     >>> tid, status, user, description, extension = data
@@ -85,7 +85,7 @@ case. :)
 
 The next message is a store message for object 0:
 
-    >>> message_type, data = connection.transport.read()
+    >>> message_type, data = connection.read()
     >>> message_type
     'S'
 
@@ -97,29 +97,26 @@ The next message is a store message for object 0:
 Finally, there will be a commit record marking the end of the
 transaction:
 
-    >>> connection.transport.read()
+    >>> connection.read()
     ('C', ())
 
 We can continue reading any additional transactions. In this case
 there is only one:
 
-    >>> def next():
-    ...     return connection.transport.read()[1]
-
-    >>> tid, status, user, description, extension = next()
+    >>> tid, status, user, description, extension = connection.read()[1]
     >>> ts(tid), status, user, description, extension
     ('2007-03-21 20:32:58.000000', ' ', '', '', {})
 
     >>> for i in range(2):
-    ...     oid, serial, version, data, data_txn = next()
+    ...     oid, serial, version, data, data_txn = connection.read()[1]
     ...     print (u64(oid), ts(serial), version, len(data), data_txn)
     (0L, '2007-03-21 20:32:58.000000', '', 116, None)
     (1L, '2007-03-21 20:32:58.000000', '', 51, None)
 
-    >>> next()
+    >>> connection.read()[1]
     ()
 
-    >>> connection.transport.have_data()
+    >>> connection.have_data()
     False
 
 If we commit more data, however, the additional data will be made
@@ -129,17 +126,17 @@ available:
     >>> ob.x = persistent.dict.PersistentDict()
     >>> commit()
 
-    >>> tid, status, user, description, extension = next()
+    >>> tid, status, user, description, extension = connection.read()[1]
     >>> ts(tid), status, user, description, extension
     ('2007-03-21 20:32:59.000000', ' ', '', '', {})
 
     >>> for i in range(2):
-    ...     oid, serial, version, data, data_txn = next()
+    ...     oid, serial, version, data, data_txn = connection.read()[1]
     ...     print (u64(oid), ts(serial), version, len(data), data_txn)
     (1L, '2007-03-21 20:32:59.000000', '', 72, None)
     (2L, '2007-03-21 20:32:59.000000', '', 51, None)
 
-    >>> next()
+    >>> connection.read()[1]
     ()
 
 In all of the examples we've seen, the data_txn is None.  Let's undo
@@ -150,18 +147,18 @@ the last transaction:
 
 Now, the undo transaction will be available:
 
-    >>> tid, status, user, description, extension = next()
+    >>> tid, status, user, description, extension = connection.read()[1]
     >>> ts(tid), status, user, description, extension
     ('2007-03-21 20:33:00.000000', ' ', '', '', {})
 
     >>> for i in range(2):
-    ...     oid, serial, version, data, data_txn = next()
+    ...     oid, serial, version, data, data_txn = connection.read()[1]
     ...     print (u64(oid), ts(serial), version, data and len(data),
     ...            data_txn and ts(data_txn))
     (1L, '2007-03-21 20:33:00.000000', '', 51, '2007-03-21 20:32:58.000000')
     (2L, '2007-03-21 20:33:00.000000', '', None, None)
 
-    >>> next()
+    >>> connection.read()[1]
     ()
 
 Let's save the transaction id and then commit some new data:
@@ -173,17 +170,17 @@ Let's save the transaction id and then commit some new data:
 
 Of course, we'll see this new data:
 
-    >>> tid, status, user, description, extension = next()
+    >>> tid, status, user, description, extension = connection.read()[1]
     >>> ts(tid), status, user, description, extension
     ('2007-03-21 20:33:01.000000', ' ', '', '', {})
 
     >>> for i in range(2):
-    ...     oid, serial, version, data, data_txn = next()
+    ...     oid, serial, version, data, data_txn = connection.read()[1]
     ...     print (u64(oid), ts(serial), version, len(data), data_txn)
     (0L, '2007-03-21 20:33:01.000000', '', 136, None)
     (3L, '2007-03-21 20:33:01.000000', '', 51, None)
 
-    >>> next()
+    >>> connection.read()[1]
     ()
 
 Let's create another connection.  This time though, we'll send our
@@ -192,35 +189,31 @@ saved transaction as the starting transaction:
     >>> connection2 = reactor.connect(('', 8000))
     IPv4Address(TCP, '127.0.0.1', 47246): Connected
 
-    >>> connection2.dataReceived(zc.zrs.sizedmessage.marshal("zrs2.0"))
-    >>> connection2.dataReceived(zc.zrs.sizedmessage.marshal(saved_tid))
-    ... # doctest: +NORMALIZE_WHITESPACE
+    >>> connection2.send("zrs2.0")
+    >>> connection2.send(saved_tid) # doctest: +NORMALIZE_WHITESPACE
     IPv4Address(TCP, '127.0.0.1', 47246):
         start '\x03lk\x91\x00\x00\x00\x00' (2007-03-21 20:33:00.000000)
-
-    >>> def next2():
-    ...     return connection2.transport.read()[1]
 
 When we get data from this connection, we'll only get the data written
 after the saved transaction:
 
-    >>> tid, status, user, description, extension = next2()
+    >>> tid, status, user, description, extension = connection2.read()[1]
     >>> ts(tid), status, user, description, extension
     ('2007-03-21 20:33:01.000000', ' ', '', '', {})
 
     >>> for i in range(2):
-    ...     oid, serial, version, data, data_txn = next2()
+    ...     oid, serial, version, data, data_txn = connection2.read()[1]
     ...     print (u64(oid), ts(serial), version, len(data), data_txn)
     (0L, '2007-03-21 20:33:01.000000', '', 136, None)
     (3L, '2007-03-21 20:33:01.000000', '', 51, None)
 
-    >>> next2()
+    >>> connection2.read()[1]
     ()
 
 The servers will spew data for ever, or until their connections are
 closed:
 
-    >>> connection.transport.close()
+    >>> connection.close()
     IPv4Address(TCP, '127.0.0.1', 47245): Disconnected 'closed'
 
 Or until the storage is closed:
