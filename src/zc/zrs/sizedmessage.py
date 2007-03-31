@@ -26,7 +26,7 @@ class LimitExceeded(Exception):
 
 class Stream:
 
-    def __init__(self, callback, limit):
+    def __init__(self, callback, limit = 1 << 32):
         self._callback = callback
         self.limit = limit
         self.data = ''
