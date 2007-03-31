@@ -32,10 +32,12 @@ class FileStorageIterator(ZODB.FileStorage.format.FileStorageFormatter):
 
     _file_size = 1 << 64 # To make base class check happy.
 
-    def __init__(self, fs, condition, start=ZODB.utils.z64):
+    def __init__(self, fs, condition=None, start=ZODB.utils.z64):
         self._ltid = start
         self._fs = fs
         self._open()
+        if condition is None:
+            condition = threading.Condition()
         self._condition = condition
         self._stopped = False
 
