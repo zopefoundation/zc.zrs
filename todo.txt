@@ -3,3 +3,5 @@ Secondary connection failure handling.
 Test primary producer pause/resume.
 
 ZConfig support and process setup.
+
+Need to always send data, even if there is a backpointer.
