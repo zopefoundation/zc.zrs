@@ -229,6 +229,11 @@ class FileStorageIterator(ZODB.FileStorage.format.FileStorageFormatter):
 
             return result
 
+    def notify(self):
+        self._condition.acquire()
+        self._condition.notifyAll()
+        self._condition.release()
+
 class RecordIterator(ZODB.FileStorage.format.FileStorageFormatter):
     """Iterate over the transactions in a FileStorage file."""
     def __init__(self, tid, status, user, desc, ext, pos, tend, file, tpos):
