@@ -121,9 +121,6 @@ class PrimaryProtocol(twisted.internet.protocol.Protocol):
                 self.factory.storage, self.factory.changed, self.__start)
             self.__producer = PrimaryProducer(
                 iterator, self.transport, self.__peer)
-            thread = threading.Thread(target=self.__producer.run)
-            thread.setDaemon(True)
-            thread.start()
  
 class PrimaryFactory(twisted.internet.protocol.Factory):
 
@@ -151,12 +148,14 @@ class PrimaryProducer:
         transport.registerProducer(self, True)
         self.callFromThread = transport.reactor.callFromThread
         self.event = threading.Event()
-        # XXX Need pause/resumt test
         self.pauseProducing = self.event.clear
         self.resumeProducing = self.event.set
         self.wait = self.event.wait
         self.resumeProducing()
         self.close_event = threading.Event()
+        thread = threading.Thread(target=self.run)
+        thread.setDaemon(True)
+        thread.start()
 
     def close(self):
         self.stopProducing()
