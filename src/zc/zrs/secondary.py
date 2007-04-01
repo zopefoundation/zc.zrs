@@ -153,6 +153,5 @@ class SecondaryFactory(twisted.internet.protocol.ClientFactory):
 
     def close(self):
         if self.instance is not None:
-            instance.close()
-            self.instance = None
+            self.instance.close()
 
