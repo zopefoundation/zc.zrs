@@ -18,8 +18,8 @@
 import os, threading
 
 if 'GLADE_REACTOR' in os.environ:
-    import twisted.manhole.glade_reactor
-    twisted.manhole.glade_reactor.install()
+    import twisted.manhole.gladereactor
+    twisted.manhole.gladereactor.install()
 
 from twisted.internet import reactor
 
