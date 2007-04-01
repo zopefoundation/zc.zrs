@@ -20,6 +20,9 @@ import ZODB.utils
 
 from zope.testing import doctest, setupstack
 
+import twisted.internet.error
+import twisted.python.failure
+
 import zc.zrs.fsiterator
 import zc.zrs.sizedmessage
 
@@ -54,8 +57,14 @@ class TestReactor:
             proto, "IPv4Address(TCP, '127.0.0.1', %s)" % self.client_port)
         self.client_port += 1
         transport.reactor = self
+        transport.factory = factory
         proto.makeConnection(transport)
+        connector = None # I wonder what this should be :)
+        factory.startedConnecting(connector)
         self.clients.setdefault(addr, []).append(transport)
+
+close_reason = twisted.python.failure.Failure(
+    twisted.internet.error.ConnectionDone())
 
 class MessageTransport:
 
@@ -104,19 +113,23 @@ class MessageTransport:
         return bool(self.data)
 
     def loseConnection(self):
-        print 'Transport closed!'
         self.closed = True
+        if self.producer is None:
+            self.proto.connectionLost(close_reason)
 
     producer = None
     def registerProducer(self, producer, streaming):
         self.producer = producer
 
     def unregisterProducer(self):
-        self.producer = None
+        if self.producer is not None:
+            self.producer = None
+            if self.closed:
+                self.proto.connectionLost(close_reason)
 
     def close(self):
         self.producer.stopProducing()
-        self.proto.connectionLost('closed')
+        self.proto.connectionLost(close_reason)
 
 class PrimaryTransport(MessageTransport):
 

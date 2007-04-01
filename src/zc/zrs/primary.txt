@@ -24,6 +24,7 @@ Let's create a primary storage:
 
     >>> import zc.zrs.primary
     >>> ps = zc.zrs.primary.Primary(fs, ('', 8000), reactor)
+    Opening Data.fs ('', 8000)
 
 Now, we can use this just like any other storage:
 
@@ -213,13 +214,17 @@ after the saved transaction:
 The servers will spew data for ever, or until their connections are
 closed:
 
-    >>> connection.close()
-    IPv4Address(TCP, '127.0.0.1', 47245): Disconnected 'closed'
+    >>> connection.close() # doctest: +NORMALIZE_WHITESPACE
+    IPv4Address(TCP, '127.0.0.1', 47245): 
+       Disconnected <twisted.python.failure.Failure
+       twisted.internet.error.ConnectionDone>
 
 Or until the storage is closed:
 
-    >>> ps.close()
+    >>> ps.close() # doctest: +NORMALIZE_WHITESPACE
     Closing Data.fs ('', 8000)
-    Transport closed!
+    IPv4Address(TCP, '127.0.0.1', 47246):
+       Disconnected <twisted.python.failure.Failure
+       twisted.internet.error.ConnectionDone>
     IPv4Address(TCP, '127.0.0.1', 47246): Closed
 

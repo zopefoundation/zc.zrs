@@ -44,6 +44,7 @@ class Secondary:
         self._factory = SecondaryFactory(storage)
         self._addr = addr
         host, port = addr
+        logger.info("Opening %s %s", self.getName(), addr)
         reactor.callFromThread(reactor.connectTCP, host, port, self._factory)
 
 
@@ -58,7 +59,7 @@ class Secondary:
         self._factory.db = db
 
     def close(self):
-        logger.info('Closing %s %s', self._storage._file_name, self._addr)
+        logger.info('Closing %s %s', self.getName(), self._addr)
         self._factory.close()
         self._storage.close()
 
@@ -141,7 +142,7 @@ class Transaction:
         self._extension = extension
 
  
-class SecondaryFactory(twisted.internet.protocol.Factory):
+class SecondaryFactory(twisted.internet.protocol.ClientFactory):
 
     protocol = SecondaryProtocol
     db = None
