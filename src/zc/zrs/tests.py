@@ -21,10 +21,13 @@ import ZODB.utils
 from zope.testing import doctest, setupstack
 
 import twisted.internet.error
+import twisted.protocols.loopback
 import twisted.python.failure
 
 import zc.zrs.fsiterator
 import zc.zrs.sizedmessage
+import zc.zrs.primary
+import zc.zrs.secondary
 
 
 def scan_from_back():
@@ -200,6 +203,11 @@ class TestReactor:
         self._factories = {}
         self.clients = {}
         self.client_port = 47245
+        self._waits = []
+
+    def wait(self):
+        for wait in self._waits:
+            wait(1)
             
     def listenTCP(self, port, factory, backlog=50, interface=''):
         addr = interface, port
@@ -221,6 +229,16 @@ class TestReactor:
     def connectTCP(self, host, port, factory, timeout=30):
         addr = host, port
         proto = factory.buildProtocol(addr)
+        if addr in self._factories:
+            # We have a server and a client.  We'll hook them together via
+            # a loopback mechanism
+            server = self._factories[addr].buildProtocol(addr)
+            deferred = twisted.protocols.loopback.loopbackAsync(server, proto)
+            event = threading.Event()
+            deferred.addCallback(lambda _: event.set())
+            self._waits.append(event.wait)
+            return
+            
         transport = SecondaryTransport(
             proto, "IPv4Address(TCP, '127.0.0.1', %s)" % self.client_port)
         self.client_port += 1
@@ -345,6 +363,96 @@ def setUp(test):
     logger.addHandler(stdout_handler)
     setupstack.register(test, logger.removeHandler, stdout_handler)
 
+##############################################################################
+# Reuse ZODB Storage Tests
+
+from ZODB.tests import StorageTestBase
+from ZODB.tests import BasicStorage
+from ZODB.tests import TransactionalUndoStorage
+from ZODB.tests import RevisionStorage
+from ZODB.tests import VersionStorage
+from ZODB.tests import TransactionalUndoVersionStorage
+from ZODB.tests import PackableStorage
+from ZODB.tests import Synchronization
+from ZODB.tests import ConflictResolution
+from ZODB.tests import HistoryStorage
+from ZODB.tests import IteratorStorage
+from ZODB.tests import PersistentStorage
+from ZODB.tests import MTStorage
+from ZODB.tests import ReadOnlyStorage
+
+class BasePrimaryStorageTests(StorageTestBase.StorageTestBase):
+
+    __port = 8000
+
+    def open(self, **kwargs):
+        reactor = self.globs['reactor']
+        self.__port += 1
+        self.__pfs = ZODB.FileStorage.FileStorage('primary.fs', **kwargs)
+        self._storage = zc.zrs.primary.Primary(
+            self.__pfs, ('', self.__port), reactor)
+        self.__sfs = ZODB.FileStorage.FileStorage('secondary.fs')
+        self.__ss = zc.zrs.secondary.Secondary(
+            self.__sfs, ('', self.__port), reactor)
+        old_close = self._storage.close
+        def close():
+            old_close()
+            self.__ss.close()
+        self._storage.close = close
+
+    def setUp(self):
+        self.globs = {}
+        setupstack.register(self, join, threading.enumerate())
+        setupstack.setUpDirectory(self)
+        self.globs['reactor'] = TestReactor()
+        
+        self.__oldreactor = getattr(
+            twisted.protocols.loopback._LoopbackTransport,
+            'reactor', None)
+        
+        reactor = self.globs['reactor']
+        twisted.protocols.loopback._LoopbackTransport.reactor = reactor
+        self.open(create=1)
+
+    def tearDown(self):
+        
+        self._storage.close()
+        reactor = self.globs['reactor']
+        reactor.wait()
+        if self.__oldreactor is None:
+            del twisted.protocols.loopback._LoopbackTransport.reactor
+        else:
+            twisted.protocols.loopback._LoopbackTransport.reactor = (
+                self.__oldreactor)
+
+        backup = open('secondary.fs').read()
+        #self.assert_(open('primary.fs').read(len(backup)) == backup)
+        setupstack.tearDown(self)
+        self.globs.clear()
+
+class PrimaryStorageTests(
+    BasePrimaryStorageTests,
+    BasicStorage.BasicStorage,
+    TransactionalUndoStorage.TransactionalUndoStorage,
+    RevisionStorage.RevisionStorage,
+    VersionStorage.VersionStorage,
+    TransactionalUndoVersionStorage.TransactionalUndoVersionStorage,
+    PackableStorage.PackableStorage,
+    PackableStorage.PackableUndoStorage,
+    Synchronization.SynchronizedStorage,
+    ConflictResolution.ConflictResolvingStorage,
+    ConflictResolution.ConflictResolvingTransUndoStorage,
+    HistoryStorage.HistoryStorage,
+    IteratorStorage.IteratorStorage,
+    IteratorStorage.ExtendedIteratorStorage,
+    PersistentStorage.PersistentStorage,
+    MTStorage.MTStorage,
+    ReadOnlyStorage.ReadOnlyStorage
+    ):
+    pass
+    
+##############################################################################
+
 def test_suite():
     return unittest.TestSuite((
         doctest.DocFileSuite(
@@ -352,6 +460,7 @@ def test_suite():
             setUp=setUp, tearDown=setupstack.tearDown),
         doctest.DocTestSuite(
             setUp=setUp, tearDown=setupstack.tearDown),
+        unittest.makeSuite(PrimaryStorageTests, "check"),
         ))
 
 if __name__ == '__main__':
