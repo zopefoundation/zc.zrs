@@ -13,6 +13,7 @@
 #
 ##############################################################################
 
+import cPickle
 import logging
 import threading
 import ZODB.BaseStorage
@@ -219,7 +220,7 @@ class FileStorageIterator(ZODB.FileStorage.format.FileStorageFormatter):
 
             pos += h.headerlen()
             if h.elen:
-                e = loads(h.ext)
+                e = cPickle.loads(h.ext)
             else:
                 e = {}
                 
