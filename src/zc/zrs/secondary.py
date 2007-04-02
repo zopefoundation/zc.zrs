@@ -38,7 +38,10 @@ class Secondary:
                      'supportsVersions', 
                      'history', 'lastTransaction',
                      'iterator', 'undoLog', 'undoInfo', 'pack', 'versionEmpty',
-                     'modifiedInVersion', 'versions'):
+                     'modifiedInVersion', 'versions', 'cleanup',
+                     'loadEx', 'getSerial', 'getExtensionMethods', '__len__',
+                     'supportsTransactionalUndo',
+                     ):
             setattr(self, name, getattr(storage, name))
 
         self._factory = SecondaryFactory(storage)

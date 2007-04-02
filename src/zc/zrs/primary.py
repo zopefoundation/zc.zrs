@@ -45,7 +45,10 @@ class Primary:
                      'history', 'registerDB', 'lastTransaction', 'isReadOnly',
                      'iterator', 'undo', 'undoLog', 'undoInfo', 'pack',
                      'abortVersion', 'commitVersion', 'versionEmpty',
-                     'modifiedInVersion', 'versions'):
+                     'modifiedInVersion', 'versions', 'cleanup',
+                     'loadEx', 'getSerial', 'getExtensionMethods', '__len__',
+                     'supportsTransactionalUndo',
+                     ):
             setattr(self, name, getattr(storage, name))
 
         self._factory = PrimaryFactory(storage, self._changed)
