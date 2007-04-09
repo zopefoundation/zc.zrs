@@ -381,6 +381,15 @@ from ZODB.tests import PersistentStorage
 from ZODB.tests import MTStorage
 from ZODB.tests import ReadOnlyStorage
 
+def catch_up(fs1, fs2):
+    if fs1._pos == fs2._pos:
+        return # caught up
+    for i in range(20):
+        time.sleep(0.1)
+        if fs1._pos == fs2._pos:
+            return # caught up
+    raise AssertionError("File sizes differ")
+
 class BasePrimaryStorageTests(StorageTestBase.StorageTestBase):
 
     __port = 8000
@@ -394,9 +403,19 @@ class BasePrimaryStorageTests(StorageTestBase.StorageTestBase):
         self.__sfs = ZODB.FileStorage.FileStorage('secondary.fs')
         self.__ss = zc.zrs.secondary.Secondary(
             self.__sfs, ('', self.__port), reactor)
-        old_close = self._storage.close
+
+        p_pack = self._storage.pack
+        def pack(*args, **kw):
+            catch_up(self.__pfs, self.__sfs)
+            #import pdb; pdb.set_trace()
+            p_pack(*args, **kw)
+            self.__ss.pack(*args, **kw)
+        self._storage.pack = pack
+        
+        p_close = self._storage.close
         def close():
-            old_close()
+            catch_up(self.__pfs, self.__sfs)
+            p_close()
             self.__ss.close()
         self._storage.close = close
 

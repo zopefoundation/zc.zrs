@@ -44,7 +44,7 @@ class FileStorageIterator(ZODB.FileStorage.format.FileStorageFormatter):
 
     def _open(self):
         self._old_file = self._fs._file
-        file = self._file = open(self._fs._file_name, 'rb')
+        file = self._file = open(self._fs._file_name, 'rb', 0)
         self._pos = 4L
         ltid = self._ltid
         if ltid > ZODB.utils.z64:
