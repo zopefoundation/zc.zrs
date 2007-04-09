@@ -382,17 +382,24 @@ from ZODB.tests import MTStorage
 from ZODB.tests import ReadOnlyStorage
 
 def catch_up(fs1, fs2):
-    if fs1._pos == fs2._pos:
-        return # caught up
     for i in range(20):
-        time.sleep(0.1)
-        if fs1._pos == fs2._pos:
+        if i:
+            time.sleep(0.1)
+        if fs1.lastTransaction() <= fs2.lastTransaction():
             return # caught up
-    raise AssertionError("File sizes differ")
+        l1 = list(fs1.iterator())
+        if not l1:
+            return
+        l2 = list(fs2.iterator())
+        if l2 and (l1[-1].tid <= l2[-1].tid):
+            return
+
+    raise AssertionError("Can't catch up.")
 
 class BasePrimaryStorageTests(StorageTestBase.StorageTestBase):
 
     __port = 8000
+    __pack = None
 
     def open(self, **kwargs):
         reactor = self.globs['reactor']
@@ -406,18 +413,42 @@ class BasePrimaryStorageTests(StorageTestBase.StorageTestBase):
 
         p_pack = self._storage.pack
         def pack(*args, **kw):
-            catch_up(self.__pfs, self.__sfs)
+            #catch_up(self.__pfs, self.__sfs)
             #import pdb; pdb.set_trace()
             p_pack(*args, **kw)
-            self.__ss.pack(*args, **kw)
+            #self.__ss.pack(*args, **kw)
+            self.__pack = args, kw
         self._storage.pack = pack
         
         p_close = self._storage.close
         def close():
             catch_up(self.__pfs, self.__sfs)
+
+            if self.__pack is not None:
+                args, kw = self.__pack
+
+                # We need to force a pack.
+                # Pack won't happen if all of the records were already packed
+                # so, we'll hack the file to make the first record appear
+                # to be unpacked. :(
+                self.__ss._storage._file.seek(20)
+                self.__ss._storage._file.write(' ')
+                
+                self._storage.pack(*args, **kw)
+                self.__ss.pack(*args, **kw)
+            else:
+                self.__comparedbs(self.__pfs, self.__sfs)
+                
             p_close()
             self.__ss.close()
         self._storage.close = close
+
+    def __comparedbs(self, fs1, fs2):
+        if fs1._pos != fs2._pos:
+            time.sleep(0.1)
+        self.assertEqual(fs1._pos, fs2._pos)
+
+        self.compare(fs1, fs2)
 
     def setUp(self):
         self.globs = {}
@@ -449,6 +480,19 @@ class BasePrimaryStorageTests(StorageTestBase.StorageTestBase):
         setupstack.tearDown(self)
         self.globs.clear()
 
+        
+    
+
+def tsr(tid):
+    return repr(str(TimeStamp(tid)))
+
+def show_fs(fs):
+    for t in fs.iterator():
+        print tsr(t.tid), repr(t.status), repr(t.description), t._pos
+        for r in t:
+            print ' ', ZODB.utils.u64(r.oid), tsr(r.tid), repr(r.version),
+            print r.data and len(r.data), r.data_txn and tsr(r.data_txn), r.pos
+
 class PrimaryStorageTests(
     BasePrimaryStorageTests,
     BasicStorage.BasicStorage,
@@ -463,6 +507,7 @@ class PrimaryStorageTests(
     ConflictResolution.ConflictResolvingTransUndoStorage,
     HistoryStorage.HistoryStorage,
     IteratorStorage.IteratorStorage,
+    IteratorStorage.IteratorDeepCompare,
     IteratorStorage.ExtendedIteratorStorage,
     PersistentStorage.PersistentStorage,
     MTStorage.MTStorage,
