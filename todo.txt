@@ -1,9 +1,37 @@
-Secondary connection failure handling.
 
-Test primary producer pause/resume.
+Secondary connection failure handling and reconnection.
 
 ZConfig support and process setup.
 
-Need to always send data, even if there is a backpointer.
-
 Need direct test of fsiterator in case when there is extension data.
+
+I think the close logic needs more work.
+
+Issues:
+
+- The restore method, which seems to exist primarily for ZRS is buggy
+  in it's handling of version data.  The tests for it are so general,
+  they don't catch the fact that non-version data aren't handled
+  correctly, even though, FileStorage is the only storage that
+  implements restore. :(
+
+  It was rather lame to put restore in FileStorage.  It probably would
+  have been better to subclass FileStorage to add restore.  
+
+  We're going to ignore this for now.
+
+- There are weird issues with packing -- especially for the tests.
+  The recovery process can cause secondaries to get into states that
+  aren't possible for primaries.  For example, secondaries can have
+  unpacked records followed by packed records.  Or all packed records
+  including packed records that have been packed away on the
+  primary. Ideosyncrasies of the FileStorage packing code make this
+  worse. 
+
+  I plan to redo the FileStorage packing code to:
+
+  1. Make it more efficient by trading memory for seeks, replacing the
+     current code that does lots of random access, with code that
+     makes mostly two passes through the file.
+
+  2. Make it much simpler.
