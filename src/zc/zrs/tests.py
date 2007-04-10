@@ -417,31 +417,65 @@ class BasePrimaryStorageTests(StorageTestBase.StorageTestBase):
             #import pdb; pdb.set_trace()
             p_pack(*args, **kw)
             #self.__ss.pack(*args, **kw)
-            self.__pack = args, kw
+            self.__pack = True
         self._storage.pack = pack
         
         p_close = self._storage.close
         def close():
             catch_up(self.__pfs, self.__sfs)
 
-            if self.__pack is not None:
-                args, kw = self.__pack
-
-                # We need to force a pack.
-                # Pack won't happen if all of the records were already packed
-                # so, we'll hack the file to make the first record appear
-                # to be unpacked. :(
-                self.__ss._storage._file.seek(20)
-                self.__ss._storage._file.write(' ')
-                
-                self._storage.pack(*args, **kw)
-                self.__ss.pack(*args, **kw)
+            if self.__pack:
+                self.__comparedbs_packed(self.__pfs, self.__sfs)
             else:
                 self.__comparedbs(self.__pfs, self.__sfs)
                 
             p_close()
             self.__ss.close()
         self._storage.close = close
+        
+    def __comparedbs_packed(self, fs1, fs2):
+                
+        # The primary was packed.  This introduces some significant
+        # complications.  The secondary can end up with packed records
+        # following unpacked records, depending on timing.  Or, it can
+        # end up with packed records that don't exist on the primary,
+        # except in pathological cases.  This can lead to the
+        # secondary having extra records not present on the
+        # primary. In any case it isn't reasonable to expect the
+        # secondary to have exactly the same records as the primary.
+        # We'll do a looser comparison that requires:
+        #
+        # - The primary's records are a subset of the secondary's, and
+        # - The primary and secondary have the same current records.
+        time.sleep(0.01)
+
+        data2 = {}
+        current2 = {}
+        for trans in fs2.iterator():
+            objects = {}
+            data2[trans.tid] = (trans.user, trans.description,
+                                trans._extension, objects)
+            for r in trans:
+                objects[r.oid] = r.tid, r.version, r.data
+                current2[r.oid] = trans.tid
+
+
+        current1 = {}
+        for trans in fs1.iterator():
+            self.assertEqual(
+                data2[trans.tid][:3],
+                (trans.user, trans.description, trans._extension),
+                )
+            objects = data2[trans.tid][3]
+            for r in trans:
+                self.assertEqual(
+                    objects[r.oid],
+                    (r.tid, r.version, r.data),
+                    )
+                current1[r.oid] = trans.tid
+
+        for oid, tid in current1.items():
+            self.assertEqual(current2[oid], tid)
 
     def __comparedbs(self, fs1, fs2):
         if fs1._pos != fs2._pos:
