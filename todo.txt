@@ -37,11 +37,3 @@ Issues:
      makes mostly two passes through the file.
 
   2. Make it much simpler.
-
-- The testing reactor doesn't really handle callFromThread properly.
-  This causes issues when used with the loopback mechanism because we
-  have the primary producer thread that drives the I/O and the
-  main/test thread that needs to close the secondary.  I've managed to
-  hack around this so far.  I fear though that, in general, it will be
-  necessary to add a test reactor that runs in it's own thread, if
-  only to handle callFromThread properly. :(

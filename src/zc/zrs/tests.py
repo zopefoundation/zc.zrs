@@ -208,11 +208,6 @@ class TestReactor:
         self._factories = {}
         self.clients = {}
         self.client_port = 47245
-        self._waits = []
-
-    def wait(self):
-        for wait in self._waits:
-            wait(1)
             
     def listenTCP(self, port, factory, backlog=50, interface=''):
         addr = interface, port
@@ -228,8 +223,13 @@ class TestReactor:
         proto.makeConnection(transport)
         return transport
 
+    lock = threading.RLock()
     def callFromThread(self, f, *a, **k):
-        f(*a, **k)
+        self.lock.acquire()
+        try:
+            f(*a, **k)
+        finally:
+            self.lock.release()
 
     def connectTCP(self, host, port, factory, timeout=30):
         addr = host, port
@@ -394,11 +394,7 @@ def catch_up(fs1, fs2):
             return
         l2 = list(fs2.iterator())
         if l2:
-            if (l1[-1].tid == l2[-1].tid):
-                return
-            if ((l1[-1].tid <= l2[-1].tid) and (i > 20)):
-                # Special case to work around a somewhat pathalogical test
-                # and a threading issue with our loopback set up.
+            if (l1[-1].tid <= l2[-1].tid):
                 return
 
     raise AssertionError("Can't catch up.")
@@ -428,15 +424,12 @@ class BasePrimaryStorageTests(StorageTestBase.StorageTestBase):
         
         self._storage.close()
         reactor = self.globs['reactor']
-        reactor.wait()
         if self.__oldreactor is None:
             del twisted.protocols.loopback._LoopbackTransport.reactor
         else:
             twisted.protocols.loopback._LoopbackTransport.reactor = (
                 self.__oldreactor)
 
-        backup = open('secondary.fs').read()
-        #self.assert_(open('primary.fs').read(len(backup)) == backup)
         setupstack.tearDown(self)
         self.globs.clear()
 
