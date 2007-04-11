@@ -29,6 +29,11 @@ import zc.zrs.sizedmessage
 import zc.zrs.primary
 import zc.zrs.secondary
 
+_loopbackAsyncBody_orig = twisted.protocols.loopback._loopbackAsyncBody
+def _loopbackAsyncBody(*args):
+    _loopbackAsyncBody_orig(*args)
+
+
 
 def scan_from_back():
     r"""
@@ -234,9 +239,6 @@ class TestReactor:
             # a loopback mechanism
             server = self._factories[addr].buildProtocol(addr)
             deferred = twisted.protocols.loopback.loopbackAsync(server, proto)
-            event = threading.Event()
-            deferred.addCallback(lambda _: event.set())
-            self._waits.append(event.wait)
             return
             
         transport = SecondaryTransport(
@@ -382,24 +384,66 @@ from ZODB.tests import MTStorage
 from ZODB.tests import ReadOnlyStorage
 
 def catch_up(fs1, fs2):
-    for i in range(20):
+    for i in range(1000):
         if i:
-            time.sleep(0.1)
+            time.sleep(0.01)
         if fs1.lastTransaction() <= fs2.lastTransaction():
             return # caught up
         l1 = list(fs1.iterator())
         if not l1:
             return
         l2 = list(fs2.iterator())
-        if l2 and (l1[-1].tid <= l2[-1].tid):
-            return
+        if l2:
+            if (l1[-1].tid == l2[-1].tid):
+                return
+            if ((l1[-1].tid <= l2[-1].tid) and (i > 20)):
+                # Special case to work around a somewhat pathalogical test
+                # and a threading issue with our loopback set up.
+                return
 
     raise AssertionError("Can't catch up.")
 
 class BasePrimaryStorageTests(StorageTestBase.StorageTestBase):
 
+    def setUp(self):
+        # Monkey patch loopback to work around bug:
+        twisted.protocols.loopback._loopbackAsyncBody = _loopbackAsyncBody
+        
+        self.__pack = None
+
+        self.globs = {}
+        setupstack.register(self, join, threading.enumerate())
+        setupstack.setUpDirectory(self)
+        self.globs['reactor'] = TestReactor()
+        
+        self.__oldreactor = getattr(
+            twisted.protocols.loopback._LoopbackTransport,
+            'reactor', None)
+        
+        reactor = self.globs['reactor']
+        twisted.protocols.loopback._LoopbackTransport.reactor = reactor
+        self.open(create=1)
+
+    def tearDown(self):
+        
+        self._storage.close()
+        reactor = self.globs['reactor']
+        reactor.wait()
+        if self.__oldreactor is None:
+            del twisted.protocols.loopback._LoopbackTransport.reactor
+        else:
+            twisted.protocols.loopback._LoopbackTransport.reactor = (
+                self.__oldreactor)
+
+        backup = open('secondary.fs').read()
+        #self.assert_(open('primary.fs').read(len(backup)) == backup)
+        setupstack.tearDown(self)
+        self.globs.clear()
+
+        # Remove monkey patch of loopback to work around bug:
+        twisted.protocols.loopback._loopbackAsyncBody = _loopbackAsyncBody_orig
+
     __port = 8000
-    __pack = None
 
     def open(self, **kwargs):
         reactor = self.globs['reactor']
@@ -482,40 +526,7 @@ class BasePrimaryStorageTests(StorageTestBase.StorageTestBase):
             time.sleep(0.1)
         self.assertEqual(fs1._pos, fs2._pos)
 
-        self.compare(fs1, fs2)
-
-    def setUp(self):
-        self.globs = {}
-        setupstack.register(self, join, threading.enumerate())
-        setupstack.setUpDirectory(self)
-        self.globs['reactor'] = TestReactor()
-        
-        self.__oldreactor = getattr(
-            twisted.protocols.loopback._LoopbackTransport,
-            'reactor', None)
-        
-        reactor = self.globs['reactor']
-        twisted.protocols.loopback._LoopbackTransport.reactor = reactor
-        self.open(create=1)
-
-    def tearDown(self):
-        
-        self._storage.close()
-        reactor = self.globs['reactor']
-        reactor.wait()
-        if self.__oldreactor is None:
-            del twisted.protocols.loopback._LoopbackTransport.reactor
-        else:
-            twisted.protocols.loopback._LoopbackTransport.reactor = (
-                self.__oldreactor)
-
-        backup = open('secondary.fs').read()
-        #self.assert_(open('primary.fs').read(len(backup)) == backup)
-        setupstack.tearDown(self)
-        self.globs.clear()
-
-        
-    
+        self.compare(fs1, fs2)    
 
 def tsr(tid):
     return repr(str(TimeStamp(tid)))
