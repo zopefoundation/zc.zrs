@@ -35,6 +35,7 @@ class Primary:
         if reactor is None:
             import zc.zrs.reactor
             reactor = zc.zrs.reactor.reactor
+        self._reactor = reactor
             
         self._storage = storage
         self._changed = threading.Condition()
@@ -53,10 +54,18 @@ class Primary:
 
         self._factory = PrimaryFactory(storage, self._changed)
         self._addr = addr
-        interface, port = addr
         logger.info("Opening %s %s", self.getName(), addr)
-        reactor.callFromThread(reactor.listenTCP, port, self._factory,
-                               interface=interface)
+        reactor.callFromThread(self._listen)
+
+    _listener = None
+    def _listen(self):
+        interface, port = self._addr
+        self._listener = self._reactor.listenTCP(
+            port, self._factory, interface=interface)
+
+    def _stop_listening(self):
+        if self._listener is not None:
+            self._listener.stopListening()
 
     def tpc_finish(self, *args):
         self._storage.tpc_finish(*args)
@@ -66,9 +75,29 @@ class Primary:
 
     def close(self):
         logger.info('Closing %s %s', self.getName(), self._addr)
-        self._factory.close()
+        self._reactor.callFromThread(self._stop_listening)
+        event = threading.Event()
+        self._reactor.callFromThread(self._factory.close, event.set)
+        event.wait()
+        self._factory.join()
         self._storage.close()
 
+class PrimaryFactory(twisted.internet.protocol.Factory):
+
+    def __init__(self, storage, changed):
+        self.storage = storage
+        self.changed = changed
+        self.instances = []
+        self.joins = []
+
+    def close(self, callback):
+        for instance in list(self.instances):
+            instance.close()
+        callback()
+
+    def join(self):
+        while self.joins:
+            self.joins.pop()()
 
 class PrimaryProtocol(twisted.internet.protocol.Protocol):
 
@@ -84,19 +113,21 @@ class PrimaryProtocol(twisted.internet.protocol.Protocol):
 
     def connectionLost(self, reason):
         self.info("Disconnected %r", reason)
+        if self.__producer is not None:
+            self.factory.joins.append(self.__producer.join)
         self.factory.instances.remove(self)
 
     def close(self):
         if self.__producer is not None:
             self.__producer.close()
+        else:
+            self.transport.loseConnection()
+            
         self.info('Closed')
 
     def error(self, message, *args):
         logger.error(self.__peer + message, *args)
-        if self.__producer is not None:
-            self.__producer.close()
-        else:
-            self.transport.loseConnection()
+        self.close()
 
     def info(self, message, *args):
         logger.info(self.__peer + message, *args)
@@ -124,20 +155,10 @@ class PrimaryProtocol(twisted.internet.protocol.Protocol):
                 self.factory.storage, self.factory.changed, self.__start)
             self.__producer = PrimaryProducer(
                 iterator, self.transport, self.__peer)
+
+PrimaryFactory.protocol = PrimaryProtocol
+
  
-class PrimaryFactory(twisted.internet.protocol.Factory):
-
-    protocol = PrimaryProtocol
-
-    def __init__(self, storage, changed):
-        self.storage = storage
-        self.changed = changed
-        self.instances = []
-
-    def close(self):
-        for instance in list(self.instances):
-            instance.close()
-
 class PrimaryProducer:
 
     zope.interface.implements(twisted.internet.interfaces.IPushProducer)
@@ -155,27 +176,29 @@ class PrimaryProducer:
         self.resumeProducing = self.event.set
         self.wait = self.event.wait
         self.resumeProducing()
-        self.close_event = threading.Event()
         thread = threading.Thread(target=self.run)
         thread.setDaemon(True)
+        self.join = thread.join
         thread.start()
 
     def close(self):
+        self.transport.unregisterProducer()
         self.stopProducing()
-        self.callFromThread(self.transport.unregisterProducer)
-        self.callFromThread(self.transport.loseConnection)
-        self.close_event.wait()
+        self.transport.loseConnection()
     
     def stopProducing(self):
         self.iterator.stop()
         self.stopped = True
         self.event.set()
 
+    def _write(self, data):
+        if not self.stopped:
+            self.transport.write(data)
+        
     def write(self, data):
         data = zc.zrs.sizedmessage.marshal(data)
         self.event.wait()
-        if not self.stopped:
-            self.callFromThread(self.transport.write, data)
+        self.callFromThread(self._write, data)
             
     def run(self):
         try:
@@ -193,8 +216,6 @@ class PrimaryProducer:
                 self.write(cPickle.dumps(('C', ())))
                 if self.stopped:
                     break
-            self.close_event.set()
         except:
             logger.exception(self.peer)
-            self.callFromThread(self.transport.unregisterProducer)
-            self.callFromThread(self.transport.loseConnection)
+            self.callFromThread(self.close)

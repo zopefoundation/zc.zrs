@@ -15,6 +15,7 @@
 
 import cPickle
 import logging
+import threading
 
 import ZODB.POSException
 
@@ -30,6 +31,7 @@ class Secondary:
         if reactor is None:
             import zc.zrs.reactor
             reactor = zc.zrs.reactor.reactor
+        self._reactor = reactor
             
         self._storage = storage
 
@@ -63,9 +65,23 @@ class Secondary:
 
     def close(self):
         logger.info('Closing %s %s', self.getName(), self._addr)
-        self._factory.close()
+        event = threading.Event()
+        self._reactor.callFromThread(self._factory.close, event.set)
+        event.wait()
         self._storage.close()
 
+class SecondaryFactory(twisted.internet.protocol.ClientFactory):
+
+    db = None
+    instance = None
+
+    def __init__(self, storage):
+        self.storage = storage
+
+    def close(self, callback):
+        if self.instance is not None:
+            self.instance.close()
+        callback()
 
 class SecondaryProtocol(twisted.internet.protocol.Protocol):
 
@@ -87,7 +103,9 @@ class SecondaryProtocol(twisted.internet.protocol.Protocol):
         self.info("Disconnected %r", reason)
 
     def close(self):
-        self.transport.loseConnection()
+        # close is called from an application, rather than a reactor
+        # thread, so we have to use callFromThread.        
+        self.transport.reactor.callFromThread(self.transport.loseConnection)
         self.info('Closed')
 
     def error(self, message, *args):
@@ -135,6 +153,9 @@ class SecondaryProtocol(twisted.internet.protocol.Protocol):
         else:
             self.error("Invalid transacton type, %r", message_type)
 
+SecondaryFactory.protocol = SecondaryProtocol
+
+
 class Transaction:
 
     def __init__(self, tid, status, user, description, extension):
@@ -143,18 +164,4 @@ class Transaction:
         self.user = user
         self.description = description
         self._extension = extension
-
- 
-class SecondaryFactory(twisted.internet.protocol.ClientFactory):
-
-    protocol = SecondaryProtocol
-    db = None
-    instance = None
-
-    def __init__(self, storage):
-        self.storage = storage
-
-    def close(self):
-        if self.instance is not None:
-            self.instance.close()
 
