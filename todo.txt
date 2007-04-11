@@ -1,11 +1,13 @@
+Todo:
 
-Secondary connection failure handling and reconnection.
+- Secondary connection failure handling and reconnection.
 
-ZConfig support and process setup.
+- ZConfig support and process setup.
 
-Need direct test of fsiterator in case when there is extension data.
+- Need direct test of fsiterator in case when there is extension data.
 
-I think the close logic needs more work.
+- Need test of secondary connection close with incomplete transaction.
+
 
 Issues:
 
