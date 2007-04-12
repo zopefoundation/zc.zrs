@@ -57,6 +57,11 @@ class Primary:
         logger.info("Opening %s %s", self.getName(), addr)
         reactor.callFromThread(self._listen)
 
+    # XXX StorageServer accesses _transaction directly. :(
+    @property
+    def _transaction(self):
+        return self._storage._transaction
+
     _listener = None
     def _listen(self):
         interface, port = self._addr
