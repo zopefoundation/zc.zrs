@@ -213,6 +213,7 @@ class TestReactor:
         addr = interface, port
         assert addr not in self._factories
         self._factories[addr] = factory
+        return TestListener(self, addr)
 
     def connect(self, addr):
         proto = self._factories[addr].buildProtocol(addr)
@@ -251,6 +252,16 @@ class TestReactor:
         factory.startedConnecting(connector)
         self.clients.setdefault(addr, []).append(transport)
 
+class TestListener:
+
+    def __init__(self, reactor, addr):
+        self.reactor = reactor
+        self.addr = addr
+
+    def stopListening(self):
+        if self.addr in self.reactor._factories:
+            del self.reactor._factories[self.addr]
+        
 close_reason = twisted.python.failure.Failure(
     twisted.internet.error.ConnectionDone())
 
@@ -430,6 +441,7 @@ class BasePrimaryStorageTests(StorageTestBase.StorageTestBase):
             twisted.protocols.loopback._LoopbackTransport.reactor = (
                 self.__oldreactor)
 
+        self.assert_(not reactor._factories) # Make sure we're not listening
         setupstack.tearDown(self)
         self.globs.clear()
 
