@@ -12,8 +12,11 @@ Todo:
 
 - Make sure lastInvalidations is supported.  
 
-- Need to run/add ZEO tests.
+- Need to try to reuse the existing ZRS tests.
 
+- Add error if a unix-domain socket is used in zconfig.
+
+- Need test of secondary in ZEO.
 
 Issues:
 
