@@ -48,7 +48,7 @@ class Primary:
                      'abortVersion', 'commitVersion', 'versionEmpty',
                      'modifiedInVersion', 'versions', 'cleanup',
                      'loadEx', 'getSerial', 'getExtensionMethods', '__len__',
-                     'supportsTransactionalUndo',
+                     'supportsTransactionalUndo', 'lastInvalidations',
                      ):
             setattr(self, name, getattr(storage, name))
 
@@ -57,7 +57,7 @@ class Primary:
         logger.info("Opening %s %s", self.getName(), addr)
         reactor.callFromThread(self._listen)
 
-    # XXX StorageServer accesses _transaction directly. :(
+    # StorageServer accesses _transaction directly. :(
     @property
     def _transaction(self):
         return self._storage._transaction
