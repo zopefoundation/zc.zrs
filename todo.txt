@@ -8,7 +8,7 @@ Todo:
 
 - Need test of secondary connection close with incomplete transaction.
 
-- Need test of disconnect/reconnext w/o loss of data.
+- Need test of disconnect/reconnect w/o loss of data.
 
 Issues:
 
