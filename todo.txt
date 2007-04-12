@@ -10,6 +10,11 @@ Todo:
 
 - Need test of disconnect/reconnect w/o loss of data.
 
+- Make sure lastInvalidations is supported.  
+
+- Need to run/add ZEO tests.
+
+
 Issues:
 
 - The restore method, which seems to exist primarily for ZRS is buggy
