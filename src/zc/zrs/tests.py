@@ -18,6 +18,8 @@ import transaction
 from ZODB.TimeStamp import TimeStamp
 import ZODB.utils
 
+import ZEO.tests.testZEO
+
 from zope.testing import doctest, setupstack
 
 import twisted.internet.error
@@ -395,7 +397,7 @@ from ZODB.tests import MTStorage
 from ZODB.tests import ReadOnlyStorage
 
 def catch_up(fs1, fs2):
-    for i in range(1000):
+    for i in range(2000):
         if i:
             time.sleep(0.01)
         if fs1.lastTransaction() <= fs2.lastTransaction():
@@ -567,6 +569,23 @@ class PrimaryStorageTests(
     
 ##############################################################################
 
+class ZEOTests(ZEO.tests.testZEO.FullGenericTests):
+
+    def getConfig(self):
+        filename = tempfile.mktemp()
+        port = ZEO.tests.testZEO.get_port()
+        return """
+        %%import zc.zrs
+
+        <primary 1>
+          address %s
+          <filestorage 1>
+            path %s
+          </filestorage>
+        </primary>
+        """ % (port, filename)
+    
+
 def test_suite():
     return unittest.TestSuite((
         doctest.DocFileSuite(
@@ -575,6 +594,7 @@ def test_suite():
         doctest.DocTestSuite(
             setUp=setUp, tearDown=setupstack.tearDown),
         unittest.makeSuite(PrimaryStorageTests, "check"),
+        unittest.makeSuite(ZEOTests, "check"),
         ))
 
 if __name__ == '__main__':
