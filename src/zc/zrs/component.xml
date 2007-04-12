@@ -1,0 +1,44 @@
+<component>
+  <description>
+     Definitions for ZRS primary and secondary storages.
+  </description>
+
+  <sectiontype name="primary" datatype="zc.zrs.zconfig.Primary"
+               implements="ZODB.storage">
+
+    <section type="ZODB.storage" name="*" attribute="base" required="yes" />
+
+    <key name="address" datatype="socket-binding-address" required="yes">
+      <description>
+        The address at which the server should listen.  This can be in
+        the form 'host:port' to signify a TCP/IP connection or a
+        pathname string to signify a Unix domain socket connection (at
+        least one '/' is required).  A hostname may be a DNS name or a
+        dotted IP address.  If the hostname is omitted, the platform's
+        default behavior is used when binding the listening socket (''
+        is passed to socket.bind() as the hostname portion of the
+        address).
+      </description>
+    </key>
+  </sectiontype>
+
+  <sectiontype name="secondary" datatype="zc.zrs.zconfig.Secondary"
+               implements="ZODB.storage">
+
+    <section type="ZODB.storage" name="*" attribute="base" required="yes" />
+
+    <key name="address" datatype="socket-address" required="yes">
+      <description>
+        The address of a primary storage to connect to.  This can be in
+        the form 'host:port' to signify a TCP/IP connection or a
+        pathname string to signify a Unix domain socket connection (at
+        least one '/' is required).  A hostname may be a DNS name or a
+        dotted IP address.  If the hostname is omitted, the platform's
+        default behavior is used when binding the listening socket (''
+        is passed to socket.bind() as the hostname portion of the
+        address).
+      </description>
+    </key>
+  </sectiontype>
+
+</component>
