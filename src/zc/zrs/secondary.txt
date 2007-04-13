@@ -22,7 +22,7 @@ To create a secondary storage, we supply:
   in a special reactor that lets us demonstrate primary
   storages without actually creating network connections.
 
-Let's create a primary storage:
+Let's create a secondary storage:
 
     >>> import zc.zrs.secondary
     >>> ss = zc.zrs.secondary.Secondary(fs, ('', 8000), reactor)
