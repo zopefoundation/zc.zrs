@@ -90,7 +90,7 @@ Finally, a commit message is sent marking the end of the transaction:
     >>> connection.send(('C', ()))
 
 Now that we've created this minimal data, we can create a database for
-out secondary storage:
+our secondary storage:
 
     >>> db = DB(ss)
     >>> conn = db.open()
