@@ -46,12 +46,11 @@ class Secondary:
                      ):
             setattr(self, name, getattr(storage, name))
 
-        self._factory = SecondaryFactory(storage)
+        self._factory = SecondaryFactory(reactor, storage)
         self._addr = addr
         host, port = addr
         logger.info("Opening %s %s", self.getName(), addr)
         reactor.callFromThread(reactor.connectTCP, host, port, self._factory)
-
 
     def isReadOnly(self):
         return True
@@ -73,15 +72,33 @@ class Secondary:
 class SecondaryFactory(twisted.internet.protocol.ClientFactory):
 
     db = None
-    instance = None
+    connector = None
+    closed = False
 
-    def __init__(self, storage):
+    def __init__(self, reactor, storage):
+        self.protocol = SecondaryProtocol
+        self.reactor = reactor
         self.storage = storage
 
     def close(self, callback):
-        if self.instance is not None:
-            self.instance.close()
+        self.closed = True
+        if self.connector is not None:
+            self.connector.disconnect()
         callback()
+
+    def startedConnecting(self, connector):
+        if self.closed:
+            connector.disconnect()
+        self.connector = connector
+
+    def clientConnectionFailed(self, connector, reason):
+        if not self.closed:
+            self.reactor.callLater(60, connector.connect)
+
+    def clientConnectionLost(self, connector, reason):
+        if not self.closed:
+            self.reactor.callLater(60, connector.connect)
+
 
 class SecondaryProtocol(twisted.internet.protocol.Protocol):
 
@@ -92,25 +109,20 @@ class SecondaryProtocol(twisted.internet.protocol.Protocol):
     def connectionMade(self):
         self.__stream = zc.zrs.sizedmessage.Stream(self.messageReceived)
         self.__peer = str(self.transport.getPeer()) + ': '
-        self.factory.instance = self
         self.transport.write(zc.zrs.sizedmessage.marshal("zrs2.0"))
         tid = self.factory.storage.lastTransaction()
         self.transport.write(zc.zrs.sizedmessage.marshal(tid))
         self.info("Connected")
 
     def connectionLost(self, reason):
-        self.factory.instance = None
+        if self.__transaction is not None:
+            self.factory.storage.tpc_abort(self.__transaction)
+            self.__transaction = None
         self.info("Disconnected %r", reason)
 
-    def close(self):
-        # close is called from an application, rather than a reactor
-        # thread, so we have to use callFromThread.        
-        self.transport.reactor.callFromThread(self.transport.loseConnection)
-        self.info('Closed')
-
     def error(self, message, *args):
-        logger.error(self.__peer + message, *args)
-        self.transport.loseConnection()
+        logger.critical(self.__peer + message, *args)
+        self.factory.connector.disconnect()
 
     def info(self, message, *args):
         logger.info(self.__peer + message, *args)
@@ -152,9 +164,6 @@ class SecondaryProtocol(twisted.internet.protocol.Protocol):
             self.__transaction = None
         else:
             self.error("Invalid transacton type, %r", message_type)
-
-SecondaryFactory.protocol = SecondaryProtocol
-
 
 class Transaction:
 

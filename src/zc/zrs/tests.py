@@ -11,7 +11,7 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-import cPickle, logging, os, shutil, struct, sys
+import cPickle, logging, os, re, shutil, struct, sys
 import tempfile, threading, time, unittest
 
 import transaction
@@ -20,8 +20,9 @@ import ZODB.utils
 
 import ZEO.tests.testZEO
 
-from zope.testing import doctest, setupstack
+from zope.testing import doctest, setupstack, renormalizing
 
+import twisted.internet.base
 import twisted.internet.error
 import twisted.protocols.loopback
 import twisted.python.failure
@@ -208,8 +209,9 @@ class TestReactor:
 
     def __init__(self):
         self._factories = {}
-        self.clients = {}
+        self.clients = []
         self.client_port = 47245
+        self.later = []
             
     def listenTCP(self, port, factory, backlog=50, interface=''):
         addr = interface, port
@@ -219,10 +221,8 @@ class TestReactor:
 
     def connect(self, addr):
         proto = self._factories[addr].buildProtocol(addr)
-        transport = PrimaryTransport(
-            proto, "IPv4Address(TCP, '127.0.0.1', %s)" % self.client_port)
+        transport = PrimaryTransport(self, addr, self.client_port, proto)
         self.client_port += 1
-        transport.reactor = self
         proto.makeConnection(transport)
         return transport
 
@@ -234,25 +234,27 @@ class TestReactor:
         finally:
             self.lock.release()
 
+    def callLater(self, delay, f, *a, **k):
+        self.later.append((delay, f, a, k))
+
+    def doLater(self):
+        while self.later:
+            delay, f, a, k = self.later.pop(0)
+            self.callFromThread(f, *a, **k)
+
     def connectTCP(self, host, port, factory, timeout=30):
         addr = host, port
-        proto = factory.buildProtocol(addr)
-        if addr in self._factories:
-            # We have a server and a client.  We'll hook them together via
-            # a loopback mechanism
-            server = self._factories[addr].buildProtocol(addr)
-            deferred = twisted.protocols.loopback.loopbackAsync(server, proto)
-            return
-            
-        transport = SecondaryTransport(
-            proto, "IPv4Address(TCP, '127.0.0.1', %s)" % self.client_port)
-        self.client_port += 1
-        transport.reactor = self
-        transport.factory = factory
-        proto.makeConnection(transport)
-        connector = None # I wonder what this should be :)
-        factory.startedConnecting(connector)
-        self.clients.setdefault(addr, []).append(transport)
+        connector = TestConnector(self, addr, factory)
+        connector.connect()
+        return connector
+
+    def accept(self):
+        connector = self.clients.pop(0)
+        return connector.accept()
+
+    def reject(self):
+        connector = self.clients.pop(0)
+        return connector.reject()
 
 class TestListener:
 
@@ -269,12 +271,14 @@ close_reason = twisted.python.failure.Failure(
 
 class MessageTransport:
 
-    def __init__(self, proto, peer):
+    def __init__(self, reactor, addr, port, proto=None):
         self.data = ''
         self.cond = threading.Condition()
         self.closed = False
+        self.reactor = reactor
+        self.addr = addr
+        self.peer = "IPv4Address(TCP, '127.0.0.1', %s)" % port
         self.proto = proto
-        self.peer = peer
 
     def getPeer(self):
         return self.peer
@@ -315,8 +319,7 @@ class MessageTransport:
 
     def loseConnection(self):
         self.closed = True
-        if self.producer is None:
-            self.proto.connectionLost(close_reason)
+        self.proto.connectionLost(close_reason)
 
     producer = None
     def registerProducer(self, producer, streaming):
@@ -341,6 +344,52 @@ class SecondaryTransport(MessageTransport):
     
     def send(self, data):
         MessageTransport.send(self, cPickle.dumps(data))
+
+    def fail(self):
+        reason = 'failed'
+        self.proto.connectionLost(reason)
+        self.connector.connectionLost(reason)
+
+    def failIfNotConnected(self, reason):
+        if self.connector in self.reactor.clients:
+            self.reactor.clients.remove(self.connector)
+        self.connector.connectionFailed(reason)
+
+class TestConnector(twisted.internet.base.BaseConnector):
+
+    def __init__(self, reactor, addr, factory, timeout=None):
+        twisted.internet.base.BaseConnector.__init__(
+            self, factory, timeout, reactor)
+        self.addr = addr
+
+    def _makeTransport(self):
+        reactor, addr = self.reactor, self.addr
+
+        if addr in reactor._factories:
+            # We have a server and a client.  We'll hook them together via
+            # a loopback mechanism
+            proto = self.buildProtocol(addr)
+            server = reactor._factories[addr].buildProtocol(addr)
+            twisted.protocols.loopback.loopbackAsync(server, proto)
+            transport = proto.transport
+        else:
+            reactor.clients.append(self)
+            transport = SecondaryTransport(reactor, addr, reactor.client_port)
+            reactor.client_port += 1
+
+        transport.connector = self
+        return transport
+
+    def accept(self):
+        reactor, addr, transport = self.reactor, self.addr, self.transport
+        proto = self.buildProtocol(addr)
+        transport.proto = proto
+        proto.makeConnection(transport)
+        return transport
+
+    def reject(self):
+        self.connectionFailed('rejected')
+  
 
 class Stdout:
     def write(self, data):
@@ -590,7 +639,11 @@ def test_suite():
     return unittest.TestSuite((
         doctest.DocFileSuite(
             'fsiterator.txt', 'primary.txt', 'secondary.txt',
-            setUp=setUp, tearDown=setupstack.tearDown),
+            setUp=setUp, tearDown=setupstack.tearDown,
+            checker=renormalizing.RENormalizing([
+                (re.compile(' at 0x[a-fA-F0-9]+'), ''),
+                ]),
+            ),
         doctest.DocTestSuite(
             setUp=setUp, tearDown=setupstack.tearDown),
         unittest.makeSuite(PrimaryStorageTests, "check"),
