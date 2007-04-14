@@ -2,17 +2,27 @@ Todo:
 
 - Secondary connection failure handling and reconnection.
 
+  o Need more edge case tests.
+
+    - close while connecting
+
+    - close while waiting to try connecting (we have that in
+      secondary.txt)
+
+    - close while connected
+
+    - close due to error in input
+
+
 - ZConfig support and process setup.
 
+  This is mostly done.  I'll remove this from the list when I have:
+
+  - Install/setup instructions
+
+  - rpm
+
 - Need direct test of fsiterator in case when there is extension data.
-
-- Need test of secondary connection close with incomplete transaction.
-
-- Need test of disconnect/reconnect w/o loss of data.
-
-- Make sure lastInvalidations is supported.  
-
-- Need to try to reuse the existing ZRS tests.
 
 - Add error if a unix-domain socket is used in zconfig.
 
