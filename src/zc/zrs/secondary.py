@@ -137,10 +137,11 @@ class SecondaryProtocol(twisted.internet.protocol.Protocol):
         message_type, data = cPickle.loads(message)
         if message_type == 'T':
             assert self.__transaction is None
-            transaction = self.__transaction = Transaction(*data)
+            transaction = Transaction(*data)
             self.__inval = {}
             self.factory.storage.tpc_begin(
                 transaction, transaction.id, transaction.status)
+            self.__transaction = transaction
         elif message_type == 'S':
             oid, serial, version, data, data_txn = data
             key = serial, version
