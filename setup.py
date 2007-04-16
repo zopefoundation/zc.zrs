@@ -10,8 +10,8 @@ setup(
     license = "ZPL 2.1",
     keywords = "ZODB",
 
-    packages = find_packages('src'),
-    include_package_data = True,
+    packages = ['zc', 'zc.zrs'],
+    zip_safe = True,
     package_dir = {'':'src'},
     namespace_packages = ['zc'],
     install_requires = ['setuptools', 'zope.testing', 'ZODB3', 'zc.twisted'],
