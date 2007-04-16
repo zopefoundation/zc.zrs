@@ -356,7 +356,6 @@ There a number of cases to consider when closing a secondary:
 
 """
 
-
 class TestReactor:
 
     def __init__(self):
@@ -464,7 +463,16 @@ class MessageTransport:
         return result
 
     def send(self, data):
-        self.proto.dataReceived(zc.zrs.sizedmessage.marshal(data))
+        record = zc.zrs.sizedmessage.marshal(data)
+        dataReceived = self.proto.dataReceived
+
+        # send data in parts to try to confuse the protocol 
+        n = 1
+        while record:
+            data, record = record[:n], record[n:]
+            if data:
+                dataReceived(data)
+            n *= 2
 
     def have_data(self):
         return bool(self.data)
