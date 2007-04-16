@@ -156,7 +156,7 @@ Our test reactor just queues later attempts:
 
     >>> reactor.later # doctest: +NORMALIZE_WHITESPACE
     [(60, <bound method TestConnector.connect of
-          <zc.zrs.tests.TestConnector instance>>, (), {})]
+          <zrstests.tests.TestConnector instance>>, (), {})]
 
 We'll simulate calling these later:
 
@@ -215,7 +215,7 @@ Again, the secondary attempts to reconnect.  We'll accept the new connection.
 
     >>> reactor.later # doctest: +NORMALIZE_WHITESPACE
     [(60, <bound method TestConnector.connect of
-          <zc.zrs.tests.TestConnector instance>>, (), {})]
+          <zrstests.tests.TestConnector instance>>, (), {})]
 
     >>> reactor.doLater()
     >>> reactor.later
@@ -265,7 +265,7 @@ attempt:
 
     >>> reactor.later # doctest: +NORMALIZE_WHITESPACE
     [(60, <bound method TestConnector.connect of
-          <zc.zrs.tests.TestConnector instance>>, (), {})]
+          <zrstests.tests.TestConnector instance>>, (), {})]
 
     >>> reactor.doLater()
     >>> reactor.later
@@ -278,7 +278,7 @@ minute between attempts.
 
     >>> reactor.later # doctest: +NORMALIZE_WHITESPACE
     [(60, <bound method TestConnector.connect of
-          <zc.zrs.tests.TestConnector instance>>, (), {})]
+          <zrstests.tests.TestConnector instance>>, (), {})]
 
 .. cleanup
 
