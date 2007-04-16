@@ -28,11 +28,10 @@ import twisted.internet.error
 import twisted.protocols.loopback
 import twisted.python.failure
 
-import zc.zrs.fsiterator
-import zc.zrs.sizedmessage
 import zc.zrs.primary
-import zc.zrs.secondary
 import zc.zrs.reactor
+import zc.zrs.secondary
+import zc.zrs.sizedmessage
 
 _loopbackAsyncBody_orig = twisted.protocols.loopback._loopbackAsyncBody
 def _loopbackAsyncBody(*args):
@@ -65,7 +64,7 @@ Now, be evil, and muck up the beginning: :)
 If we try to iterate from the beginning, we'll get an error:
 
     >>> condition = threading.Condition()
-    >>> it = zc.zrs.fsiterator.FileStorageIterator(fs, condition)
+    >>> it = zc.zrs.primary.FileStorageIterator(fs, condition)
     >>> it.next()
     Traceback (most recent call last):
     ...
@@ -75,7 +74,7 @@ If we try to iterate from the beginning, we'll get an error:
     ...     return repr(TimeStamp(*(time.gmtime(t)[:5] + (t%60,))))
 
     >>> tid = tid_from_time(time.time()-70)
-    >>> zc.zrs.fsiterator.FileStorageIterator(fs, condition, tid)
+    >>> zc.zrs.primary.FileStorageIterator(fs, condition, tid)
     Traceback (most recent call last):
     ...
     OverflowError: long too big to convert
@@ -83,7 +82,7 @@ If we try to iterate from the beginning, we'll get an error:
 But, if we iterate from near the end, we'll be OK:
 
     >>> tid = tid_from_time(time.time()-30)
-    >>> it = zc.zrs.fsiterator.FileStorageIterator(fs, condition, tid)
+    >>> it = zc.zrs.primary.FileStorageIterator(fs, condition, tid)
     >>> trans = it.next()
     >>> from ZODB import utils
     >>> print TimeStamp(trans.tid), [utils.u64(r.oid) for r in trans]
@@ -93,7 +92,7 @@ But, if we iterate from near the end, we'll be OK:
     2007-03-21 20:34:08.000000
 
     >>> tid = tid_from_time(time.time()-29.5)
-    >>> it = zc.zrs.fsiterator.FileStorageIterator(fs, condition, tid)
+    >>> it = zc.zrs.primary.FileStorageIterator(fs, condition, tid)
     >>> trans = it.next()
     >>> from ZODB import utils
     >>> print TimeStamp(trans.tid), [utils.u64(r.oid) for r in trans]
@@ -117,8 +116,7 @@ We'll create a file-storage:
 
 Now, we'll create an iterator:
 
-    >>> import zc.zrs.fsiterator
-    >>> iterator = zc.zrs.fsiterator.FileStorageIterator(fs)
+    >>> iterator = zc.zrs.primary.FileStorageIterator(fs)
 
 And a special transport that will output data when it is called:
 
@@ -141,7 +139,6 @@ And a special transport that will output data when it is called:
 
 And a producer based on the iterator and transport:
 
-    >>> import zc.zrs.primary
     >>> import time
     >>> producer = zc.zrs.primary.PrimaryProducer(iterator, Transport(), 'test'
     ...            ); time.sleep(0.1)
@@ -323,7 +320,7 @@ There a number of cases to consider when closing a secondary:
     []
 
     >>> primary_fs = ZODB.FileStorage.FileStorage('primary.fs')
-    >>> primary_data = zc.zrs.fsiterator.FileStorageIterator(primary_fs)
+    >>> primary_data = zc.zrs.primary.FileStorageIterator(primary_fs)
     >>> from ZODB.DB import DB
     >>> primary_db = DB(primary_fs)
     >>> trans = primary_data.next()

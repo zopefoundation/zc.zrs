@@ -33,7 +33,7 @@ it.
 We'll create a simple program that iterates over a file storage
 printing some information.
 
-    >>> import zc.zrs.fsiterator
+    >>> import zc.zrs.primary
     >>> from ZODB.TimeStamp import TimeStamp
     >>> from ZODB import utils
     >>> def list(iterator, event):
@@ -72,7 +72,7 @@ printing some information.
 
     >>> event = threading.Event()
     >>> condition = Condition(event)
-    >>> iterator = zc.zrs.fsiterator.FileStorageIterator(fs, condition)
+    >>> iterator = zc.zrs.primary.FileStorageIterator(fs, condition)
     >>> thread = threading.Thread(target=list, args=(iterator, event))
     >>> thread.setDaemon(True)
 
@@ -128,7 +128,7 @@ that is too high, will cause an error:
     ...     return repr(TimeStamp(*(time.gmtime(t)[:5] + (t%60,))))
 
     >>> tid = tid_from_time(time.time()+1)
-    >>> zc.zrs.fsiterator.FileStorageIterator(fs, condition, tid)
+    >>> zc.zrs.primary.FileStorageIterator(fs, condition, tid)
     Traceback (most recent call last):
     ...
     TidTooHigh: '\x03lk\x91*\xaa\xaa\xaa'
@@ -137,7 +137,7 @@ If the tid is lower than any tid in the file, then iteration will
 start at the beginning:
 
     >>> tid = tid_from_time(time.time()-100)
-    >>> it = zc.zrs.fsiterator.FileStorageIterator(fs, condition, tid)
+    >>> it = zc.zrs.primary.FileStorageIterator(fs, condition, tid)
     >>> trans = it.next()
     >>> print TimeStamp(trans.tid), [utils.u64(r.oid) for r in trans]
     2007-03-21 20:32:58.000000 [1L]
@@ -155,7 +155,7 @@ If the tid lies somewhere in the middle, then iteration will start
 there:
 
     >>> tid = tid_from_time(time.time()-3)
-    >>> it = zc.zrs.fsiterator.FileStorageIterator(fs, condition, tid)
+    >>> it = zc.zrs.primary.FileStorageIterator(fs, condition, tid)
     >>> trans = it.next()
     >>> print TimeStamp(trans.tid), [utils.u64(r.oid) for r in trans]
     2007-03-21 20:33:07.000000 [0L, 10L]

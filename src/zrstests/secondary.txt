@@ -61,8 +61,8 @@ iterator that will give us the data we need to send.  We'll create a
 file storage and database that we can use for this:
 
     >>> primary_fs = ZODB.FileStorage.FileStorage('primary.fs')
-
-    >>> primary_data = zc.zrs.fsiterator.FileStorageIterator(primary_fs)
+    >>> import zc.zrs.primary
+    >>> primary_data = zc.zrs.primary.FileStorageIterator(primary_fs)
 
     >>> from ZODB.DB import DB
     >>> primary_db = DB(primary_fs)
