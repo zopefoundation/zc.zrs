@@ -1,12 +1,5 @@
 Todo:
 
-- Secondary connection failure handling and reconnection.
-
-  o Need more edge case tests.
-
-    - close due to error in input
-
-
 - ZConfig support and process setup.
 
   This is mostly done.  I'll remove this from the list when I have:
@@ -17,9 +10,10 @@ Todo:
 
 - Need direct test of fsiterator in case when there is extension data.
 
-- Add error if a unix-domain socket is used in zconfig.
+  We test this indirectoy through storage tests, so maybe this isn't
+  so important.
 
-- Need test of secondary in ZEO.
+- Add error if a unix-domain socket is used in zconfig.
 
 Issues:
 
