@@ -205,6 +205,146 @@ and resume:
 
 """
 
+def secondary_close_edge_cases():
+    r"""
+There a number of cases to consider when closing a secondary:
+
+- Closing while connecting
+
+  The reactor.clients attribute has a list of secondaries that are
+  "connecting". The reactor later attribute has requests to do things
+  later.
+
+    >>> reactor.clients
+    []
+
+    >>> reactor.later
+    []
+
+    >>> import ZODB.FileStorage
+    >>> import zc.zrs.secondary
+    >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
+    >>> ss = zc.zrs.secondary.Secondary(fs, ('', 8000), reactor)
+    Opening Data.fs ('', 8000)
+
+    >>> len(reactor.clients)
+    1
+
+    >>> ss.close()
+    Closing Data.fs ('', 8000)
+
+    >>> reactor.clients
+    []
+
+    >>> reactor.later
+    []
+    
+- Closing while waiting to connect
+
+  We'll reject the connection attempt, which will make the secondary
+  queue a connection attempt for later:
+  
+    >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
+    >>> ss = zc.zrs.secondary.Secondary(fs, ('', 8000), reactor)
+    Opening Data.fs ('', 8000)
+
+    >>> reactor.reject()
+
+    >>> reactor.clients
+    []
+
+    >>> len(reactor.later)
+    1
+
+    >>> ss.close()
+    Closing Data.fs ('', 8000)
+
+    >>> reactor.doLater()
+
+    >>> reactor.later
+    []
+    
+    >>> reactor.clients
+    []
+
+- Closing while connected but between transactions
+
+    >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
+    >>> ss = zc.zrs.secondary.Secondary(fs, ('', 8000), reactor)
+    Opening Data.fs ('', 8000)
+    >>> connection = reactor.accept()
+    IPv4Address(TCP, '127.0.0.1', 47248): Connected
+    
+    >>> reactor.later
+    []
+    
+    >>> reactor.clients
+    []
+
+    >>> ss.close() # doctest: +NORMALIZE_WHITESPACE
+    Closing Data.fs ('', 8000)
+    IPv4Address(TCP, '127.0.0.1', 47248):
+    Disconnected <twisted.python.failure.Failure
+    twisted.internet.error.ConnectionDone>
+        
+    >>> reactor.later
+    []
+    
+    >>> reactor.clients
+    []
+
+- Closing while connected and recieving data
+    
+    >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
+    >>> ss = zc.zrs.secondary.Secondary(fs, ('', 8000), reactor)
+    Opening Data.fs ('', 8000)
+    >>> connection = reactor.accept()
+    IPv4Address(TCP, '127.0.0.1', 47249): Connected
+
+    >>> connection.read()
+    'zrs2.0'
+    >>> connection.read()
+    '\x00\x00\x00\x00\x00\x00\x00\x00'
+
+    
+    >>> reactor.later
+    []
+    
+    >>> reactor.clients
+    []
+
+    >>> primary_fs = ZODB.FileStorage.FileStorage('primary.fs')
+    >>> primary_data = zc.zrs.fsiterator.FileStorageIterator(primary_fs)
+    >>> from ZODB.DB import DB
+    >>> primary_db = DB(primary_fs)
+    >>> trans = primary_data.next()
+    >>> connection.send(('T', (trans.tid, trans.status, trans.user,
+    ...                        trans.description, trans._extension)))
+    >>> record = trans.next
+    ... connection.send(('S', (record.oid, record.tid, record.version,
+    ...                        record.data, record.data_txn)))
+
+    >>> ss.close() # doctest: +NORMALIZE_WHITESPACE
+    Closing Data.fs ('', 8000)
+    IPv4Address(TCP, '127.0.0.1', 47249):
+    Disconnected <twisted.python.failure.Failure
+    twisted.internet.error.ConnectionDone>
+        
+    >>> reactor.later
+    []
+    
+    >>> reactor.clients
+    []
+
+    >>> print fs._transaction
+    None
+    
+    >>> fs._pos
+    4L
+
+"""
+
+
 class TestReactor:
 
     def __init__(self):

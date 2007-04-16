@@ -4,13 +4,6 @@ Todo:
 
   o Need more edge case tests.
 
-    - close while connecting
-
-    - close while waiting to try connecting (we have that in
-      secondary.txt)
-
-    - close while connected
-
     - close due to error in input
 
 
