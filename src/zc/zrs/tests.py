@@ -17,6 +17,7 @@ import tempfile, threading, time, unittest
 import transaction
 from ZODB.TimeStamp import TimeStamp
 import ZODB.utils
+import ZODB.FileStorage
 
 import ZEO.tests.testZEO
 
@@ -31,6 +32,7 @@ import zc.zrs.fsiterator
 import zc.zrs.sizedmessage
 import zc.zrs.primary
 import zc.zrs.secondary
+import zc.zrs.reactor
 
 _loopbackAsyncBody_orig = twisted.protocols.loopback._loopbackAsyncBody
 def _loopbackAsyncBody(*args):
@@ -42,7 +44,6 @@ def scan_from_back():
     r"""
 Create the database:
 
-    >>> import ZODB.FileStorage
     >>> from ZODB.DB import DB
     >>> import persistent.dict
 
@@ -221,7 +222,6 @@ There a number of cases to consider when closing a secondary:
     >>> reactor.later
     []
 
-    >>> import ZODB.FileStorage
     >>> import zc.zrs.secondary
     >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
     >>> ss = zc.zrs.secondary.Secondary(fs, ('', 8000), reactor)
@@ -431,7 +431,6 @@ def secondary_data_input_errors():
 There is not good reason for a secondary to get a data input error. If
 it does, it should simply close.
 
-    >>> import ZODB.FileStorage
     >>> import zc.zrs.secondary
     >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
     >>> ss = zc.zrs.secondary.Secondary(fs, ('', 8000), reactor)
@@ -801,57 +800,13 @@ class BasePrimaryStorageTests(StorageTestBase.StorageTestBase):
             catch_up(self.__pfs, self.__sfs)
 
             if self.__pack:
-                self.__comparedbs_packed(self.__pfs, self.__sfs)
+                comparedbs_packed(self, self.__pfs, self.__sfs)
             else:
                 self.__comparedbs(self.__pfs, self.__sfs)
                 
             p_close()
             self.__ss.close()
         self._storage.close = close
-        
-    def __comparedbs_packed(self, fs1, fs2):
-                
-        # The primary was packed.  This introduces some significant
-        # complications.  The secondary can end up with packed records
-        # following unpacked records, depending on timing.  Or, it can
-        # end up with packed records that don't exist on the primary,
-        # except in pathological cases.  This can lead to the
-        # secondary having extra records not present on the
-        # primary. In any case it isn't reasonable to expect the
-        # secondary to have exactly the same records as the primary.
-        # We'll do a looser comparison that requires:
-        #
-        # - The primary's records are a subset of the secondary's, and
-        # - The primary and secondary have the same current records.
-        time.sleep(0.01)
-
-        data2 = {}
-        current2 = {}
-        for trans in fs2.iterator():
-            objects = {}
-            data2[trans.tid] = (trans.user, trans.description,
-                                trans._extension, objects)
-            for r in trans:
-                objects[r.oid] = r.tid, r.version, r.data
-                current2[r.oid] = trans.tid
-
-
-        current1 = {}
-        for trans in fs1.iterator():
-            self.assertEqual(
-                data2[trans.tid][:3],
-                (trans.user, trans.description, trans._extension),
-                )
-            objects = data2[trans.tid][3]
-            for r in trans:
-                self.assertEqual(
-                    objects[r.oid],
-                    (r.tid, r.version, r.data),
-                    )
-                current1[r.oid] = trans.tid
-
-        for oid, tid in current1.items():
-            self.assertEqual(current2[oid], tid)
 
     def __comparedbs(self, fs1, fs2):
         if fs1._pos != fs2._pos:
@@ -859,6 +814,51 @@ class BasePrimaryStorageTests(StorageTestBase.StorageTestBase):
         self.assertEqual(fs1._pos, fs2._pos)
 
         self.compare(fs1, fs2)    
+
+def comparedbs_packed(self, fs1, fs2):
+
+    # The primary was packed.  This introduces some significant
+    # complications.  The secondary can end up with packed records
+    # following unpacked records, depending on timing.  Or, it can
+    # end up with packed records that don't exist on the primary,
+    # except in pathological cases.  This can lead to the
+    # secondary having extra records not present on the
+    # primary. In any case it isn't reasonable to expect the
+    # secondary to have exactly the same records as the primary.
+    # We'll do a looser comparison that requires:
+    #
+    # - The primary's records are a subset of the secondary's, and
+    # - The primary and secondary have the same current records.
+    time.sleep(0.01)
+
+    data2 = {}
+    current2 = {}
+    for trans in fs2.iterator():
+        objects = {}
+        data2[trans.tid] = (trans.user, trans.description,
+                            trans._extension, objects)
+        for r in trans:
+            objects[r.oid] = r.tid, r.version, r.data
+            current2[r.oid] = trans.tid
+
+
+    current1 = {}
+    for trans in fs1.iterator():
+        self.assertEqual(
+            data2[trans.tid][:3],
+            (trans.user, trans.description, trans._extension),
+            )
+        objects = {}
+        for r in trans:
+            objects[r.oid] = r.tid, r.version, r.data
+            current2[r.oid] = trans.tid
+
+        objects2 = data2[trans.tid][3]
+        for oid in objects:
+            self.assertEqual(objects2[r.oid], objects[r.oid])
+
+    for oid, tid in current1.items():
+        self.assertEqual(current2[oid], tid)
 
 def tsr(tid):
     return repr(str(TimeStamp(tid)))
@@ -897,19 +897,45 @@ class PrimaryStorageTests(
 class ZEOTests(ZEO.tests.testZEO.FullGenericTests):
 
     def getConfig(self):
-        filename = tempfile.mktemp()
-        port = ZEO.tests.testZEO.get_port()
+        port = self.__port = ZEO.tests.testZEO.get_port()
         return """
         %%import zc.zrs
 
         <primary 1>
           address %s
           <filestorage 1>
-            path %s
+            path primary.fs
           </filestorage>
         </primary>
-        """ % (port, filename)
-    
+        """ % port
+
+    def setUp(self):
+        self.globs = {}
+        setupstack.register(self, join, threading.enumerate())
+        setupstack.setUpDirectory(self)
+        ZEO.tests.testZEO.FullGenericTests.setUp(self)
+        self.__sfs = ZODB.FileStorage.FileStorage('secondary.fs')
+        self.__s = zc.zrs.secondary.Secondary(self.__sfs, ('', self.__port))
+
+    def tearDown(self):
+
+        # Check whether secondary has same data as primary:
+        for i in range(100):
+            try:
+                fsp = ZODB.FileStorage.FileStorage('primary.fs',
+                                                   read_only=True)
+                comparedbs_packed(self, fsp, self.__sfs)
+                break
+            except:
+                # Hm. Maybe we didn't wait long enough before starting
+                # the compare.  Let's wait a tad longer.
+                time.sleep(.1)
+            comparedbs_packed(self, fsp, self.__sfs)
+            
+        fsp.close()
+        self.__sfs.close()
+        ZEO.tests.testZEO.FullGenericTests.tearDown(self)
+        setupstack.tearDown(self)
 
 def test_suite():
     return unittest.TestSuite((
