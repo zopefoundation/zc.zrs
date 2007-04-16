@@ -24,6 +24,7 @@ Let's create a primary storage:
 
     >>> import zc.zrs.primary
     >>> ps = zc.zrs.primary.Primary(fs, ('', 8000), reactor)
+    INFO zc.zrs.primary:
     Opening Data.fs ('', 8000)
 
 Now, we can use this just like any other storage:
@@ -40,6 +41,7 @@ We can connect to it to get data that have been committed.  We're
 going to connect using the test reactor:
 
     >>> connection = reactor.connect(('', 8000))
+    INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47245): Connected
 
 (We see logging output.)
@@ -56,6 +58,7 @@ the client.  We'll pass a transaction id of all zeros, indicating that
 we have no data and want all of the data the storage has:
 
     >>> connection.send("\0"*8) # doctest: +NORMALIZE_WHITESPACE
+    INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47245): 
        start '\x00\x00\x00\x00\x00\x00\x00\x00' (1900-01-01 00:00:00.000000)
 
@@ -190,10 +193,12 @@ Let's create another connection.  This time though, we'll send our
 saved transaction as the starting transaction:
 
     >>> connection2 = reactor.connect(('', 8000))
+    INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47246): Connected
 
     >>> connection2.send("zrs2.0")
     >>> connection2.send(saved_tid) # doctest: +NORMALIZE_WHITESPACE
+    INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47246):
         start '\x03lk\x91\x00\x00\x00\x00' (2007-03-21 20:33:00.000000)
 
@@ -217,6 +222,7 @@ The servers will spew data for ever, or until their connections are
 closed:
 
     >>> connection.close() # doctest: +NORMALIZE_WHITESPACE
+    INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47245): 
        Disconnected <twisted.python.failure.Failure
        twisted.internet.error.ConnectionDone>
@@ -224,9 +230,12 @@ closed:
 Or until the storage is closed:
 
     >>> ps.close() # doctest: +NORMALIZE_WHITESPACE
+    INFO zc.zrs.primary:
     Closing Data.fs ('', 8000)
+    INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47246):
        Disconnected <twisted.python.failure.Failure
        twisted.internet.error.ConnectionDone>
+    INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47246): Closed
 

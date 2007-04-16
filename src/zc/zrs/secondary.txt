@@ -26,6 +26,7 @@ Let's create a secondary storage:
 
     >>> import zc.zrs.secondary
     >>> ss = zc.zrs.secondary.Secondary(fs, ('', 8000), reactor)
+    INFO zc.zrs.secondary:
     Opening Data.fs ('', 8000)
 
 We can't use a secondary storage until it has gotten some data.  Our
@@ -36,6 +37,7 @@ Let's accept the connection, getting the client connection created for
 this server:
 
     >>> connection = reactor.accept()
+    INFO zc.zrs.secondary:
     IPv4Address(TCP, '127.0.0.1', 47245): Connected
 
 The secondary server writes two messages to the connection to begin
@@ -147,6 +149,7 @@ and ask the reactor to reconnect 60 seconds later.  We'll demonstrate
 this by asking out test conection to fail:
 
     >>> connection.fail()
+    INFO zc.zrs.secondary:
     IPv4Address(TCP, '127.0.0.1', 47245): Disconnected 'failed'
     
 Our test reactor just queues later attempts:
@@ -165,6 +168,7 @@ We'll simulate calling these later:
 This causes a connection to be attempted, which we'll accept:
 
     >>> connection = reactor.accept()
+    INFO zc.zrs.secondary:
     IPv4Address(TCP, '127.0.0.1', 47246): Connected
 
 The secondary will send the protocol and a transaction, as before:
@@ -198,6 +202,7 @@ and then break the connection:
     ...                        record.data, record.data_txn)))
 
     >>> connection.fail()
+    INFO zc.zrs.secondary:
     IPv4Address(TCP, '127.0.0.1', 47246): Disconnected 'failed'
 
 The secondary still shows the old data:
@@ -217,6 +222,7 @@ Again, the secondary attempts to reconnect.  We'll accept the new connection.
     []
 
     >>> connection = reactor.accept()
+    INFO zc.zrs.secondary:
     IPv4Address(TCP, '127.0.0.1', 47247): Connected
 
     >>> connection.read()
@@ -254,6 +260,7 @@ again break the connection, but this time we'll reject the connection
 attempt: 
 
     >>> connection.fail()
+    INFO zc.zrs.secondary:
     IPv4Address(TCP, '127.0.0.1', 47247): Disconnected 'failed'
 
     >>> reactor.later # doctest: +NORMALIZE_WHITESPACE
@@ -277,6 +284,7 @@ minute between attempts.
 
     >>> primary_db.close()
     >>> db.close() # doctest: +NORMALIZE_WHITESPACE
+    INFO zc.zrs.secondary:
     Closing Data.fs ('', 8000)
 
     >>> reactor.doLater()

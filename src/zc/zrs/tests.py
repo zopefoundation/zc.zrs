@@ -225,12 +225,14 @@ There a number of cases to consider when closing a secondary:
     >>> import zc.zrs.secondary
     >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
     >>> ss = zc.zrs.secondary.Secondary(fs, ('', 8000), reactor)
+    INFO zc.zrs.secondary:
     Opening Data.fs ('', 8000)
 
     >>> len(reactor.clients)
     1
 
     >>> ss.close()
+    INFO zc.zrs.secondary:
     Closing Data.fs ('', 8000)
 
     >>> reactor.clients
@@ -246,6 +248,7 @@ There a number of cases to consider when closing a secondary:
   
     >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
     >>> ss = zc.zrs.secondary.Secondary(fs, ('', 8000), reactor)
+    INFO zc.zrs.secondary:
     Opening Data.fs ('', 8000)
 
     >>> reactor.reject()
@@ -257,6 +260,7 @@ There a number of cases to consider when closing a secondary:
     1
 
     >>> ss.close()
+    INFO zc.zrs.secondary:
     Closing Data.fs ('', 8000)
 
     >>> reactor.doLater()
@@ -271,8 +275,10 @@ There a number of cases to consider when closing a secondary:
 
     >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
     >>> ss = zc.zrs.secondary.Secondary(fs, ('', 8000), reactor)
+    INFO zc.zrs.secondary:
     Opening Data.fs ('', 8000)
     >>> connection = reactor.accept()
+    INFO zc.zrs.secondary:
     IPv4Address(TCP, '127.0.0.1', 47248): Connected
     
     >>> reactor.later
@@ -282,7 +288,9 @@ There a number of cases to consider when closing a secondary:
     []
 
     >>> ss.close() # doctest: +NORMALIZE_WHITESPACE
+    INFO zc.zrs.secondary:
     Closing Data.fs ('', 8000)
+    INFO zc.zrs.secondary:
     IPv4Address(TCP, '127.0.0.1', 47248):
     Disconnected <twisted.python.failure.Failure
     twisted.internet.error.ConnectionDone>
@@ -297,8 +305,10 @@ There a number of cases to consider when closing a secondary:
     
     >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
     >>> ss = zc.zrs.secondary.Secondary(fs, ('', 8000), reactor)
+    INFO zc.zrs.secondary:
     Opening Data.fs ('', 8000)
     >>> connection = reactor.accept()
+    INFO zc.zrs.secondary:
     IPv4Address(TCP, '127.0.0.1', 47249): Connected
 
     >>> connection.read()
@@ -325,7 +335,9 @@ There a number of cases to consider when closing a secondary:
     ...                        record.data, record.data_txn)))
 
     >>> ss.close() # doctest: +NORMALIZE_WHITESPACE
+    INFO zc.zrs.secondary:
     Closing Data.fs ('', 8000)
+    INFO zc.zrs.secondary:
     IPv4Address(TCP, '127.0.0.1', 47249):
     Disconnected <twisted.python.failure.Failure
     twisted.internet.error.ConnectionDone>
@@ -538,6 +550,8 @@ class Stdout:
         sys.stdout.flush()
 
 stdout_handler = logging.StreamHandler(Stdout())
+stdout_handler.setFormatter(logging.Formatter(
+    "%(levelname)s %(name)s:\n%(message)s"))
 
 def join(old):
     # Wait for any new threads created during a test to die.
