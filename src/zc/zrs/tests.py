@@ -315,7 +315,6 @@ There a number of cases to consider when closing a secondary:
     'zrs2.0'
     >>> connection.read()
     '\x00\x00\x00\x00\x00\x00\x00\x00'
-
     
     >>> reactor.later
     []
@@ -355,6 +354,119 @@ There a number of cases to consider when closing a secondary:
     4L
 
 """
+
+def primary_data_input_errors():
+    """
+    There is not good reason for a primary to get a data input error. If
+    it does, it should simply close the connection.
+
+    >>> import ZODB.FileStorage, zc.zrs.primary
+    >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
+    >>> ps = zc.zrs.primary.Primary(fs, ('', 8000), reactor)
+    INFO zc.zrs.primary:
+    Opening Data.fs ('', 8000)
+
+    >>> connection = reactor.connect((('', 8000)))
+    INFO zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47245): Connected
+
+    >>> connection.send("Hi") # doctest: +NORMALIZE_WHITESPACE
+    ERROR zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47245): Invalid protocol 'Hi'
+    INFO zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47245):
+    Disconnected <twisted.python.failure.Failure
+    twisted.internet.error.ConnectionDone>
+    INFO zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47245): Closed
+
+    >>> connection = reactor.connect((('', 8000)))
+    INFO zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47246): Connected
+
+    >>> connection.send("xxxxxxxxxxxxxxx") # doctest: +NORMALIZE_WHITESPACE
+    ERROR zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47246): message too large: (8, 15L)
+    INFO zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47246):
+    Disconnected <twisted.python.failure.Failure
+    twisted.internet.error.ConnectionDone>
+    INFO zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47246): Closed
+
+    >>> connection = reactor.connect((('', 8000)))
+    INFO zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47247): Connected
+
+    >>> connection.send("zrs2.0")
+    >>> connection.send("xxxxxxxxxxxxxxx") # doctest: +NORMALIZE_WHITESPACE
+    ERROR zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47247): message too large: (8, 15L)
+    INFO zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47247):
+    Disconnected <twisted.python.failure.Failure
+    twisted.internet.error.ConnectionDone>
+    INFO zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47247): Closed
+
+    >>> connection = reactor.connect((('', 8000)))
+    INFO zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47248): Connected
+
+    >>> connection.send("zrs2.0")
+    >>> connection.send("xxxxxxx") # doctest: +NORMALIZE_WHITESPACE
+    ERROR zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47248): Invalid transaction id, 'xxxxxxx'
+    INFO zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47248):
+    Disconnected <twisted.python.failure.Failure
+    twisted.internet.error.ConnectionDone>
+    INFO zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47248): Closed
+    """
+
+def secondary_data_input_errors():
+    r"""
+    
+There is not good reason for a secondary to get a data input error. If
+it does, it should simply close.
+
+    >>> import ZODB.FileStorage
+    >>> import zc.zrs.secondary
+    >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
+    >>> ss = zc.zrs.secondary.Secondary(fs, ('', 8000), reactor)
+    INFO zc.zrs.secondary:
+    Opening Data.fs ('', 8000)
+
+    >>> connection = reactor.accept()
+    INFO zc.zrs.secondary:
+    IPv4Address(TCP, '127.0.0.1', 47245): Connected
+
+    >>> connection.read()
+    'zrs2.0'
+    >>> connection.read()
+    '\x00\x00\x00\x00\x00\x00\x00\x00'
+
+    >>> connection.send('hi', raw=True)
+    ... # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+    CRITICAL zc.zrs.secondary:
+    IPv4Address(TCP, '127.0.0.1', 47245): Input data error
+    Traceback (most recent call last):
+    ...
+    BadPickleGet: 105
+    INFO zc.zrs.secondary:
+    IPv4Address(TCP, '127.0.0.1', 47245):
+    Disconnected <twisted.python.failure.Failure
+    twisted.internet.error.ConnectionDone>
+        
+    >>> reactor.later
+    []
+    
+    >>> reactor.clients
+    []
+    
+
+    """
 
 class TestReactor:
 
@@ -470,7 +582,7 @@ class MessageTransport:
         n = 1
         while record:
             data, record = record[:n], record[n:]
-            if data:
+            if data and not self.closed:
                 dataReceived(data)
             n *= 2
 
@@ -502,8 +614,10 @@ class PrimaryTransport(MessageTransport):
 
 class SecondaryTransport(MessageTransport):
     
-    def send(self, data):
-        MessageTransport.send(self, cPickle.dumps(data))
+    def send(self, data, raw=False):
+        if not raw:
+            data = cPickle.dumps(data)
+        MessageTransport.send(self, data)
 
     def fail(self):
         reason = 'failed'

@@ -120,8 +120,8 @@ class SecondaryProtocol(twisted.internet.protocol.Protocol):
             self.__transaction = None
         self.info("Disconnected %r", reason)
 
-    def error(self, message, *args):
-        logger.critical(self.__peer + message, *args)
+    def error(self, message, *args, **kw):
+        logger.critical(self.__peer + message, *args, **kw)
         self.factory.connector.disconnect()
 
     def info(self, message, *args):
@@ -130,11 +130,11 @@ class SecondaryProtocol(twisted.internet.protocol.Protocol):
     def dataReceived(self, data):
         try:
             self.__stream(data)
-        except zc.zrs.sizedmessage.LimitExceeded, v:
-            self.error(str(v))
+        except:
+            self.error("Input data error", exc_info=True)
 
-    def messageReceived(self, data):
-        message_type, data = cPickle.loads(data)
+    def messageReceived(self, message):
+        message_type, data = cPickle.loads(message)
         if message_type == 'T':
             assert self.__transaction is None
             transaction = self.__transaction = Transaction(*data)
@@ -163,7 +163,7 @@ class SecondaryProtocol(twisted.internet.protocol.Protocol):
             self.factory.storage.tpc_finish(self.__transaction, invalidate)
             self.__transaction = None
         else:
-            self.error("Invalid transacton type, %r", message_type)
+            raise ValueError("Invalid message type, %r" % message_type)
 
 class Transaction:
 

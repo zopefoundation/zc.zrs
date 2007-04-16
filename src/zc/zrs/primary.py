@@ -141,7 +141,7 @@ class PrimaryProtocol(twisted.internet.protocol.Protocol):
         try:
             self.__stream(data)
         except zc.zrs.sizedmessage.LimitExceeded, v:
-            self.error(str(v))
+            self.error('message too large: '+str(v))
 
     def messageReceived(self, data):
         if self.__protocol is None:
