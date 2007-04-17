@@ -25,19 +25,13 @@ from zope.testing import doctest, setupstack, renormalizing
 
 import twisted.internet.base
 import twisted.internet.error
-import twisted.protocols.loopback
+from zrstests import loopback
 import twisted.python.failure
 
 import zc.zrs.primary
 import zc.zrs.reactor
 import zc.zrs.secondary
 import zc.zrs.sizedmessage
-
-_loopbackAsyncBody_orig = twisted.protocols.loopback._loopbackAsyncBody
-def _loopbackAsyncBody(*args):
-    _loopbackAsyncBody_orig(*args)
-
-
 
 def scan_from_back():
     r"""
@@ -647,9 +641,8 @@ class TestConnector(twisted.internet.base.BaseConnector):
             # a loopback mechanism
             proto = self.buildProtocol(addr)
             server = reactor._factories[addr].buildProtocol(addr)
-            twisted.protocols.loopback.loopbackAsync(server, proto)
+            loopback.loopbackAsync(server, proto, self)
             transport = proto.transport
-            transport.connector = self
         else:
             reactor.clients.append(self)
             transport = SecondaryTransport(reactor, addr, reactor.client_port)
@@ -742,55 +735,52 @@ def catch_up(fs1, fs2):
 
     raise AssertionError("Can't catch up.")
 
+class TestPrimary(zc.zrs.primary.Primary):
+
+    _transaction_count = 0
+    def tpc_finish(self, *args):
+        self._transaction_count += 1
+        zc.zrs.primary.Primary.tpc_finish(self, *args)
+        if self._transaction_count%20 == 0:
+            # be annoying and disconnect out clients every 20 transactions.
+            # Hee hee.
+            # Before we do that though, we'll call doLater on our reactor to
+            # give previously disconnected clients a chance to reconnect.
+            self._reactor.doLater()
+            self._reactor.callFromThread(self._factory.close, lambda : None)
+
+
 class BasePrimaryStorageTests(StorageTestBase.StorageTestBase):
 
     def setUp(self):
-        # Monkey patch loopback to work around bug:
-        twisted.protocols.loopback._loopbackAsyncBody = _loopbackAsyncBody
-        
         self.__pack = None
 
         self.globs = {}
         setupstack.register(self, join, threading.enumerate())
         setupstack.setUpDirectory(self)
         self.globs['reactor'] = TestReactor()
-        
-        self.__oldreactor = getattr(
-            twisted.protocols.loopback._LoopbackTransport,
-            'reactor', None)
-        
-        reactor = self.globs['reactor']
-        twisted.protocols.loopback._LoopbackTransport.reactor = reactor
         self.open(create=1)
 
     def tearDown(self):
-        
+        # Give any disconnected clients a chance to reconnect.
+        self._storage._reactor.doLater()
+
         self._storage.close()
         reactor = self.globs['reactor']
-        if self.__oldreactor is None:
-            del twisted.protocols.loopback._LoopbackTransport.reactor
-        else:
-            twisted.protocols.loopback._LoopbackTransport.reactor = (
-                self.__oldreactor)
-
         self.assert_(not reactor._factories) # Make sure we're not listening
         setupstack.tearDown(self)
         self.globs.clear()
-
-        # Remove monkey patch of loopback to work around bug:
-        twisted.protocols.loopback._loopbackAsyncBody = _loopbackAsyncBody_orig
 
     __port = 8000
 
     def open(self, **kwargs):
         reactor = self.globs['reactor']
         self.__port += 1
+        addr = '', self.__port
         self.__pfs = ZODB.FileStorage.FileStorage('primary.fs', **kwargs)
-        self._storage = zc.zrs.primary.Primary(
-            self.__pfs, ('', self.__port), reactor)
+        self._storage = TestPrimary(self.__pfs, addr, reactor)
         self.__sfs = ZODB.FileStorage.FileStorage('secondary.fs')
-        self.__ss = zc.zrs.secondary.Secondary(
-            self.__sfs, ('', self.__port), reactor)
+        self.__ss = zc.zrs.secondary.Secondary(self.__sfs, addr, reactor)
 
         p_pack = self._storage.pack
         def pack(*args, **kw):
@@ -803,6 +793,7 @@ class BasePrimaryStorageTests(StorageTestBase.StorageTestBase):
         
         p_close = self._storage.close
         def close():
+            self._storage._reactor.doLater()
             catch_up(self.__pfs, self.__sfs)
 
             if self.__pack:
@@ -810,8 +801,16 @@ class BasePrimaryStorageTests(StorageTestBase.StorageTestBase):
             else:
                 self.__comparedbs(self.__pfs, self.__sfs)
                 
+            # Now, just recover from scratch to make sure we can:
+            sfs = ZODB.FileStorage.FileStorage('secondary2.fs')
+            ss = zc.zrs.secondary.Secondary(sfs, addr, reactor)
+            catch_up(self.__pfs, sfs)
+            self.__comparedbs(self.__pfs, sfs)
+            ss.close()
+
             p_close()
             self.__ss.close()
+
         self._storage.close = close
 
     def __comparedbs(self, fs1, fs2):
@@ -897,8 +896,12 @@ class PrimaryStorageTests(
     ReadOnlyStorage.ReadOnlyStorage
     ):
     pass
-    
+
+#
 ##############################################################################
+
+##############################################################################
+# ZEO Tests
 
 class ZEOTests(ZEO.tests.testZEO.FullGenericTests):
 
@@ -935,7 +938,7 @@ class ZEOTests(ZEO.tests.testZEO.FullGenericTests):
     def tearDown(self):
 
         # Check whether secondary has same data as primary:
-        for i in range(100):
+        for i in range(200):
             try:
                 fsp = ZODB.FileStorage.FileStorage('primary.fs',
                                                    read_only=True)
@@ -951,6 +954,9 @@ class ZEOTests(ZEO.tests.testZEO.FullGenericTests):
         self.__s.close()
         ZEO.tests.testZEO.FullGenericTests.tearDown(self)
         setupstack.tearDown(self)
+
+#
+##############################################################################
 
 def test_suite():
     return unittest.TestSuite((
