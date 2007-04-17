@@ -13,7 +13,11 @@ Todo:
   We test this indirectoy through storage tests, so maybe this isn't
   so important.
 
+  Low priority.
+
 - Add error if a unix-domain socket is used in zconfig.
+
+  Low priority.
 
 Issues:
 
