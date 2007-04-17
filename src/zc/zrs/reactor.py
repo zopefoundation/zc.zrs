@@ -15,7 +15,7 @@
 """Set's up the reactor used by zrs
 """
 
-import os, threading
+import atexit, os, threading
 
 if 'GLADE_REACTOR' in os.environ:
     import twisted.manhole.gladereactor
@@ -26,3 +26,14 @@ from twisted.internet import reactor
 thread = threading.Thread(target=lambda : reactor.run(False))
 thread.setDaemon(True)
 thread.start()
+
+def _shutdown(event):
+    reactor.stop()
+    event.set()
+
+def shutdown():
+    event = threading.Event()
+    reactor.callFromThread(_shutdown, event)
+    event.wait()
+
+atexit.register(shutdown)
