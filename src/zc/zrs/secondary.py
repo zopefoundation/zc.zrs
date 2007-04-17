@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 class Secondary:
 
-    def __init__(self, storage, addr, reactor=None):
+    def __init__(self, storage, addr, reactor=None, reconnect_delay=60):
         if reactor is None:
             import zc.zrs.reactor
             reactor = zc.zrs.reactor.reactor
@@ -46,7 +46,7 @@ class Secondary:
                      ):
             setattr(self, name, getattr(storage, name))
 
-        self._factory = SecondaryFactory(reactor, storage)
+        self._factory = SecondaryFactory(reactor, storage, reconnect_delay)
         self._addr = addr
         host, port = addr
         logger.info("Opening %s %s", self.getName(), addr)
@@ -75,10 +75,16 @@ class SecondaryFactory(twisted.internet.protocol.ClientFactory):
     connector = None
     closed = False
 
-    def __init__(self, reactor, storage):
+    # We'll keep track of the connected instance, if any mainly
+    # for the convenience of some tests that want to force disconnects to
+    # stress the secondaries.
+    instance = None
+
+    def __init__(self, reactor, storage, reconnect_delay):
         self.protocol = SecondaryProtocol
         self.reactor = reactor
         self.storage = storage
+        self.reconnect_delay = reconnect_delay
 
     def close(self, callback):
         self.closed = True
@@ -89,15 +95,18 @@ class SecondaryFactory(twisted.internet.protocol.ClientFactory):
     def startedConnecting(self, connector):
         if self.closed:
             connector.disconnect()
-        self.connector = connector
+        else:
+            self.connector = connector
 
     def clientConnectionFailed(self, connector, reason):
+        self.connector = None
         if not self.closed:
-            self.reactor.callLater(60, connector.connect)
+            self.reactor.callLater(self.reconnect_delay, connector.connect)
 
     def clientConnectionLost(self, connector, reason):
+        self.connector = None
         if not self.closed:
-            self.reactor.callLater(60, connector.connect)
+            self.reactor.callLater(self.reconnect_delay, connector.connect)
 
 
 class SecondaryProtocol(twisted.internet.protocol.Protocol):
@@ -109,12 +118,14 @@ class SecondaryProtocol(twisted.internet.protocol.Protocol):
     def connectionMade(self):
         self.__stream = zc.zrs.sizedmessage.Stream(self.messageReceived)
         self.__peer = str(self.transport.getPeer()) + ': '
+        self.factory.instance = self
         self.transport.write(zc.zrs.sizedmessage.marshal("zrs2.0"))
         tid = self.factory.storage.lastTransaction()
         self.transport.write(zc.zrs.sizedmessage.marshal(tid))
         self.info("Connected")
 
     def connectionLost(self, reason):
+        self.factory.instance = None
         if self.__transaction is not None:
             self.factory.storage.tpc_abort(self.__transaction)
             self.__transaction = None

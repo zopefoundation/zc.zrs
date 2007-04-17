@@ -616,9 +616,16 @@ class SecondaryTransport(MessageTransport):
         MessageTransport.send(self, data)
 
     def fail(self):
-        reason = 'failed'
+        self.connectionLost('failed')
+
+    def connectionLost(self, reason):
+        """Notify of a lost connection
+
+        This is a distillation of what happens in a tcp Client transport.
+        """
         self.proto.connectionLost(reason)
         self.connector.connectionLost(reason)
+        
 
     def failIfNotConnected(self, reason):
         if self.connector in self.reactor.clients:
@@ -642,6 +649,7 @@ class TestConnector(twisted.internet.base.BaseConnector):
             server = reactor._factories[addr].buildProtocol(addr)
             twisted.protocols.loopback.loopbackAsync(server, proto)
             transport = proto.transport
+            transport.connector = self
         else:
             reactor.clients.append(self)
             transport = SecondaryTransport(reactor, addr, reactor.client_port)
@@ -654,6 +662,7 @@ class TestConnector(twisted.internet.base.BaseConnector):
         reactor, addr, transport = self.reactor, self.addr, self.transport
         proto = self.buildProtocol(addr)
         transport.proto = proto
+        transport.connector = self
         proto.makeConnection(transport)
         return transport
 
@@ -912,7 +921,16 @@ class ZEOTests(ZEO.tests.testZEO.FullGenericTests):
         setupstack.setUpDirectory(self)
         ZEO.tests.testZEO.FullGenericTests.setUp(self)
         self.__sfs = ZODB.FileStorage.FileStorage('secondary.fs')
-        self.__s = zc.zrs.secondary.Secondary(self.__sfs, ('', self.__port))
+        self.__s = zc.zrs.secondary.Secondary(
+            self.__sfs, ('', self.__port), reconnect_delay=0.1)
+        zc.zrs.reactor.reactor.callLater(0.1, self.__breakConnection)
+
+    def __breakConnection(self):
+        try:
+            f = self.__s._factory.instance.transport.loseConnection
+        except AttributeError:
+            return
+        f('broken by test')
 
     def tearDown(self):
 
@@ -930,7 +948,7 @@ class ZEOTests(ZEO.tests.testZEO.FullGenericTests):
             comparedbs_packed(self, fsp, self.__sfs)
             
         fsp.close()
-        self.__sfs.close()
+        self.__s.close()
         ZEO.tests.testZEO.FullGenericTests.tearDown(self)
         setupstack.tearDown(self)
 
