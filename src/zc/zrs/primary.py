@@ -205,27 +205,32 @@ class PrimaryProducer:
 
     def _write(self, data):
         if not self.stopped:
-            self.transport.write(data)
+            self.transport.writeSequence(data)
         
     def write(self, data):
-        data = zc.zrs.sizedmessage.marshal(data)
+        data = zc.zrs.sizedmessage.marshals(data)
         self.event.wait()
         self.callFromThread(self._write, data)
             
     def run(self):
+        pickler = cPickle.Pickler(1)
+        pickler.fast = 1
         try:
             for trans in self.iterator:
                 self.write(
-                    cPickle.dumps(('T', (trans.tid, trans.status, trans.user,
-                                         trans.description, trans._extension)))
+                    pickler.dump(('T', (trans.tid, trans.status, trans.user,
+                                        trans.description, trans._extension)),
+                                 1)
                     )
                 for record in trans:
                     self.write(
-                        cPickle.dumps(('S',
+                        pickler.dump(('S',
                                        (record.oid, record.tid, record.version,
-                                        record.data, record.data_txn)))
+                                        record.data_txn)),
+                                     1)
                         )
-                self.write(cPickle.dumps(('C', ())))
+                    self.write(record.data or '')
+                self.write(pickler.dump(('C', ()), 1))
                 if self.stopped:
                     break
         except:

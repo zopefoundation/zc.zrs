@@ -121,9 +121,13 @@ And a special transport that will output data when it is called:
     >>> class Transport:
     ...     def __init__(self):
     ...         self.reactor = Reactor()
-    ...     def write(self, message):
-    ...         message = message[4:] # cheat. :)
-    ...         print cPickle.loads(message)[0]
+    ...     def writeSequence(self, message):
+    ...         message = message[1] # cheat. :)
+    ...         if message:
+    ...             message = cPickle.loads(message)
+    ...             if type(message) is tuple:
+    ...                 message = message[0]
+    ...         print message
     ...     def registerProducer(self, producer, streaming):
     ...         print 'registered producer'
     ...     def unregisterProducer(self):
@@ -139,6 +143,7 @@ And a producer based on the iterator and transport:
     registered producer
     T
     S
+    <class 'persistent.mapping.PersistentMapping'>
     C
 
 We get the initial transaction, because the producer starts producing
@@ -150,12 +155,12 @@ and we'll create another transaction:
 
     >>> conn = db.open()
     >>> ob = conn.root()
-    >>> import persistent.dict
-    >>> ob.x = persistent.dict.PersistentDict()
+    >>> import persistent.mapping
+    >>> ob.x = persistent.mapping.PersistentMapping()
     >>> commit()
     >>> iterator.notify()
     >>> ob = ob.x
-    >>> ob.x = persistent.dict.PersistentDict()
+    >>> ob.x = persistent.mapping.PersistentMapping()
     >>> commit()
     >>> iterator.notify()
     >>> time.sleep(0.1)
@@ -165,18 +170,22 @@ No output because we are paused.  Now let's resume:
     >>> producer.resumeProducing(); time.sleep(0.1)
     T
     S
+    <class 'persistent.mapping.PersistentMapping'>
     S
+    <class 'persistent.mapping.PersistentMapping'>
     C
     T
     S
+    <class 'persistent.mapping.PersistentMapping'>
     S
+    <class 'persistent.mapping.PersistentMapping'>
     C
 
 and pause again:
 
     >>> producer.pauseProducing()
     >>> ob = ob.x
-    >>> ob.x = persistent.dict.PersistentDict()
+    >>> ob.x = persistent.mapping.PersistentMapping()
     >>> commit()
     >>> iterator.notify()
     >>> time.sleep(0.1)
@@ -186,7 +195,9 @@ and resume:
     >>> producer.resumeProducing(); time.sleep(0.1)
     T
     S
+    <class 'persistent.mapping.PersistentMapping'>
     S
+    <class 'persistent.mapping.PersistentMapping'>
     C
 
     >>> producer.close()
@@ -599,15 +610,18 @@ class MessageTransport:
 
 class PrimaryTransport(MessageTransport):
 
-    def read(self):
-        return cPickle.loads(MessageTransport.read(self))
+    def read(self, raw=False):
+        data = MessageTransport.read(self)
+        if raw:
+            return data
+        return cPickle.loads(data)
 
 class SecondaryTransport(MessageTransport):
     
     def send(self, data, raw=False):
         if not raw:
             data = cPickle.dumps(data)
-        MessageTransport.send(self, data)
+        MessageTransport.send(self, data or '')
 
     def fail(self):
         self.connectionLost('failed')

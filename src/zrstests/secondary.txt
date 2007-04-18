@@ -80,12 +80,14 @@ and includes transaction meta data:
     >>> connection.send(('T', (trans.tid, trans.status, trans.user,
     ...                        trans.description, trans._extension)))
 
-This initial message is followed by a serious of messages, one for
-each object store:
+This initial message is followed by a serious of messages, two for
+each object store. The first has record meta data as a pickle, and the
+second has the record data:
 
     >>> for record in trans:
     ...     connection.send(('S', (record.oid, record.tid, record.version,
-    ...                            record.data, record.data_txn)))
+    ...                            record.data_txn)))
+    ...     connection.send(record.data, raw=True)
 
 Finally, a commit message is sent marking the end of the transaction:
 
@@ -112,7 +114,8 @@ Let's send some more data.
     ...                        trans.description, trans._extension)))
     >>> for record in trans:
     ...     connection.send(('S', (record.oid, record.tid, record.version,
-    ...                            record.data, record.data_txn)))
+    ...                            record.data_txn)))
+    ...     connection.send(record.data, raw=True)
     >>> connection.send(('C', ()))
 
 We'll see the data in the secondary database, and on the secondary
@@ -132,7 +135,8 @@ If we undo the transaction in the primary data:
     ...                        trans.description, trans._extension)))
     >>> for record in trans:
     ...     connection.send(('S', (record.oid, record.tid, record.version,
-    ...                            record.data, record.data_txn)))
+    ...                            record.data_txn)))
+    ...     connection.send(record.data, raw=True)
     >>> connection.send(('C', ()))
 
 Then, as we expect, the data will be undone on the secondary:
@@ -199,7 +203,8 @@ and then break the connection:
     ...                        newtrans.description, newtrans._extension)))
     >>> record = newtrans.next()
     >>> connection.send(('S', (record.oid, record.tid, record.version,
-    ...                        record.data, record.data_txn)))
+    ...                        record.data_txn)))
+    >>> connection.send(record.data, raw=True)
 
     >>> connection.fail()
     INFO zc.zrs.secondary:
@@ -239,12 +244,14 @@ We'll send the new data and this time send the commit record:
     >>> connection.send(('T', (newtrans.tid, newtrans.status, newtrans.user,
     ...                        newtrans.description, newtrans._extension)))
     >>> connection.send(('S', (record.oid, record.tid, record.version,
-    ...                        record.data, record.data_txn)))
+    ...                        record.data_txn)))
+    >>> connection.send(record.data, raw=True)
 
     >>> record = newtrans.next()
 
     >>> connection.send(('S', (record.oid, record.tid, record.version,
-    ...                        record.data, record.data_txn)))
+    ...                        record.data_txn)))
+    >>> connection.send(record.data, raw=True)
 
     >>> connection.send(('C', ()))
 

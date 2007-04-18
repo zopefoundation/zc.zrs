@@ -114,6 +114,7 @@ class SecondaryProtocol(twisted.internet.protocol.Protocol):
     __protocol = None
     __start = None
     __transaction = None
+    __record = None
 
     def connectionMade(self):
         self.__stream = zc.zrs.sizedmessage.Stream(self.messageReceived)
@@ -145,37 +146,47 @@ class SecondaryProtocol(twisted.internet.protocol.Protocol):
             self.error("Input data error", exc_info=True)
 
     def messageReceived(self, message):
-        message_type, data = cPickle.loads(message)
-        if message_type == 'T':
-            assert self.__transaction is None
-            transaction = Transaction(*data)
-            self.__inval = {}
-            self.factory.storage.tpc_begin(
-                transaction, transaction.id, transaction.status)
-            self.__transaction = transaction
-        elif message_type == 'S':
-            oid, serial, version, data, data_txn = data
+        if self.__record is None:
+            message_type, data = cPickle.loads(message)
+            if message_type == 'T':
+                assert self.__transaction is None
+                assert self.__record is None
+                transaction = Transaction(*data)
+                self.__inval = {}
+                self.factory.storage.tpc_begin(
+                    transaction, transaction.id, transaction.status)
+                self.__transaction = transaction
+            elif message_type == 'S':
+                self.__record = data
+            elif message_type == 'C':
+                assert self.__transaction is not None            
+                assert self.__record is None
+                self.factory.storage.tpc_vote(self.__transaction)
+
+                def invalidate(tid):
+                    if self.factory.db is not None:
+                        for (tid, version), oids in self.__inval.items():
+                            self.factory.db.invalidate(
+                                tid, oids, version=version)
+
+                self.factory.storage.tpc_finish(self.__transaction, invalidate)
+                self.__transaction = None
+            else:
+                raise ValueError("Invalid message type, %r" % message_type)
+        else:
+            oid, serial, version, data_txn = self.__record
+            self.__record = None
+            data = message or None
             key = serial, version
             oids = self.__inval.get(key)
             if oids is None:
                 oids = self.__inval[key] = {}
             oids[oid] = 1
-            
-            self.factory.storage.restore(oid, serial, data, version, data_txn,
-                                         self.__transaction)
-        elif message_type == 'C':
-            assert self.__transaction is not None            
-            self.factory.storage.tpc_vote(self.__transaction)
 
-            def invalidate(tid):
-                if self.factory.db is not None:
-                    for (tid, version), oids in self.__inval.items():
-                        self.factory.db.invalidate(tid, oids, version=version)
+            self.factory.storage.restore(
+                oid, serial, data, version, data_txn,
+                self.__transaction)
             
-            self.factory.storage.tpc_finish(self.__transaction, invalidate)
-            self.__transaction = None
-        else:
-            raise ValueError("Invalid message type, %r" % message_type)
 
 class Transaction:
 

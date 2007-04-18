@@ -18,6 +18,9 @@ import struct
 def marshal(message):
     return struct.pack(">I", len(message)) + message
 
+def marshals(message):
+    return struct.pack(">I", len(message)), message
+
 class LimitExceeded(Exception):
     """Too much data
     """
@@ -46,5 +49,7 @@ class Stream:
 
             self.length, = struct.unpack(">I", self.data[:4])
             self.data = self.data[4:]
-            if self.length > self.limit:
+            if self.length == 0:
+                self._callback('')
+            elif self.length > self.limit:
                 raise LimitExceeded(self.limit, self.length)
