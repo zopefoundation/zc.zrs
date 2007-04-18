@@ -11,6 +11,7 @@ setup(
     keywords = "ZODB",
 
     packages = ['zc', 'zc.zrs'],
+    include_package_data = True,
     zip_safe = True,
     package_dir = {'':'src'},
     namespace_packages = ['zc'],
