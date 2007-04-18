@@ -51,9 +51,13 @@ class Primary:
                      'abortVersion', 'commitVersion', 'versionEmpty',
                      'modifiedInVersion', 'versions', 'cleanup',
                      'loadEx', 'getSerial', 'getExtensionMethods', '__len__',
-                     'supportsTransactionalUndo', 'lastInvalidations',
+                     'supportsTransactionalUndo',
                      ):
             setattr(self, name, getattr(storage, name))
+
+        # Only newest ZODBs have lastInvalidations:
+        if hasattr(storage, 'lastInvalidations'):
+            self.lastInvalidations = storage.lastInvalidations
 
         self._factory = PrimaryFactory(storage, self._changed)
         self._addr = addr
