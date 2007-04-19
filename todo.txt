@@ -1,5 +1,7 @@
 Todo:
 
+- Need test with very large data records.
+
 - ZConfig support and process setup.
 
   This is mostly done.  I'll remove this from the list when I have:
