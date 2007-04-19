@@ -362,7 +362,7 @@ We'll walk through steps to create a ZRS primary installation using
 
      bin/primary start
 
-   To stop it, use:
+   To stop it, use::
 
      bin/primary stop
 
