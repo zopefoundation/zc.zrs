@@ -12,8 +12,6 @@ are running, secondary data are kept up to date.  In the event of a
 failure of a primary storage, you can simply reconfigure a secondary
 to be the primary and it can begin handling application requests.
 
-.. contents::
-
 Features
 ********
 
@@ -51,7 +49,9 @@ Limitations
 System Requirements
 *******************
 
-ZRS requires Python 2.4.  It requires ZODB version 3.4 or later.
+- Python 2.4.
+
+- ZODB version 3.4 or later.
 
 Installation
 ************
