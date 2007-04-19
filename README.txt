@@ -207,10 +207,11 @@ zc.zrs.secondary.Secondary takes the same arguments.
 Changes
 *******
 
-2.0b3 (2007-4-18)
-=================
+2.0b3 2.0b3 (2007-4-18)
+=======================
 
-Updated the network protocol to more efficiently handle large adta pickles.
+Updated the network protocol to more efficiently handle large data pickles.
+Improved secondary handling of very large data records.
 
 2.0b2 (2007-4-18)
 =================

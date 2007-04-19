@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 name = 'zc.zrs'
 setup(
     name = name,
-    version = "2.0b3",
+    version = "2.0b4",
     author = "Jim Fulton",
     author_email = "jim#zope.com",
     description = "Zope Replication Server",

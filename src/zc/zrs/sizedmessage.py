@@ -24,32 +24,43 @@ def marshals(message):
 class LimitExceeded(Exception):
     """Too much data
     """
+
 class Stream:
 
     def __init__(self, callback, limit = 1 << 32):
         self._callback = callback
         self.limit = limit
-        self.data = ''
+        self.data = []
+        self.size = 0
         self.length = 0
 
     def __call__(self, data):
-        self.data += data
+        self.data.append(data)
+        self.size += len(data)
         while 1:
             if self.length:
-                if len(self.data) < self.length:
+                if self.size < self.length:
                     return
 
-                result = self.data[:self.length]
-                self.data = self.data[self.length:]
+                data = ''.join(self.data)
+                result = data[:self.length]
+                data = data[self.length:]
+                self.data = [data]
+                self.size = len(data)
                 self.length = 0
                 self._callback(result)
 
-            if len(self.data) < 4:
+            if self.size < 4:
                 return
 
-            self.length, = struct.unpack(">I", self.data[:4])
-            self.data = self.data[4:]
+            if len(self.data[0]) < 4:
+                self.data = [''.join(self.data)]
+
+            self.length, = struct.unpack(">I", self.data[0][:4])
+            self.data[0] = self.data[0][4:]
+            self.size -= 4
             if self.length == 0:
                 self._callback('')
             elif self.length > self.limit:
                 raise LimitExceeded(self.limit, self.length)
+
