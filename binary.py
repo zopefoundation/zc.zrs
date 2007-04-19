@@ -6,16 +6,16 @@ open('setup.cfg', 'w').write("""
 exclude-source-files = true
 """)
 
-open('LICENSE.txt', 'w').write(open('ZBL.txt'))
+open('LICENSE.txt', 'w').write(open('ZBL.txt').read())
 
 try:
     setup(
         name = 'zc.zrs_binary',
-        version = "2.0b4",
+        version = open('version.txt').read().strip(),
         author = "Jim Fulton",
         author_email = "jim#zope.com",
         description = "Zope Replication Server",
-        license = "ZPL 2.1",
+        license = "Zope Binary License 1.0",
         keywords = "ZODB",
 
         packages = ['zc', 'zc.zrs'],
