@@ -48,6 +48,10 @@ Limitations
 
 - No support for ZODB BLOBs.  BLOB support will be added in ZRS 2.1.
 
+System Requirements
+*******************
+
+ZRS requires Python 2.4.  It requires ZODB version 3.4 or later.
 
 Installation
 ************
