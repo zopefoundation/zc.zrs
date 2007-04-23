@@ -3,7 +3,7 @@
 requires: zpython
 Name: zrs
 Version: `cat version.txt`
-Release: 1
+Release: 2
 Summary: Zope Replication Service
 URL: http://www.zope.com/products/zope_replication_services.html
 
