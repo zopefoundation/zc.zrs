@@ -35,16 +35,25 @@ class Secondary:
             
         self._storage = storage
 
-        for name in ('getName', 'sortKey', 'getSize', 'load', 'loadSerial',
-                     'loadBefore', 'supportsUndo',
-                     'supportsVersions', 
-                     'history', 'lastTransaction',
-                     'iterator', 'undoLog', 'undoInfo', 'pack', 'versionEmpty',
-                     'modifiedInVersion', 'versions', 'cleanup',
-                     'loadEx', 'getSerial', 'getExtensionMethods', '__len__',
-                     'supportsTransactionalUndo',
-                     ):
+        # required methods
+        for name in (
+            'getName', 'getSize', 'history', 'lastTransaction',
+            '__len__', 'load', 'loadBefore', 'loadSerial', 'pack', 
+            'sortKey',
+            ):
             setattr(self, name, getattr(storage, name))
+
+        # Optional methods:
+        for name in (
+            'iterator', 'cleanup', 'loadEx', 'getSerial',
+            'getExtensionMethods', 'supportsTransactionalUndo',
+            'tpc_transaction', 'getTid', 'lastInvalidations',
+            'supportsUndo', 'undoLog', 'undoInfo',
+            'supportsVersions',
+            'versionEmpty', 'modifiedInVersion', 'versions', 
+            ):
+            if hasattr(storage, name):
+                setattr(self, name, getattr(storage, name))
 
         self._factory = SecondaryFactory(reactor, storage, reconnect_delay)
         self._addr = addr

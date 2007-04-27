@@ -43,21 +43,26 @@ class Primary:
         self._storage = storage
         self._changed = threading.Condition()
 
-        for name in ('getName', 'sortKey', 'getSize', 'load', 'loadSerial',
-                     'loadBefore', 'new_oid', 'store', 'supportsUndo',
-                     'supportsVersions', 'tpc_abort', 'tpc_begin', 'tpc_vote',
-                     'history', 'registerDB', 'lastTransaction', 'isReadOnly',
-                     'iterator', 'undo', 'undoLog', 'undoInfo', 'pack',
-                     'abortVersion', 'commitVersion', 'versionEmpty',
-                     'modifiedInVersion', 'versions', 'cleanup',
-                     'loadEx', 'getSerial', 'getExtensionMethods', '__len__',
-                     'supportsTransactionalUndo',
-                     ):
+        # required methods
+        for name in (
+            'getName', 'getSize', 'history', 'isReadOnly', 'lastTransaction',
+            '__len__', 'load', 'loadBefore', 'loadSerial', 'new_oid', 'pack', 
+            'registerDB', 'sortKey', 'store', 'tpc_abort', 'tpc_begin',
+            'tpc_vote',
+            ):
             setattr(self, name, getattr(storage, name))
 
-        # Only newest ZODBs have lastInvalidations:
-        if hasattr(storage, 'lastInvalidations'):
-            self.lastInvalidations = storage.lastInvalidations
+        # Optional methods:
+        for name in (
+            'restore', 'iterator', 'cleanup', 'loadEx', 'getSerial',
+            'getExtensionMethods', 'supportsTransactionalUndo',
+            'tpc_transaction', 'getTid', 'lastInvalidations',
+            'supportsUndo', 'undoLog', 'undoInfo', 'undo',
+            'supportsVersions', 'abortVersion', 'commitVersion',
+            'versionEmpty', 'modifiedInVersion', 'versions', 
+            ):
+            if hasattr(storage, name):
+                setattr(self, name, getattr(storage, name))
 
         self._factory = PrimaryFactory(storage, self._changed)
         self._addr = addr
