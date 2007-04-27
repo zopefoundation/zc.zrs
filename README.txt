@@ -10,6 +10,11 @@ replicate data from the primary storage.
 Changes
 *******
 
+2.0b5 2.0b4 (2007-4-27)
+=======================
+
+Updated to work with recent ZODB API changes.
+
 2.0b3 2.0b4 (2007-4-18)
 =======================
 
