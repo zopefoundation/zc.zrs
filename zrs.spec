@@ -2,8 +2,8 @@
 %define svn_url svn+ssh://svn.zope.com/repos/main/zc.zrs/trunk
 requires: zpython
 Name: zrs
-Version: `cat version.txt`
-Release: 2
+Version: 2.0.0b5
+Release: 1
 Summary: Zope Replication Service
 URL: http://www.zope.com/products/zope_replication_services.html
 
