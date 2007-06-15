@@ -28,6 +28,7 @@ import zope.interface
 import twisted.internet.protocol
 import twisted.internet.interfaces
 
+import zc.zrs.reactor
 import zc.zrs.sizedmessage
 
 logger = logging.getLogger(__name__)
@@ -36,8 +37,8 @@ class Primary:
 
     def __init__(self, storage, addr, reactor=None):
         if reactor is None:
-            import zc.zrs.reactor
-            reactor = zc.zrs.reactor.reactor
+            reactor = zc.zrs.reactor.reactor()
+            
         self._reactor = reactor
             
         self._storage = storage

@@ -21,6 +21,7 @@ import ZODB.POSException
 
 import twisted.internet.protocol
 
+import zc.zrs.reactor
 import zc.zrs.sizedmessage
 
 logger = logging.getLogger(__name__)
@@ -29,8 +30,7 @@ class Secondary:
 
     def __init__(self, storage, addr, reactor=None, reconnect_delay=60):
         if reactor is None:
-            import zc.zrs.reactor
-            reactor = zc.zrs.reactor.reactor
+            reactor = zc.zrs.reactor.reactor()
         self._reactor = reactor
             
         self._storage = storage

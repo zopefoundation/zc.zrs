@@ -15,25 +15,63 @@
 """Set's up the reactor used by zrs
 """
 
-import atexit, os, threading
+import atexit, logging, os, threading
 
-if 'GLADE_REACTOR' in os.environ:
-    import twisted.manhole.gladereactor
-    twisted.manhole.gladereactor.install()
+import twisted.internet
+import twisted.python.log
 
-from twisted.internet import reactor
+logger = logging.getLogger(__name__)
 
-thread = threading.Thread(target=lambda : reactor.run(False))
-thread.setDaemon(True)
-thread.start()
+def log_twisted(data):
+    message = data['message']
+    message = '\n'.join([str(m) for m in message])
+    if data['isError']:
+        logger.error(message)
+    else:
+        logger.info(message)
+
+twisted.python.log.startLoggingWithObserver(log_twisted, setStdout=False)
+
+_shutdown_called = False
+_started = False
+
+def _run(reactor):
+    try:
+        reactor.run(False)
+    except:
+        logger.exception("The reactor errored")
+
+    if not _shutdown_called:
+        logger.critical("The twisted reactor quit unexpectedly")
+        logging.shutdown()
+        # Force the process to exit. I wish there was a less violent way.
+        os._exit(os.EX_SOFTWARE)
+
+def reactor():
+    global _started
+    if not _started:
+        _started = True
+        from twisted.internet import reactor
+        thread = threading.Thread(target=_run,
+                                  args=(twisted.internet.reactor, ))
+        thread.setDaemon(True)
+        thread.start()
+        atexit.register(shutdown)
+
+    return twisted.internet.reactor
 
 def _shutdown(event):
-    reactor.stop()
+    twisted.internet.reactor.stop()
     event.set()
 
 def shutdown():
-    event = threading.Event()
-    reactor.callFromThread(_shutdown, event)
-    event.wait()
+    global _shutdown_called
 
-atexit.register(shutdown)
+    if not _started or _shutdown_called:
+        return
+    
+    _shutdown_called = True
+    event = threading.Event()
+    twisted.internet.reactor.callFromThread(_shutdown, event)
+    event.wait(60)
+

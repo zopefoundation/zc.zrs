@@ -28,6 +28,8 @@ Let's create a secondary storage:
     >>> ss = zc.zrs.secondary.Secondary(fs, ('', 8000), reactor)
     INFO zc.zrs.secondary:
     Opening Data.fs ('', 8000)
+    INFO zc.zrs.reactor:
+    Starting factory <zc.zrs.secondary.SecondaryFactory instance>
 
 We can't use a secondary storage until it has gotten some data.  Our
 demo reactor doesn't make any network connections, so of course, the
@@ -155,6 +157,8 @@ this by asking out test conection to fail:
     >>> connection.fail()
     INFO zc.zrs.secondary:
     IPv4Address(TCP, '127.0.0.1', 47245): Disconnected 'failed'
+    INFO zc.zrs.reactor:
+    Stopping factory <zc.zrs.secondary.SecondaryFactory instance>
     
 Our test reactor just queues later attempts:
 
@@ -165,6 +169,8 @@ Our test reactor just queues later attempts:
 We'll simulate calling these later:
 
     >>> reactor.doLater()
+    INFO zc.zrs.reactor:
+    Starting factory <zc.zrs.secondary.SecondaryFactory instance>
 
     >>> reactor.later
     []
@@ -209,6 +215,8 @@ and then break the connection:
     >>> connection.fail()
     INFO zc.zrs.secondary:
     IPv4Address(TCP, '127.0.0.1', 47246): Disconnected 'failed'
+    INFO zc.zrs.reactor:
+    Stopping factory <zc.zrs.secondary.SecondaryFactory instance>
 
 The secondary still shows the old data:
 
@@ -223,6 +231,9 @@ Again, the secondary attempts to reconnect.  We'll accept the new connection.
           <zrstests.tests.TestConnector instance>>, (), {})]
 
     >>> reactor.doLater()
+    INFO zc.zrs.reactor:
+    Starting factory <zc.zrs.secondary.SecondaryFactory instance>
+
     >>> reactor.later
     []
 
@@ -269,16 +280,23 @@ attempt:
     >>> connection.fail()
     INFO zc.zrs.secondary:
     IPv4Address(TCP, '127.0.0.1', 47247): Disconnected 'failed'
+    INFO zc.zrs.reactor:
+    Stopping factory <zc.zrs.secondary.SecondaryFactory instance>
 
     >>> reactor.later # doctest: +NORMALIZE_WHITESPACE
     [(60, <bound method TestConnector.connect of
           <zrstests.tests.TestConnector instance>>, (), {})]
 
     >>> reactor.doLater()
+    INFO zc.zrs.reactor:
+    Starting factory <zc.zrs.secondary.SecondaryFactory instance>
+
     >>> reactor.later
     []
 
     >>> connection = reactor.reject()
+    INFO zc.zrs.reactor:
+    Stopping factory <zc.zrs.secondary.SecondaryFactory instance>
 
 As with failed connections, the secondary just tries again, waiting a
 minute between attempts.
@@ -295,6 +313,11 @@ minute between attempts.
     Closing Data.fs ('', 8000)
 
     >>> reactor.doLater()
+    INFO zc.zrs.reactor:
+    Starting factory <zc.zrs.secondary.SecondaryFactory instance>
+    INFO zc.zrs.reactor:
+    Stopping factory <zc.zrs.secondary.SecondaryFactory instance>
+
     >>> reactor.later 
     []
 

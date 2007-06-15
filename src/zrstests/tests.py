@@ -11,7 +11,7 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-import cPickle, logging, os, re, shutil, struct, sys
+import cPickle, logging, os, re, shutil, struct, subprocess, sys
 import tempfile, threading, time, unittest
 
 import transaction
@@ -32,6 +32,9 @@ import zc.zrs.primary
 import zc.zrs.reactor
 import zc.zrs.secondary
 import zc.zrs.sizedmessage
+
+# start the reactor thread so that it isn't reported as left over:
+zc.zrs.reactor.reactor()
 
 def scan_from_back():
     r"""
@@ -229,6 +232,8 @@ There a number of cases to consider when closing a secondary:
     >>> ss = zc.zrs.secondary.Secondary(fs, ('', 8000), reactor)
     INFO zc.zrs.secondary:
     Opening Data.fs ('', 8000)
+    INFO zc.zrs.reactor:
+    Starting factory <zc.zrs.secondary.SecondaryFactory instance>
 
     >>> len(reactor.clients)
     1
@@ -236,6 +241,8 @@ There a number of cases to consider when closing a secondary:
     >>> ss.close()
     INFO zc.zrs.secondary:
     Closing Data.fs ('', 8000)
+    INFO zc.zrs.reactor:
+    Stopping factory <zc.zrs.secondary.SecondaryFactory instance>
 
     >>> reactor.clients
     []
@@ -252,8 +259,12 @@ There a number of cases to consider when closing a secondary:
     >>> ss = zc.zrs.secondary.Secondary(fs, ('', 8000), reactor)
     INFO zc.zrs.secondary:
     Opening Data.fs ('', 8000)
+    INFO zc.zrs.reactor:
+    Starting factory <zc.zrs.secondary.SecondaryFactory instance>
 
     >>> reactor.reject()
+    INFO zc.zrs.reactor:
+    Stopping factory <zc.zrs.secondary.SecondaryFactory instance>
 
     >>> reactor.clients
     []
@@ -266,6 +277,10 @@ There a number of cases to consider when closing a secondary:
     Closing Data.fs ('', 8000)
 
     >>> reactor.doLater()
+    INFO zc.zrs.reactor:
+    Starting factory <zc.zrs.secondary.SecondaryFactory instance>
+    INFO zc.zrs.reactor:
+    Stopping factory <zc.zrs.secondary.SecondaryFactory instance at 0xb662b5cc>
 
     >>> reactor.later
     []
@@ -279,6 +294,9 @@ There a number of cases to consider when closing a secondary:
     >>> ss = zc.zrs.secondary.Secondary(fs, ('', 8000), reactor)
     INFO zc.zrs.secondary:
     Opening Data.fs ('', 8000)
+    INFO zc.zrs.reactor:
+    Starting factory <zc.zrs.secondary.SecondaryFactory instance>
+
     >>> connection = reactor.accept()
     INFO zc.zrs.secondary:
     IPv4Address(TCP, '127.0.0.1', 47248): Connected
@@ -309,6 +327,9 @@ There a number of cases to consider when closing a secondary:
     >>> ss = zc.zrs.secondary.Secondary(fs, ('', 8000), reactor)
     INFO zc.zrs.secondary:
     Opening Data.fs ('', 8000)
+    INFO zc.zrs.reactor:
+    Starting factory <zc.zrs.secondary.SecondaryFactory instance>
+
     >>> connection = reactor.accept()
     INFO zc.zrs.secondary:
     IPv4Address(TCP, '127.0.0.1', 47249): Connected
@@ -438,6 +459,8 @@ it does, it should simply close.
     >>> ss = zc.zrs.secondary.Secondary(fs, ('', 8000), reactor)
     INFO zc.zrs.secondary:
     Opening Data.fs ('', 8000)
+    INFO zc.zrs.reactor:
+    Starting factory <zc.zrs.secondary.SecondaryFactory instance>
 
     >>> connection = reactor.accept()
     INFO zc.zrs.secondary:
@@ -466,8 +489,75 @@ it does, it should simply close.
     >>> reactor.clients
     []
     
+    """
+
+
+def crashing_reactor_logs_as_such():
+    """
+
+We'll write a silly script that simply starts the reactor and tells it
+to crash:
+    
+    >>> open('t.py', 'w').write('''
+    ... import logging, time
+    ... import twisted.internet
+    ... import zc.zrs.reactor
+    ...
+    ... logging.getLogger().setLevel(1)
+    ... handler = logging.StreamHandler(open('t.log', 'w'))
+    ... logging.getLogger().addHandler(handler)
+    ... zc.zrs.reactor.reactor()
+    ... time.sleep(0.1)
+    ... twisted.internet.reactor.callFromThread(twisted.internet.reactor.crash)
+    ... time.sleep(5)
+    ... logging.error('failed')
+    ... ''')
+
+We'll run it:
+
+    >>> env = os.environ.copy()
+    >>> env['PYTHONPATH'] = os.pathsep.join(sys.path)
+    >>> p = subprocess.Popen(
+    ...       [sys.executable, 't.py'],
+    ...       env=env)
+
+It exits with a non-zero exit status:
+
+    >>> bool(p.wait())
+    True
+
+And we get something in the log to the effect that it closed unexpectedly.
+
+    >>> print open('t.log').read(),
+    Main loop terminated.
+    The twisted reactor quit unexpectedly
+
+OTOH, if we exit without crashing:
+
+    >>> open('t.py', 'w').write('''
+    ... import logging, time
+    ... import twisted.internet
+    ... import zc.zrs.reactor
+    ...
+    ... logging.getLogger().setLevel(1)
+    ... handler = logging.StreamHandler(open('t.log', 'w'))
+    ... logging.getLogger().addHandler(handler)
+    ... zc.zrs.reactor.reactor()
+    ... time.sleep(0.1)
+    ... ''')
+
+    >>> p = subprocess.Popen(
+    ...       [sys.executable, 't.py'],
+    ...       env=env)
+
+    >>> bool(p.wait())
+    False
+
+    >>> print open('t.log').read(),
+    Main loop terminated.
 
     """
+    
 
 class TestReactor:
 
@@ -940,7 +1030,7 @@ class ZEOTests(ZEO.tests.testZEO.FullGenericTests):
         self.__sfs = ZODB.FileStorage.FileStorage('secondary.fs')
         self.__s = zc.zrs.secondary.Secondary(
             self.__sfs, ('', self.__port), reconnect_delay=0.1)
-        zc.zrs.reactor.reactor.callLater(0.1, self.__breakConnection)
+        zc.zrs.reactor.reactor().callLater(0.1, self.__breakConnection)
 
     def __breakConnection(self):
         try:
@@ -983,7 +1073,11 @@ def test_suite():
                 ]),
             ),
         doctest.DocTestSuite(
-            setUp=setUp, tearDown=setupstack.tearDown),
+            setUp=setUp, tearDown=setupstack.tearDown,
+            checker=renormalizing.RENormalizing([
+                (re.compile(' at 0x[a-fA-F0-9]+'), ''),
+                ]),
+            ),
         unittest.makeSuite(PrimaryStorageTests, "check"),
         unittest.makeSuite(ZEOTests, "check"),
         ))
