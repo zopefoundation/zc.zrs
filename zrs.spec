@@ -1,6 +1,6 @@
-%define python zpython
+%define python /opt/cleanpython24/bin/python
 %define svn_url svn+ssh://svn.zope.com/repos/main/zc.zrs/trunk
-requires: zpython
+requires: cleanpython24
 Name: zrs
 Version: 2.0.1
 Release: 1
