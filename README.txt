@@ -10,6 +10,16 @@ replicate data from the primary storage.
 Changes
 *******
 
+2.0.1 (2007-6-15)
+=================
+
+Added additional logging.
+
+2.0.0 (2007-6-1)
+================
+
+First stable release.
+
 2.0b5 2.0b4 (2007-4-27)
 =======================
 
