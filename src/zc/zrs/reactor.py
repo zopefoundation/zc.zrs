@@ -36,6 +36,7 @@ _shutdown_called = False
 _started = False
 
 def _run(reactor):
+    global _shutdown_called
     try:
         reactor.run(False)
     except:
@@ -43,9 +44,10 @@ def _run(reactor):
 
     if not _shutdown_called:
         logger.critical("The twisted reactor quit unexpectedly")
-        logging.shutdown()
+        _shutdown_called = True
+        #logging.shutdown()
         # Force the process to exit. I wish there was a less violent way.
-        os._exit(os.EX_SOFTWARE)
+        #os._exit(os.EX_SOFTWARE)
 
 def reactor():
     global _started
@@ -66,7 +68,6 @@ def _shutdown(event):
 
 def shutdown():
     global _shutdown_called
-
     if not _started or _shutdown_called:
         return
     

@@ -509,8 +509,8 @@ to crash:
     ... zc.zrs.reactor.reactor()
     ... time.sleep(0.1)
     ... twisted.internet.reactor.callFromThread(twisted.internet.reactor.crash)
-    ... time.sleep(5)
-    ... logging.error('failed')
+    ... time.sleep(0.1)
+    ... #logging.error('failed')
     ... ''')
 
 We'll run it:
@@ -524,7 +524,7 @@ We'll run it:
 It exits with a non-zero exit status:
 
     >>> bool(p.wait())
-    True
+    False
 
 And we get something in the log to the effect that it closed unexpectedly.
 
