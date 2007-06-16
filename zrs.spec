@@ -3,7 +3,7 @@
 requires: cleanpython24
 Name: zrs
 Version: 2.0.1
-Release: 1
+Release: 2
 Summary: Zope Replication Service
 URL: http://www.zope.com/products/zope_replication_services.html
 
