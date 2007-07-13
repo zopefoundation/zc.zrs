@@ -557,6 +557,44 @@ OTOH, if we exit without crashing:
     Main loop terminated.
 
     """
+
+def leaking_file_handles_when_secondaries_disconnect():
+    r"""
+
+    >>> import sys, ZODB.FileStorage, zc.zrs.primary
+    >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
+    >>> ps = zc.zrs.primary.Primary(fs, ('', 8000), reactor)
+    INFO zc.zrs.primary:
+    Opening Data.fs ('', 8000)
+
+    >>> oldrc = sys.getrefcount(zc.zrs.primary.FileStorageIterator)
+
+    >>> from ZODB.DB import DB
+    >>> import persistent.dict
+    >>> db = DB(ps)
+    >>> conn = db.open()
+    >>> ob = conn.root()
+    >>> for i in range(10):
+    ...   ob.x = persistent.dict.PersistentDict()
+    ...   commit()
+
+    >>> for i in range(10):
+    ...     connection = reactor.connect(('', 8000))
+    ...     connection.send("zrs2.0")
+    ...     connection.send("\0"*8)
+    ...     _ = connection.read()
+    ...     connection.close()
+    ...     # doctest: +ELLIPSIS
+    INFO ...
+
+    >>> time.sleep(.01)
+    >>> sys.getrefcount(zc.zrs.primary.FileStorageIterator) == oldrc
+    True
+    
+    >>> db.close() # doctest: +ELLIPSIS
+    INFO ...
+    
+    """
     
 
 class TestReactor:

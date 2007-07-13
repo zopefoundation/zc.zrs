@@ -10,6 +10,17 @@ replicate data from the primary storage.
 Changes
 *******
 
+2.0.2 (2007-7-13)
+=================
+
+Bugs Fixed
+----------
+
+In primary servers, resources for closed secondary connections were
+leaked.  In a situation where a secondary connected and disconnected
+many times, this could cause primaries to runout of resources, like
+open files.
+
 2.0.1 (2007-6-15)
 =================
 

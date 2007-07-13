@@ -16,6 +16,7 @@
 import cPickle
 import logging
 import threading
+import time
 
 import ZODB.BaseStorage
 import ZODB.FileStorage
@@ -106,16 +107,16 @@ class PrimaryFactory(twisted.internet.protocol.Factory):
         self.storage = storage
         self.changed = changed
         self.instances = []
-        self.joins = []
+        self.threads = ThreadCounter()
 
     def close(self, callback):
         for instance in list(self.instances):
             instance.close()
         callback()
 
-    def join(self):
-        while self.joins:
-            self.joins.pop()()
+    def join(self, timeout=5):
+        self.threads.wait(timeout)
+        
 
 class PrimaryProtocol(twisted.internet.protocol.Protocol):
 
@@ -132,7 +133,7 @@ class PrimaryProtocol(twisted.internet.protocol.Protocol):
     def connectionLost(self, reason):
         self.info("Disconnected %r", reason)
         if self.__producer is not None:
-            self.factory.joins.append(self.__producer.join)
+            self.__producer.stopProducing()
         self.factory.instances.remove(self)
 
     def close(self):
@@ -172,7 +173,8 @@ class PrimaryProtocol(twisted.internet.protocol.Protocol):
             iterator = FileStorageIterator(
                 self.factory.storage, self.factory.changed, self.__start)
             self.__producer = PrimaryProducer(
-                iterator, self.transport, self.__peer)
+                iterator, self.transport, self.__peer,
+                self.factory.threads.run)
 
 PrimaryFactory.protocol = PrimaryProtocol
 
@@ -183,7 +185,8 @@ class PrimaryProducer:
 
     stopped = False
 
-    def __init__(self, iterator, transport, peer):
+    def __init__(self, iterator, transport, peer,
+                 run=lambda f, *args: f(*args)):
         self.iterator = iterator
         self.transport = transport
         self.peer = peer
@@ -194,9 +197,8 @@ class PrimaryProducer:
         self.resumeProducing = self.event.set
         self.wait = self.event.wait
         self.resumeProducing()
-        thread = threading.Thread(target=self.run)
+        thread = threading.Thread(target=run, args=(self.run, ))
         thread.setDaemon(True)
-        self.join = thread.join
         thread.start()
 
     def close(self):
@@ -205,7 +207,9 @@ class PrimaryProducer:
         self.transport.loseConnection()
     
     def stopProducing(self):
-        self.iterator.stop()
+        iterator = self.iterator
+        if iterator is not None:
+            iterator.stop()
         self.stopped = True
         self.event.set()
 
@@ -242,6 +246,9 @@ class PrimaryProducer:
         except:
             logger.exception(self.peer)
             self.callFromThread(self.close)
+
+        self.iterator = None
+        
 
 
 class TidTooHigh(Exception):
@@ -514,3 +521,38 @@ class Record:
         self.data = data
         self.data_txn = prev
         self.pos = pos
+
+class ThreadCounter:
+    """Keep track of running threads
+
+    We use the run method to run the threads and the wait method to
+    wait until they're all done:
+    """
+
+    def __init__(self):
+        self.count = 0
+        self.condition = threading.Condition()
+
+    def run(self, func, *args):
+        self.condition.acquire()
+        self.count += 1
+        self.condition.release()
+        try:
+            func(*args)
+        finally:
+            self.condition.acquire()
+            self.count -= 1
+            self.condition.notifyAll()
+            self.condition.release()
+
+    def wait(self, timeout):
+        deadline = time.time()+timeout
+        self.condition.acquire()
+        while self.count > 0:
+            w = deadline-time.time()
+            if w <= 0:
+                break
+            self.condition.wait(w)
+        self.condition.release()
+            
+    
