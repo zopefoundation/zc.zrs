@@ -21,6 +21,17 @@ leaked.  In a situation where a secondary connected and disconnected
 many times, this could cause primaries to runout of resources, like
 open files.
 
+2.0.2 (2007-7-16)
+=================
+
+Bugs fixed
+----------
+
+- In ZRS primaries, resources were leaked for each secondary
+  connection. In situations where there were many secondary
+  connections, this could cause primaries to fail due to resource
+  exhaustion.
+
 2.0.1 (2007-6-15)
 =================
 
