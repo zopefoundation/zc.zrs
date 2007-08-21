@@ -1,10 +1,13 @@
 %define python /opt/cleanpython24/bin/python
 %define zrs_version 2.0.2
-%define svn_url svn+ssh://svn.zope.com/repos/main/zc.zrs/tags/%{zrs_version}
+%define release 2
+%define svn_project svn+ssh://svn.zope.com/repos/main/zc.zrs
+%define svn_url %{svn_project}/tags/%{name}-%{zrs_version}-%{release}
+
 requires: cleanpython24
 Name: zrs
 Version: %{zrs_version}
-Release: 1
+Release: %{release}
 Summary: Zope Replication Service
 URL: http://www.zope.com/products/zope_replication_services.html
 
