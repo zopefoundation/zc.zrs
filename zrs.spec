@@ -1,6 +1,6 @@
 %define python /opt/cleanpython24/bin/python
 %define zrs_version 2.0.2
-%define release 2
+%define release 3
 %define svn_project svn+ssh://svn.zope.com/repos/main/zc.zrs
 %define svn_url %{svn_project}/tags/%{name}-%{zrs_version}-%{release}
 
@@ -32,7 +32,7 @@ touch $RPM_BUILD_ROOT/etc/init.d/%{name}
 svn export %{svn_url} $RPM_BUILD_ROOT/opt/%{name}
 cd $RPM_BUILD_ROOT/opt/%{name}
 %{python} bootstrap.py -c rpm.cfg buildout:eggs-directory=eggs
-bin/buildout -c rpm.cfg \
+bin/buildout -v -c rpm.cfg \
    buildout:installed= \
    bootstrap:recipe=zc.rebootstrap \
    buildout:eggs-directory=eggs
@@ -41,8 +41,7 @@ bin/buildout -c rpm.cfg \
 cd $RPM_INSTALL_PREFIX/%{name}
 %{python} bin/bootstrap -Uc rpmpost.cfg
 bin/buildout -Uc rpmpost.cfg \
-   buildout:offline=true buildout:find-links= buildout:installed= \
-   mercury:name=%{name} mercury:recipe=buildoutmercury
+   buildout:offline=true buildout:find-links= buildout:installed= 
 chmod -R -w . 
 
 %preun
