@@ -1,54 +1,37 @@
-%define python /opt/cleanpython24/bin/python
-%define zrs_version 2.0.2
-%define release 3
-%define svn_project svn+ssh://svn.zope.com/repos/main/zc.zrs
-%define svn_url %{svn_project}/tags/%{name}-%{zrs_version}-%{release}
+%define source trunk
+Version: 2.0.2
+Release: 3
 
-requires: cleanpython24
 Name: zrs
-Version: %{zrs_version}
-Release: %{release}
 Summary: Zope Replication Service
-URL: http://www.zope.com/products/zope_replication_services.html
+Group: Applications/Database
+Requires: cleanpython24
+# BuildRequires: ???
+%define python /opt/cleanpython24/bin/python
+
+##########################################################################
+# Lines below this point normally shouldn't change
 
 Copyright: ZVSL
 Vendor: Zope Corporation
 Packager: Zope Corporation <sales@zope.com>
-Buildroot: /tmp/buildroot
-Prefix: /opt
-Group: Applications/Database
 AutoReqProv: no
+Source: %{source}.tgz
 
 %description
 %{summary}
 
+%prep
+rm -rf $RPM_BUILD_DIR/%{source}
+zcat $RPM_SOURCE_DIR/%{source}.tgz | tar -xvf -
+
 %build
-rm -rf $RPM_BUILD_ROOT
-mkdir $RPM_BUILD_ROOT
-mkdir $RPM_BUILD_ROOT/opt
-mkdir $RPM_BUILD_ROOT/etc
-mkdir $RPM_BUILD_ROOT/etc/init.d
-touch $RPM_BUILD_ROOT/etc/init.d/%{name}
-svn export %{svn_url} $RPM_BUILD_ROOT/opt/%{name}
-cd $RPM_BUILD_ROOT/opt/%{name}
-%{python} bootstrap.py -c rpm.cfg buildout:eggs-directory=eggs
-bin/buildout -v -c rpm.cfg \
-   buildout:installed= \
-   bootstrap:recipe=zc.rebootstrap \
-   buildout:eggs-directory=eggs
-
-%post
-cd $RPM_INSTALL_PREFIX/%{name}
-%{python} bin/bootstrap -Uc rpmpost.cfg
-bin/buildout -Uc rpmpost.cfg \
-   buildout:offline=true buildout:find-links= buildout:installed= 
-chmod -R -w . 
-
-%preun
-cd $RPM_INSTALL_PREFIX/%{name}
-chmod -R +w . 
-find . -name \*.pyc | xargs rm -f
+if [ -d /opt/%{name} ] ; then chmod -R +w /opt/%{name} ; fi
+rm -rf /opt/%{name}
+cp -r $RPM_BUILD_DIR/%{source} /opt/%{name}
+%{python} /opt/%{name}/install.py bootstrap
+%{python} /opt/%{name}/install.py buildout:extensions=
+chmod -R -w /opt/%{name}
 
 %files
 %attr(-, root, root) /opt/%{name}
-%attr(744, root, root) /etc/init.d/%{name}
