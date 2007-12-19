@@ -1,6 +1,6 @@
 %define source trunk
-Version: 2.0.2
-Release: 4
+#Version: 2.0.2
+#Release: 4
 
 Name: zrs
 Summary: Zope Replication Service
