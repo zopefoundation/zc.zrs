@@ -1,5 +1,5 @@
 Version: 2.1.0
-Release: 1
+Release: 2
 %define source zrs-%{version}-%{release}
 
 Name: zrs
