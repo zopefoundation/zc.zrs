@@ -11,23 +11,30 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-import cPickle, logging, os, re, shutil, struct, subprocess, sys
-import tempfile, threading, time, unittest
 
-import transaction
 from ZODB.TimeStamp import TimeStamp
-import ZODB.utils
-import ZODB.FileStorage
-
-import ZEO.tests.testZEO
-
 from zope.testing import doctest, setupstack, renormalizing
-
+from zrstests import loopback
+import ZEO.ClientStorage
+import ZEO.tests.testZEO
+import ZODB.FileStorage
+import ZODB.utils
+import cPickle
+import logging
+import os
+import re
+import shutil
+import struct
+import subprocess
+import sys
+import tempfile
+import threading
+import time
+import transaction
 import twisted.internet.base
 import twisted.internet.error
-from zrstests import loopback
 import twisted.python.failure
-
+import unittest
 import zc.zrs.primary
 import zc.zrs.reactor
 import zc.zrs.secondary
@@ -1101,6 +1108,21 @@ class ZEOTests(ZEO.tests.testZEO.FullGenericTests):
 #
 ##############################################################################
 
+##############################################################################
+# Monitor test
+
+def monitor_setUp(test):
+    test.globs['__logging_dict'] = dict(logging.__dict__)
+    reload(logging)
+
+def monitor_tearDown(test):
+    logging.__dict__.clear()
+    logging.__dict__.update(test.globs['__logging_dict'])
+
+#
+##############################################################################
+
+
 def test_suite():
     return unittest.TestSuite((
         doctest.DocFileSuite(
@@ -1118,6 +1140,9 @@ def test_suite():
             ),
         unittest.makeSuite(PrimaryStorageTests, "check"),
         unittest.makeSuite(ZEOTests, "check"),
+        doctest.DocFileSuite('monitor.test',
+                             setUp=monitor_setUp, tearDown=monitor_tearDown,
+                             ),
         ))
 
 if __name__ == '__main__':

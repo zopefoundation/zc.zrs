@@ -1,9 +1,16 @@
+name = 'zc.zrs'
+version = open('version.txt').read().strip()
+
 from setuptools import setup, find_packages
 
-name = 'zc.zrs'
+entry_points = """
+[console_scripts]
+monitor = zc.zrs.monitor:main
+"""
+
 setup(
     name = name,
-    version = open('version.txt').read().strip(),
+    version = version,
     author = "Jim Fulton",
     author_email = "jim#zope.com",
     description = "Zope Replication Server",
@@ -13,6 +20,7 @@ setup(
     packages = ['zc', 'zc.zrs'],
     include_package_data = True,
     zip_safe = True,
+    entry_points = entry_points,
     package_dir = {'':'src'},
     namespace_packages = ['zc'],
     install_requires = ['setuptools', 'ZODB3', 'zc.twisted'],
