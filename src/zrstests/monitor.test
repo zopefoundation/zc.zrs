@@ -203,17 +203,33 @@ almost up:
 Here we see that the second primary is OK. Even though it is benhind
 the primary, it isn't behind by much.
 
+There's an important edge case.  A storage may never have had
+any trasactions:
+
+    >>> primary._server.last = '\0'*8
+    >>> secondary1._server.last = '\0'*8
+    >>> secondary2._server.last = '\0'*8
+    >>> wake() # doctest: +NORMALIZE_WHITESPACE
+    slept 291.0 seconds Sat Jul  7 01:25:09 2007
+    INFO monitor storage1.zope.com sample-primary No transactions
+    ('storage1.zope.com', 'sample-primary', 'No transactions')
+    INFO monitor storage2.zope.com sample-secondary No data
+    ('storage2.zope.com', 'sample-secondary', 'No data')
+    INFO monitor storage3.zope.com sample-secondary No data
+    ('storage3.zope.com', 'sample-secondary', 'No data')
+
+
 Finally, let's disconnect from the servers:
 
     >>> _ = [s.disconnect() for s in opened]
     >>> wake() # doctest: +NORMALIZE_WHITESPACE
-    slept 291.0 seconds Sat Jul  7 01:25:09 2007
-    CRITICAL monitor storage1.zope.com sample-primary Disconnected since: Sat Jul  7 01:25:00 2007
-    ('storage1.zope.com', 'sample-primary', 'Disconnected since: Sat Jul  7 01:25:00 2007')
-    CRITICAL monitor storage2.zope.com sample-secondary Disconnected since: Sat Jul  7 01:25:02 2007
-    ('storage2.zope.com', 'sample-secondary', 'Disconnected since: Sat Jul  7 01:25:02 2007')
-    CRITICAL monitor storage3.zope.com sample-secondary Disconnected since: Sat Jul  7 01:25:06 2007
-    ('storage3.zope.com', 'sample-secondary', 'Disconnected since: Sat Jul  7 01:25:06 2007')
+    slept 292.0 seconds Sat Jul  7 01:30:08 2007
+    CRITICAL monitor storage1.zope.com sample-primary Disconnected since: Sat Jul  7 01:30:00 2007
+    ('storage1.zope.com', 'sample-primary', 'Disconnected since: Sat Jul  7 01:30:00 2007')
+    CRITICAL monitor storage2.zope.com sample-secondary Disconnected since: Sat Jul  7 01:30:02 2007
+    ('storage2.zope.com', 'sample-secondary', 'Disconnected since: Sat Jul  7 01:30:02 2007')
+    CRITICAL monitor storage3.zope.com sample-secondary Disconnected since: Sat Jul  7 01:30:05 2007
+    ('storage3.zope.com', 'sample-secondary', 'Disconnected since: Sat Jul  7 01:30:05 2007')
 
 We see alerts for all of them because we're disconnected.
 
@@ -221,7 +237,7 @@ We see alerts for all of them because we're disconnected.
 
     >>> zc.zrs.monitor.stop()
     >>> wake()
-    slept 297.0 seconds Sat Jul  7 01:30:03 2007
+    slept 297.0 seconds Sat Jul  7 01:35:03 2007
     
     >>> for cluster in clusters:
     ...     cluster.thread.join()

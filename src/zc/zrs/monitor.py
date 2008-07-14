@@ -18,6 +18,7 @@
 import ConfigParser
 import ZEO.ClientStorage, ZEO.Exceptions
 import ZODB.TimeStamp
+import ZODB.utils
 import logging
 import logging.config
 import sys
@@ -128,7 +129,10 @@ class Cluster(Base):
                 else:
                     last_connected = time.ctime(time.time())
                     ts_seconds = ZODB.TimeStamp.TimeStamp(ts).timeTime()
-                    self.ok("Committed: %s" % time.ctime(ts_seconds))
+                    if ts == ZODB.utils.z64:
+                        self.ok("No transactions")
+                    else:
+                        self.ok("Committed: %s" % time.ctime(ts_seconds))
 
                 for secondary in secondaries:
                     secondary.check(ts_seconds, now)
@@ -143,7 +147,7 @@ class Secondary(Base):
     def __init__(self, name, address_string):
         super(Secondary, self).__init__(name, address_string, 'secondary')
         self.last_connected = 'Never connected'
-        self.last_seconds = 0
+        self.last_seconds = -2208988800.0
 
     def check(self, primary_seconds, primary_start):
         try:
@@ -154,10 +158,16 @@ class Secondary(Base):
             self.last_connected = time.ctime(time.time())
             ts_seconds = ZODB.TimeStamp.TimeStamp(ts).timeTime()
             if (ts_seconds - primary_seconds) > (time.time()-primary_start):
-                self.critical(
-                    "Secondary is ahead of primary s=%s p=%s"
-                    % (time.ctime(ts_seconds), time.ctime(primary_seconds))
-                    )
+                if primary_seconds < 0:
+                    self.critical(
+                        "Secondary has data, %s, but primary doesn't."
+                        % time.ctime(ts_seconds)
+                        )
+                else:
+                    self.critical(
+                        "Secondary is ahead of primary s=%s p=%s"
+                        % (time.ctime(ts_seconds), time.ctime(primary_seconds))
+                        )
             elif ((primary_seconds - ts_seconds) > 60
                   or
                   ((primary_seconds > ts_seconds)
@@ -171,9 +181,18 @@ class Secondary(Base):
                 else:
                     meth = self.critical
 
-                meth("Secondary out of date: s=%s p=%s" %
-                     (time.ctime(ts_seconds), time.ctime(primary_seconds))
-                     )
+                if ts == ZODB.utils.z64:
+                    meth("Secondary has no data, but primary does: %s" %
+                         (time.ctime(primary_seconds))
+                         )
+                else:
+                    meth("Secondary out of date: s=%s p=%s" %
+                         (time.ctime(ts_seconds), time.ctime(primary_seconds))
+                         )
             else:
-                self.ok("Committed: %s" % time.ctime(ts_seconds))
+                if ts == ZODB.utils.z64:
+                    self.ok("No data")
+                else:
+                    self.ok("Committed: %s" % time.ctime(ts_seconds))
+
             self.last_seconds = ts_seconds
