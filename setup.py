@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 entry_points = """
 [console_scripts]
-monitor = zc.zrs.monitor:main
+zrsmonitor-script = zc.zrs.monitor:main
 """
 
 setup(
