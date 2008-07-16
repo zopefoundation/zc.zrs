@@ -49,7 +49,7 @@ going to connect using the test reactor:
 The connection represents the server.  It accepts two string messages.
 The first message is the protocol, which must be "zrs2.0".
 The second message is the starting transaction.  We'll send the
-messages by calling the dataReceived method on the connection:
+messages by calling the send method on the connection:
 
     >>> connection.send("zrs2.0")
 
