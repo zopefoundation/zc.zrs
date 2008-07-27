@@ -95,7 +95,7 @@ class _LoopbackTransport(object):
     def connectionLost(self, reason):
         if self.producer is not None:
             self.producer.stopProducing()
-            self.producer = None
+            self.unregisterProducer()
         self.proto.connectionLost(reason)
 
 class _ClientLoopbackTransport(_LoopbackTransport):
