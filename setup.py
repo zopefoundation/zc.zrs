@@ -23,5 +23,9 @@ setup(
     entry_points = entry_points,
     package_dir = {'':'src'},
     namespace_packages = ['zc'],
-    install_requires = ['setuptools', 'ZODB3', 'zc.twisted'],
+    install_requires = [
+        'setuptools',
+        'ZODB3',
+        'Twisted',
+        ],
     )
