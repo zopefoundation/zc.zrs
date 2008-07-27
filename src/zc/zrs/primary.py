@@ -15,6 +15,7 @@
 
 import cPickle
 import logging
+import os
 import threading
 import time
 
@@ -69,7 +70,7 @@ class Primary:
         self._factory = PrimaryFactory(storage, self._changed)
         self._addr = addr
         logger.info("Opening %s %s", self.getName(), addr)
-        reactor.callFromThread(self._listen)
+        reactor.callFromThread(self.cfr_listen)
 
     # StorageServer accesses _transaction directly. :(
     @property
@@ -77,12 +78,12 @@ class Primary:
         return self._storage._transaction
 
     _listener = None
-    def _listen(self):
+    def cfr_listen(self):
         interface, port = self._addr
         self._listener = self._reactor.listenTCP(
             port, self._factory, interface=interface)
 
-    def _stop_listening(self):
+    def cfr_stop_listening(self):
         if self._listener is not None:
             self._listener.stopListening()
 
@@ -94,12 +95,12 @@ class Primary:
 
     def close(self):
         logger.info('Closing %s %s', self.getName(), self._addr)
-        self._reactor.callFromThread(self._stop_listening)
-        event = threading.Event()
-        self._reactor.callFromThread(self._factory.close, event.set)
-        event.wait()
-        self._factory.join()
+        self._reactor.callFromThread(self.cfr_stop_listening)
+
+        # Close the storage first to prevent more writes and to
+        # give the secondaries more time to catch up.
         self._storage.close()
+        self._factory.close()
 
 class PrimaryFactory(twisted.internet.protocol.Factory):
 
@@ -109,14 +110,10 @@ class PrimaryFactory(twisted.internet.protocol.Factory):
         self.instances = []
         self.threads = ThreadCounter()
 
-    def close(self, callback):
+    def close(self):
         for instance in list(self.instances):
             instance.close()
-        callback()
-
-    def join(self, timeout=5):
-        self.threads.wait(timeout)
-        
+        self.threads.wait(10)
 
 class PrimaryProtocol(twisted.internet.protocol.Protocol):
 
@@ -124,13 +121,13 @@ class PrimaryProtocol(twisted.internet.protocol.Protocol):
     __start = None
     __producer = None
 
-    def connectionMade(self):
+    def connectionMade(self):           # cfr
         self.__stream = zc.zrs.sizedmessage.Stream(self.messageReceived, 8)
         self.__peer = str(self.transport.getPeer()) + ': '
         self.factory.instances.append(self)
         self.info("Connected")
 
-    def connectionLost(self, reason):
+    def connectionLost(self, reason):   # cfr
         self.info("Disconnected %r", reason)
         if self.__producer is not None:
             self.__producer.stopProducing()
@@ -140,8 +137,8 @@ class PrimaryProtocol(twisted.internet.protocol.Protocol):
         if self.__producer is not None:
             self.__producer.close()
         else:
-            self.transport.loseConnection()
-            
+            self.transport.reactor.callFromThread(
+                self.transport.loseConnection)
         self.info('Closed')
 
     def error(self, message, *args):
@@ -151,13 +148,13 @@ class PrimaryProtocol(twisted.internet.protocol.Protocol):
     def info(self, message, *args):
         logger.info(self.__peer + message, *args)
 
-    def dataReceived(self, data):
+    def dataReceived(self, data):       # cfr
         try:
             self.__stream(data)
         except zc.zrs.sizedmessage.LimitExceeded, v:
             self.error('message too large: '+str(v))
 
-    def messageReceived(self, data):
+    def messageReceived(self, data):    # cfr
         if self.__protocol is None:
             if data != 'zrs2.0':
                 return self.error("Invalid protocol %r", data)
@@ -170,10 +167,9 @@ class PrimaryProtocol(twisted.internet.protocol.Protocol):
                 return self.error("Invalid transaction id, %r", data)
 
             self.info("start %r (%s)", data, ZODB.TimeStamp.TimeStamp(data))
-            iterator = FileStorageIterator(
-                self.factory.storage, self.factory.changed, self.__start)
             self.__producer = PrimaryProducer(
-                iterator, self.transport, self.__peer,
+                (self.factory.storage, self.factory.changed, self.__start),
+                self.transport, self.__peer,
                 self.factory.threads.run)
 
 PrimaryFactory.protocol = PrimaryProtocol
@@ -183,46 +179,79 @@ class PrimaryProducer:
 
     zope.interface.implements(twisted.internet.interfaces.IPushProducer)
 
+    # stopped indicates that we should stop sending output to a client
     stopped = False
 
-    def __init__(self, iterator, transport, peer,
+    # closed means that we're closed.  This is mainly to deal with a
+    # possible race at startup.  When we close a producer, we continue
+    # sending data to the client as long as data are available.
+    closed = False
+
+    def __init__(self, iterator_args, transport, peer,
                  run=lambda f, *args: f(*args)):
-        self.iterator = iterator
+        self.iterator = None
+        self.iterator_args = iterator_args
         self.transport = transport
         self.peer = peer
         transport.registerProducer(self, True)
         self.callFromThread = transport.reactor.callFromThread
-        self.event = threading.Event()
-        self.pauseProducing = self.event.clear
-        self.resumeProducing = self.event.set
-        self.wait = self.event.wait
+        event = threading.Event()
+        self.pauseProducing = event.clear
+        self.resumeProducing = event.set
+        self.waitForConsumer = event.wait
         self.resumeProducing()
-        thread = threading.Thread(target=run, args=(self.run, ))
+        thread = threading.Thread(target=run, args=(self.run, ),
+                                  name='Producer(%s)' % peer)
         thread.setDaemon(True)
         thread.start()
+        self.thread = thread
 
     def close(self):
-        self.transport.unregisterProducer()
-        self.stopProducing()
-        self.transport.loseConnection()
+        # We use the closed flag to handle a race condition in
+        # iterator setup.  We set the close flag before checking for
+        # the iterator.  If we find the iterator, we tell it to stop.
+        # If not, then when the run method below finishes creating the
+        # iterator, it will find the close flag and not use the iterator.
+        self.closed = True
+
+        iterator = self.iterator
+        if iterator is not None:
+            iterator.catch_up_then_stop()
+
+    def cfr_close(self):
+        if not self.stopped:
+            self.transport.unregisterProducer()
+            self.stopProducing()
+            self.transport.loseConnection()
+        
     
-    def stopProducing(self):
+    def stopProducing(self): # cfr
+        self.stopped = True
         iterator = self.iterator
         if iterator is not None:
             iterator.stop()
-        self.stopped = True
-        self.event.set()
+        self.resumeProducing() # unblock wait calls
 
-    def _write(self, data):
+    def cfr_write(self, data):
         if not self.stopped:
             self.transport.writeSequence(data)
-        
+
     def write(self, data):
         data = zc.zrs.sizedmessage.marshals(data)
-        self.event.wait()
-        self.callFromThread(self._write, data)
-            
+        self.waitForConsumer()
+        self.callFromThread(self.cfr_write, data)
+
     def run(self):
+        self.iterator = FileStorageIterator(*self.iterator_args)
+        if self.closed:
+            self.callFromThread(self.cfr_close)
+            return
+
+        if self.stopped:
+            # make sure our iterator gets stopped, as stopProducing might
+            # have been called while we were creating the iterator.
+            self.iterator.stop()
+        
         pickler = cPickle.Pickler(1)
         pickler.fast = 1
         try:
@@ -241,14 +270,12 @@ class PrimaryProducer:
                         )
                     self.write(record.data or '')
                 self.write(pickler.dump(('C', ()), 1))
-                if self.stopped:
-                    break
+
         except:
             logger.exception(self.peer)
-            self.callFromThread(self.close)
 
         self.iterator = None
-        
+        self.callFromThread(self.cfr_close)        
 
 
 class TidTooHigh(Exception):
@@ -266,11 +293,27 @@ class FileStorageIterator(ZODB.FileStorage.format.FileStorageFormatter):
         if condition is None:
             condition = threading.Condition()
         self._condition = condition
-        self._stopped = False
+        self._stop = False
+        self._catch_up_then_stop = False
 
     def _open(self):
         self._old_file = self._fs._file
-        file = self._file = open(self._fs._file_name, 'rb', 0)
+        try:
+            file = open(self._fs._file_name, 'rb', 0)
+        except IOError, v:
+            if os.path.exists(self._fs._file_name):
+                raise
+
+            # The file is gone.  It must have been removed -- probably
+            # in a test.  We won't die here because we're probably
+            # never going to be used.  If we are ever used 
+
+            def _next():
+                raise v
+            self._next = _next
+            return
+        
+        self._file = file
         self._pos = 4L
         ltid = self._ltid
         if ltid > ZODB.utils.z64:
@@ -361,22 +404,28 @@ class FileStorageIterator(ZODB.FileStorage.format.FileStorageFormatter):
 
     def stop(self):
         self._condition.acquire()
-        self._stopped = True
+        self._stop = True
+        self._condition.notifyAll()
+        self._condition.release()
+
+    def catch_up_then_stop(self):
+        self._condition.acquire()
+        self._catch_up_then_stop = True
         self._condition.notifyAll()
         self._condition.release()
 
     def next(self):
         self._condition.acquire()
         try:
-            if self._stopped:
-                raise StopIteration
             while 1:
+                if self._stop:
+                    raise StopIteration
                 r = self._next()
                 if r is not None:
                     return r
-                self._condition.wait()
-                if self._stopped:
+                if self._catch_up_then_stop:
                     raise StopIteration
+                self._condition.wait()
         finally:
             self._condition.release()
 

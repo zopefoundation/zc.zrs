@@ -79,9 +79,10 @@ If we try to iterate from the beginning, we'll get an error:
 
     >>> tid = tid_from_time(time.time()-70)
     >>> zc.zrs.primary.FileStorageIterator(fs, condition, tid)
+    ... # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    OverflowError: long too big to convert
+    OverflowError: ...
 
 But, if we iterate from near the end, we'll be OK:
 
@@ -118,11 +119,7 @@ We'll create a file-storage:
     >>> from ZODB.DB import DB
     >>> db = DB(fs)
 
-Now, we'll create an iterator:
-
-    >>> iterator = zc.zrs.primary.FileStorageIterator(fs)
-
-And a special transport that will output data when it is called:
+Now, we'll create a special transport that will output data when it is called:
 
     >>> class Reactor:
     ...     def callFromThread(self, f, *args, **kw):
@@ -145,10 +142,10 @@ And a special transport that will output data when it is called:
     ...     def loseConnection(self):
     ...         print 'loseConnection'
 
-And a producer based on the iterator and transport:
+And a producer based on the file storage and transport:
 
     >>> import time
-    >>> producer = zc.zrs.primary.PrimaryProducer(iterator, Transport(), 'test'
+    >>> producer = zc.zrs.primary.PrimaryProducer((fs, ), Transport(), 'test'
     ...            ); time.sleep(0.1)
     registered producer
     T
@@ -168,11 +165,11 @@ and we'll create another transaction:
     >>> import persistent.mapping
     >>> ob.x = persistent.mapping.PersistentMapping()
     >>> commit()
-    >>> iterator.notify()
+    >>> producer.iterator.notify()
     >>> ob = ob.x
     >>> ob.x = persistent.mapping.PersistentMapping()
     >>> commit()
-    >>> iterator.notify()
+    >>> producer.iterator.notify()
     >>> time.sleep(0.1)
     
 No output because we are paused.  Now let's resume:
@@ -197,7 +194,7 @@ and pause again:
     >>> ob = ob.x
     >>> ob.x = persistent.mapping.PersistentMapping()
     >>> commit()
-    >>> iterator.notify()
+    >>> producer.iterator.notify()
     >>> time.sleep(0.1)
 
 and resume:
@@ -210,7 +207,7 @@ and resume:
     <class 'persistent.mapping.PersistentMapping'>
     C
 
-    >>> producer.close()
+    >>> producer.close(); producer.thread.join()
     unregistered producer
     loseConnection
 
@@ -602,6 +599,68 @@ def leaking_file_handles_when_secondaries_disconnect():
     INFO ...
     
     """
+
+def close_writes_new_transactions():
+    r"""
+    We want close to try to write pending transactions, even if it
+    means that close will take a long time.
+
+    >>> import ZODB.FileStorage, zc.zrs.primary, persistent.dict
+    >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
+    >>> ps = zc.zrs.primary.Primary(fs, ('', 8000), reactor)
+    INFO zc.zrs.primary:
+    Opening Data.fs ('', 8000)
+
+    >>> db = ZODB.DB(ps)
+    >>> conn = db.open()
+    >>> ob = conn.root()
+    >>> ob.x = 0
+    >>> commit()
+
+    >>> committed = 2
+
+    We'll open lots of connections: :)
+
+    >>> nconnections = 10
+    >>> connections = []
+    >>> for i in range(nconnections):
+    ...     connection = reactor.connect(('', 8000))
+    ...     connection.send("zrs2.0")
+    ...     connection.send("\0"*8)
+    ...     connections.append(connection)
+    ...     # doctest: +ELLIPSIS
+    INFO zc.zrs.primary:...
+
+    >>> import time
+    >>> time.sleep(.1)
+
+    >>> for i in range(300):
+    ...     ob[i] = persistent.dict.PersistentDict()
+
+    >>> commit()
+    >>> committed += 1
+
+    >>> db.close()
+    ...     # doctest: +ELLIPSIS
+    INFO zc.zrs.primary:...
+    
+    >>> for i in range(nconnections):
+    ...     connection = connections[i]
+    ...     trans = message_type = x = None
+    ...     ntrans = 0
+    ...     while connection.have_data():
+    ...         message_type, data = connection.read()
+    ...         if message_type == 'T':
+    ...             trans = data
+    ...             ntrans += 1
+    ...         elif message_type == 'S':
+    ...             x = connection.read(True)
+    ...     if message_type != 'C' or ntrans != committed:
+    ...         print i, message_type, ntrans
+
+    """
+    
+
     
 
 class TestReactor:
@@ -896,7 +955,7 @@ class TestPrimary(zc.zrs.primary.Primary):
             # Before we do that though, we'll call doLater on our reactor to
             # give previously disconnected clients a chance to reconnect.
             self._reactor.doLater()
-            self._reactor.callFromThread(self._factory.close, lambda : None)
+            self._reactor.callFromThread(self._factory.close)
 
 
 class BasePrimaryStorageTests(StorageTestBase.StorageTestBase):
