@@ -14,7 +14,7 @@ setup(
     author = "Jim Fulton",
     author_email = "jim#zope.com",
     description = "Zope Replication Server",
-    license = "ZPL 2.1",
+    license = "ZVSL 1.0",
     keywords = "ZODB",
 
     packages = ['zc', 'zc.zrs'],
