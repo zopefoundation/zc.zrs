@@ -8,6 +8,11 @@ exclude-source-files = true
 
 open('LICENSE.txt', 'w').write(open('ZEL.txt').read())
 
+entry_points = """
+[console_scripts]
+zrsmonitor-script = zc.zrs.monitor:main
+"""
+
 try:
     setup(
         name = 'zc.zrs_eval',
@@ -22,6 +27,7 @@ try:
         include_package_data = True,
         data_files = [('.', ['README.txt', 'LICENSE.txt'])],
         zip_safe = True,
+        entry_points = entry_points,
         package_dir = {'':'src'},
         namespace_packages = ['zc'],
         install_requires = ['setuptools', 'ZODB3', 'zc.twisted'],
