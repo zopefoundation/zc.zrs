@@ -927,22 +927,6 @@ from ZODB.tests import PersistentStorage
 from ZODB.tests import MTStorage
 from ZODB.tests import ReadOnlyStorage
 
-def catch_up(fs1, fs2):
-    for i in range(2000):
-        if i:
-            time.sleep(0.01)
-        if fs1.lastTransaction() <= fs2.lastTransaction():
-            return # caught up
-        l1 = list(fs1.iterator())
-        if not l1:
-            return
-        l2 = list(fs2.iterator())
-        if l2:
-            if (l1[-1].tid <= l2[-1].tid):
-                return
-
-    raise AssertionError("Can't catch up.")
-
 class TestPrimary(zc.zrs.primary.Primary):
 
     _transaction_count = 0
@@ -950,12 +934,13 @@ class TestPrimary(zc.zrs.primary.Primary):
         self._transaction_count += 1
         zc.zrs.primary.Primary.tpc_finish(self, *args)
         if self._transaction_count%20 == 0:
-            # be annoying and disconnect out clients every 20 transactions.
+            # be annoying and disconnect our clients every 20 transactions.
             # Hee hee.
             # Before we do that though, we'll call doLater on our reactor to
             # give previously disconnected clients a chance to reconnect.
             self._reactor.doLater()
-            self._reactor.callFromThread(self._factory.close)
+            for instance in self._factory.instances:
+                instance._stop()
 
 
 class BasePrimaryStorageTests(StorageTestBase.StorageTestBase):
@@ -981,6 +966,26 @@ class BasePrimaryStorageTests(StorageTestBase.StorageTestBase):
 
     __port = 8000
 
+    def catch_up(self, fs1, fs2):
+        for i in range(2000):
+            self._storage._reactor.doLater()
+            if i:
+                time.sleep(0.01)
+
+            if fs1.lastTransaction() <= fs2.lastTransaction():
+                return # caught up
+
+            l1 = list(fs1.iterator())
+            if not l1:
+                return
+            l2 = list(fs2.iterator())
+            if l2:
+                if (l1[-1].tid <= l2[-1].tid):
+                    return
+
+        raise AssertionError("Can't catch up.")
+
+
     def open(self, **kwargs):
         reactor = self.globs['reactor']
         self.__port += 1
@@ -992,17 +997,13 @@ class BasePrimaryStorageTests(StorageTestBase.StorageTestBase):
 
         p_pack = self._storage.pack
         def pack(*args, **kw):
-            #catch_up(self.__pfs, self.__sfs)
-            #import pdb; pdb.set_trace()
             p_pack(*args, **kw)
-            #self.__ss.pack(*args, **kw)
             self.__pack = True
         self._storage.pack = pack
         
         p_close = self._storage.close
         def close():
-            self._storage._reactor.doLater()
-            catch_up(self.__pfs, self.__sfs)
+            self.catch_up(self.__pfs, self.__sfs)
 
             if self.__pack:
                 comparedbs_packed(self, self.__pfs, self.__sfs)
@@ -1012,7 +1013,7 @@ class BasePrimaryStorageTests(StorageTestBase.StorageTestBase):
             # Now, just recover from scratch to make sure we can:
             sfs = ZODB.FileStorage.FileStorage('secondary2.fs')
             ss = zc.zrs.secondary.Secondary(sfs, addr, reactor)
-            catch_up(self.__pfs, sfs)
+            self.catch_up(self.__pfs, sfs)
             self.__comparedbs(self.__pfs, sfs)
             ss.close()
 

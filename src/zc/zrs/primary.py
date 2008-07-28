@@ -113,7 +113,7 @@ class PrimaryFactory(twisted.internet.protocol.Factory):
     def close(self):
         for instance in list(self.instances):
             instance.close()
-        self.threads.wait(10)
+        self.threads.wait(60)
 
 class PrimaryProtocol(twisted.internet.protocol.Protocol):
 
@@ -140,6 +140,15 @@ class PrimaryProtocol(twisted.internet.protocol.Protocol):
             self.transport.reactor.callFromThread(
                 self.transport.loseConnection)
         self.info('Closed')
+
+    def _stop(self):
+        # for tests
+        if self.__producer is not None:
+            self.__producer._stop()
+        else:
+            self.transport.reactor.callFromThread(
+                self.transport.loseConnection)
+        
 
     def error(self, message, *args):
         logger.error(self.__peer + message, *args)
@@ -217,6 +226,12 @@ class PrimaryProducer:
         iterator = self.iterator
         if iterator is not None:
             iterator.catch_up_then_stop()
+
+    def _stop(self):
+        # for tests
+        iterator = self.iterator
+        if iterator is not None:
+            iterator.stop()
 
     def cfr_close(self):
         if not self.stopped:
