@@ -1,6 +1,6 @@
 Version: 2.0.3b1
 Release: 0
-Name: zrs
+Name: zc.zrs
 
 %define source %{name}-%{version}-%{release}
 
