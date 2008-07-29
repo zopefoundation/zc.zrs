@@ -1,8 +1,9 @@
-Version: 2.1.0
-Release: 2
-%define source zrs-%{version}-%{release}
-
+Version: 2.0.3b1
+Release: 0
 Name: zrs
+
+%define source %{name}-%{version}-%{release}
+
 Summary: Zope Replication Service
 Group: Applications/Database
 Requires: cleanpython24
