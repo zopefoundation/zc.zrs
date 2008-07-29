@@ -1,8 +1,7 @@
-Version: 2.1.0
-Release: 2
-%define source zrs-%{version}-%{release}
+Name: zc.zrs
+Version: 0
+Release: 0
 
-Name: zrs
 Summary: Zope Replication Service
 Group: Applications/Database
 Requires: cleanpython24
@@ -11,6 +10,8 @@ Requires: cleanpython24
 
 ##########################################################################
 # Lines below this point normally shouldn't change
+
+%define source %{name}-%{version}-%{release}
 
 Copyright: ZVSL
 Vendor: Zope Corporation
