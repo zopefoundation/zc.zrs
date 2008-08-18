@@ -48,7 +48,7 @@ def main(args=None, testing=False):
     frequency = float(options.get('frequency', 5))
     message = options.get(
         'message',
-        '%(hostname)s\t%(service)s\t%(severity)s\t%(comment)s')
+        '%(hostname)s %(service)s %(comment)s')
 
     clusters = [
         Cluster(cluster_name, data[cluster_name], frequency, message)
