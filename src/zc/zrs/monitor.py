@@ -46,9 +46,12 @@ def main(args=None, testing=False):
         )
     options = data["monitor"]
     frequency = float(options.get('frequency', 5))
+    message = options.get(
+        'message',
+        '%(hostname)s\t%(service)s\t%(severity)s\t%(comment)s')
 
     clusters = [
-        Cluster(cluster_name, data[cluster_name], frequency)
+        Cluster(cluster_name, data[cluster_name], frequency, message)
         for cluster_name in options['clusters'].split()
         ]
 
@@ -64,34 +67,44 @@ zeo_options = dict(wait= False, read_only=True,
 
 class Base(object):
 
-    def __init__(self, name, address_string, service):
+    def __init__(self, name, address_string, service, message):
         address = tuple(address_string.split(':'))
         address = address[0], int(address[1])
         self.address = address
         self.name = name
+        self.message = message
         self.service = name + '-' + service
         self.storage = ZEO.ClientStorage.ClientStorage(address, **zeo_options)
 
-    def _report(self, log, comment):
-        return log("%s %s %s", self.address[0], self.service, comment)
+    def _report(self, log, severity, comment):
+        return log(
+            self.message % dict(
+                hostname = self.address[0],
+                port = self.address[1],
+                name = self.name,
+                service = self.service,
+                severity = severity,
+                comment = comment,
+                ))
 
     def ok(self, comment):
-        self._report(monitor_logger.info, comment)
+        self._report(monitor_logger.info, 'INFO', comment)
 
     def warning(self, comment):
-        self._report(monitor_logger.warning, comment)
+        self._report(monitor_logger.warning, 'WARNING', comment)
 
     def critical(self, comment):
-        self._report(monitor_logger.critical, comment)
+        self._report(monitor_logger.critical, 'CRITICAL', comment)
 
 class Cluster(Base):
 
-    def __init__(self, name, options, frequency):
-        super(Cluster, self).__init__(name, options['primary'], 'primary')
+    def __init__(self, name, options, frequency, message):
+        super(Cluster, self).__init__(name, options['primary'], 'primary',
+                                      message)
         self.frequency = frequency
 
         self.secondaries = [
-            Secondary(name, address_string)
+            Secondary(name, address_string, message)
             for address_string in options['secondaries'].split()
             ]
         thread = self.thread = threading.Thread(target=self.run, name=name)
@@ -144,8 +157,9 @@ class Cluster(Base):
             
 class Secondary(Base):
 
-    def __init__(self, name, address_string):
-        super(Secondary, self).__init__(name, address_string, 'secondary')
+    def __init__(self, name, address_string, message):
+        super(Secondary, self).__init__(name, address_string, 'secondary',
+                                        message)
         self.last_connected = 'Never connected'
         self.last_seconds = -2208988800.0
 
