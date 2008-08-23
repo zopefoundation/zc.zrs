@@ -16,14 +16,15 @@
 """
 
 import ConfigParser
-import ZEO.ClientStorage, ZEO.Exceptions
-import ZODB.TimeStamp
-import ZODB.utils
+import datetime
 import logging
 import logging.config
 import sys
 import threading
 import time
+import ZEO.ClientStorage, ZEO.Exceptions
+import ZODB.TimeStamp
+import ZODB.utils
 
 event = threading.Event()
 stop = event.set
@@ -85,6 +86,7 @@ class Base(object):
                 service = self.service,
                 severity = severity,
                 comment = comment,
+                utc = datetime.datetime.utcnow().strftime("%m-%d-%Y %H:%M:%S"),
                 ))
 
     def ok(self, comment):
