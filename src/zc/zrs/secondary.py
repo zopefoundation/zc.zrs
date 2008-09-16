@@ -29,7 +29,8 @@ logger = logging.getLogger(__name__)
 
 class Secondary:
 
-    def __init__(self, storage, addr, reactor=None, reconnect_delay=60):
+    def __init__(self, storage, addr, reactor=None, reconnect_delay=60,
+                 check_checksums=True):
         if reactor is None:
             reactor = zc.zrs.reactor.reactor()
         self._reactor = reactor
@@ -56,7 +57,8 @@ class Secondary:
             if hasattr(storage, name):
                 setattr(self, name, getattr(storage, name))
 
-        self._factory = SecondaryFactory(reactor, storage, reconnect_delay)
+        self._factory = SecondaryFactory(reactor, storage, reconnect_delay,
+                                         check_checksums)
         self._addr = addr
         host, port = addr
         logger.info("Opening %s %s", self.getName(), addr)
@@ -90,11 +92,12 @@ class SecondaryFactory(twisted.internet.protocol.ClientFactory):
     # stress the secondaries.
     instance = None
 
-    def __init__(self, reactor, storage, reconnect_delay):
+    def __init__(self, reactor, storage, reconnect_delay, check_checksums):
         self.protocol = SecondaryProtocol
         self.reactor = reactor
         self.storage = storage
         self.reconnect_delay = reconnect_delay
+        self.check_checksums = check_checksums
 
     def close(self, callback):
         self.closed = True
@@ -170,7 +173,8 @@ class SecondaryProtocol(twisted.internet.protocol.Protocol):
             elif message_type == 'S':
                 self.__record = data
             elif message_type == 'C':
-                if data[0] != self.__md5.digest():
+                if self.factory.check_checksums and (
+                    data[0] != self.__md5.digest()):
                     raise AssertionError(
                         "Bad checksum", data[0], self.__md5.digest())
                 assert self.__transaction is not None            

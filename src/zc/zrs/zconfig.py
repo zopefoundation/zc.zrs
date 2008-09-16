@@ -31,3 +31,10 @@ class Primary:
 class Secondary(Primary):
 
     storage_class = zc.zrs.secondary.Secondary
+
+    def open(self):
+        base = self.config.base.open()
+        return self.storage_class(
+            base, self.config.address.address,
+            check_checksums=self.config.check_checksums,
+            )

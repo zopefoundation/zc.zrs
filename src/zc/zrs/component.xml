@@ -39,6 +39,9 @@
         address).
       </description>
     </key>
+    <key name="check_checksums" datatype="boolean" required="no"
+         default="false">
+    </key>
   </sectiontype>
 
 </component>
