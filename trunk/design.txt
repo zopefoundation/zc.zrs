@@ -1,0 +1,34 @@
+This document describes the basic zc.zrs design.
+
+ZRS has two parts, a primary storage and a secondary storage.  Both
+are ZODB storages.  They can be used with ZEO or directly in
+applications.  A secondary storage is configured with one or more
+addresses of primary storages.  It will try to connect to each address
+until a connection succeeds.
+
+When a secondary connects to a primary, it presents it's highest
+committed transaction id.  The primary sends it all subsequent
+transactions for as long as the secondary is running.  The secondary
+restores these transactions as they are recieved from the primary.
+
+From an application's point of view, a secondary is read-only.  An
+application is not allowed to write to a secondary.
+
+Primaries and secondaries are defined with other storages that actualy
+store data.
+
+We will support multiple versions of ZODB. 
+
+Notes:
+
+  - Current secondaries only work with FileStorage
+
+  - We want extra features:
+
+    o restore for secondaries
+
+    o Ability to tell ZEO servers when new data comes in.
+
+  - We don't support versions
+
+  - We don't provide the backpointer optimization.
