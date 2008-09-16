@@ -15,6 +15,7 @@
 
 import cPickle
 import logging
+import md5
 import threading
 
 import ZODB.POSException
@@ -131,6 +132,7 @@ class SecondaryProtocol(twisted.internet.protocol.Protocol):
         self.factory.instance = self
         self.transport.write(zc.zrs.sizedmessage.marshal("zrs2.0"))
         tid = self.factory.storage.lastTransaction()
+        self.__md5 = md5.new(tid)
         self.transport.write(zc.zrs.sizedmessage.marshal(tid))
         self.info("Connected")
 
@@ -168,6 +170,9 @@ class SecondaryProtocol(twisted.internet.protocol.Protocol):
             elif message_type == 'S':
                 self.__record = data
             elif message_type == 'C':
+                if data[0] != self.__md5.digest():
+                    raise AssertionError(
+                        "Bad checksum", data[0], self.__md5.digest())
                 assert self.__transaction is not None            
                 assert self.__record is None
                 self.factory.storage.tpc_vote(self.__transaction)
@@ -195,7 +200,7 @@ class SecondaryProtocol(twisted.internet.protocol.Protocol):
             self.factory.storage.restore(
                 oid, serial, data, version, data_txn,
                 self.__transaction)
-            
+        self.__md5.update(message)
 
 class Transaction:
 

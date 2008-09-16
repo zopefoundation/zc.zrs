@@ -15,6 +15,7 @@
 
 import cPickle
 import logging
+import md5
 import os
 import threading
 import time
@@ -200,6 +201,7 @@ class PrimaryProducer:
                  run=lambda f, *args: f(*args)):
         self.iterator = None
         self.iterator_args = iterator_args
+        self.start_tid = iterator_args[2]
         self.transport = transport
         self.peer = peer
         transport.registerProducer(self, True)
@@ -253,6 +255,7 @@ class PrimaryProducer:
 
     def write(self, data):
         data = zc.zrs.sizedmessage.marshals(data)
+        self.md5.update(data[1])
         self.waitForConsumer()
         self.callFromThread(self.cfr_write, data)
 
@@ -269,6 +272,8 @@ class PrimaryProducer:
         
         pickler = cPickle.Pickler(1)
         pickler.fast = 1
+        self.md5 = md5.new(self.start_tid)
+        
         try:
             for trans in self.iterator:
                 self.write(
@@ -284,7 +289,8 @@ class PrimaryProducer:
                                      1)
                         )
                     self.write(record.data or '')
-                self.write(pickler.dump(('C', ()), 1))
+                self.write(pickler.dump(('C', (self.md5.digest(), )), 1))
+                #self.write(pickler.dump(('C', ()), 1))
 
         except:
             logger.exception(self.peer)

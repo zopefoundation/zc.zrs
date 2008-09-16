@@ -75,9 +75,21 @@ the secondary.
     >>> trans = primary_data.next()
 
 Transactions are sent as a series of messages.  To make this easier
-for this demonstration, the connections let us pass data directly.
+for this demonstration, the test connections let us pass data directly.
+
+The replication protocol includes md5 checksums to make sure data are
+recieved correctly.  The test connection also keeps track of md5
+checksums for us, but we have to initialize the checksum with the
+last transaction:
+
+    >>> connection.init_md5('\x00\x00\x00\x00\x00\x00\x00\x00')
+
+(We could actually skip this in this case, as the test connection
+initializes itself with a zero transaction id.  We won't be able to
+skip it below when we use non-zero transaction ids.)
+
 The first message is a transaction message that starts the transaction
-and includes transaction meta data:
+and includes transaction meta data.
 
     >>> connection.send(('T', (trans.tid, trans.status, trans.user,
     ...                        trans.description, trans._extension)))
@@ -93,7 +105,7 @@ second has the record data:
 
 Finally, a commit message is sent marking the end of the transaction:
 
-    >>> connection.send(('C', ()))
+    >>> connection.send(('C', (connection.md5.digest(),)))
 
 Now that we've created this minimal data, we can create a database for
 our secondary storage:
@@ -118,7 +130,7 @@ Let's send some more data.
     ...     connection.send(('S', (record.oid, record.tid, record.version,
     ...                            record.data_txn)))
     ...     connection.send(record.data, raw=True)
-    >>> connection.send(('C', ()))
+    >>> connection.send(('C', (connection.md5.digest(),)))
 
 We'll see the data in the secondary database, and on the secondary
 connection, after a sync:
@@ -139,7 +151,7 @@ If we undo the transaction in the primary data:
     ...     connection.send(('S', (record.oid, record.tid, record.version,
     ...                            record.data_txn)))
     ...     connection.send(record.data, raw=True)
-    >>> connection.send(('C', ()))
+    >>> connection.send(('C', (connection.md5.digest(),)))
 
 Then, as we expect, the data will be undone on the secondary:
 
@@ -189,6 +201,8 @@ The secondary will send the protocol and a transaction, as before:
     >>> tid = connection.read()
     >>> tid
     '\x03lk\x90\xfb\xbb\xbb\xbb'
+
+    >>> connection.init_md5(tid)
 
 Note that the transaction id isn't zero.  It fact, it's the same as
 the last transaction that was sent to the secondary:
@@ -247,6 +261,9 @@ Again, the secondary attempts to reconnect.  We'll accept the new connection.
     >>> connection.read() == trans.tid
     True
 
+    >>> connection.init_md5(trans.tid)
+
+
 Again, the transaction id sent is the earlier transaction, which is
 the last transaction committed by the secondary.
 
@@ -264,7 +281,7 @@ We'll send the new data and this time send the commit record:
     ...                        record.data_txn)))
     >>> connection.send(record.data, raw=True)
 
-    >>> connection.send(('C', ()))
+    >>> connection.send(('C', (connection.md5.digest(),)))
 
 Now we see the new data:
 

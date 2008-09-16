@@ -109,7 +109,12 @@ Finally, there will be a commit record marking the end of the
 transaction:
 
     >>> connection.read()
-    ('C', ())
+    ('C', ('Jf\xc4\x7fjMH\xdb#\xd0\xaf\x072fs\x0e',))
+
+The data for the commit contains a md5 checksup of the 
+identifier of the last transaction seen by the client sent during
+client connection, and the records, not including the commit
+record, sent to the client.
 
 We can continue reading any additional transactions. In this case
 there is only one:
@@ -125,8 +130,8 @@ there is only one:
     (0L, '2007-03-21 20:32:58.000000', '', 116, None)
     (1L, '2007-03-21 20:32:58.000000', '', 51, None)
 
-    >>> connection.read()[1]
-    ()
+    >>> connection.read()
+    ('C', ('\x7f\xdc\x8d\x9e\x82\x81\x94\xa4\x9a\x07LZ\xf8\xcf3L',))
 
     >>> import time
     >>> time.sleep(0.1)
@@ -151,8 +156,8 @@ available:
     (1L, '2007-03-21 20:32:59.000000', '', 72, None)
     (2L, '2007-03-21 20:32:59.000000', '', 51, None)
 
-    >>> connection.read()[1]
-    ()
+    >>> connection.read()
+    ('C', ('\xc7<\x0b\xf5\xbbf7!\xf3\xb6sYz\x0c\x08f',))
 
 In all of the examples we've seen, the data_txn is None.  Let's undo
 the last transaction:
@@ -174,8 +179,8 @@ Now, the undo transaction will be available:
     (1L, '2007-03-21 20:33:00.000000', '', 51, '2007-03-21 20:32:58.000000')
     (2L, '2007-03-21 20:33:00.000000', '', 0, None)
 
-    >>> connection.read()[1]
-    ()
+    >>> connection.read()
+    ('C', ('S\xb8\xfar,nM\x0eb\xb9w\xdap4\x8f\x0f',))
 
 Let's save the transaction id and then commit some new data:
 
@@ -197,8 +202,8 @@ Of course, we'll see this new data:
     (0L, '2007-03-21 20:33:01.000000', '', 136, None)
     (3L, '2007-03-21 20:33:01.000000', '', 51, None)
 
-    >>> connection.read()[1]
-    ()
+    >>> connection.read()
+    ('C', ('X;\xd5/3\xc7M\x12I\x93\xd61W\xa2\x06\xc4',))
 
 Let's create another connection.  This time though, we'll send our
 saved transaction as the starting transaction:
@@ -227,8 +232,8 @@ after the saved transaction:
     (0L, '2007-03-21 20:33:01.000000', '', 136, None)
     (3L, '2007-03-21 20:33:01.000000', '', 51, None)
 
-    >>> connection2.read()[1]
-    ()
+    >>> connection2.read()
+    ('C', ('\x1e\x04w\xda\xdd\xd8\x9d\xd5ht\xa0/\xa1\xc7\x8e\xf2',))
 
 The servers will spew data for ever, or until their connections are
 closed:
@@ -250,4 +255,3 @@ Or until the storage is closed:
     IPv4Address(TCP, '127.0.0.1', 47246):
        Disconnected <twisted.python.failure.Failure
        twisted.internet.error.ConnectionDone>
-

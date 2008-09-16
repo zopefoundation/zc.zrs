@@ -21,6 +21,7 @@ import ZODB.FileStorage
 import ZODB.utils
 import cPickle
 import logging
+import md5
 import os
 import re
 import shutil
@@ -145,7 +146,8 @@ Now, we'll create a special transport that will output data when it is called:
 And a producer based on the file storage and transport:
 
     >>> import time
-    >>> producer = zc.zrs.primary.PrimaryProducer((fs, ), Transport(), 'test'
+    >>> producer = zc.zrs.primary.PrimaryProducer(
+    ...            (fs, None, ZODB.utils.z64), Transport(), 'test'
     ...            ); time.sleep(0.1)
     registered producer
     T
@@ -737,6 +739,7 @@ class MessageTransport:
         self.addr = addr
         self.peer = "IPv4Address(TCP, '127.0.0.1', %s)" % port
         self.proto = proto
+        self.init_md5('\x00\x00\x00\x00\x00\x00\x00\x00')
 
     def getPeer(self):
         return self.peer
@@ -769,8 +772,12 @@ class MessageTransport:
 
         return result
 
+    def init_md5(self, data):
+        self.md5 = md5.new(data)
+
     def send(self, data):
         record = zc.zrs.sizedmessage.marshal(data)
+        self.md5.update(record[4:])
         dataReceived = self.proto.dataReceived
 
         # send data in parts to try to confuse the protocol 

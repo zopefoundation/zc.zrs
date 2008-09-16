@@ -16,9 +16,6 @@ Changes
 New Features
 ------------
 
-- Now delay primary-server shutdown to give secondaries time to
-  recieve recent transactions.
-
 - Added a monitoring script to support monitoring that ZRS servers are
   up and replicating.
 
@@ -26,6 +23,13 @@ New Features
   multiple storage servers.
 
 - Use the publically releases Twisted package.
+
+- Added checksums to the replication protocol.  When upgrading, it
+  will be necessary to upgrade primaries first. (Old secondaries will
+  work with new primaries, but not the other way around.)
+
+- Now delay primary-server shutdown to give secondaries time to
+  recieve recent transactions.
 
 2.0.2 (2007-7-13)
 =================
