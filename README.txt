@@ -10,6 +10,23 @@ replicate data from the primary storage.
 Changes
 *******
 
+2.0.3
+=====
+
+New Features
+------------
+
+- Now delay primary-server shutdown to give secondaries time to
+  recieve recent transactions.
+
+- Added a monitoring script to support monitoring that ZRS servers are
+  up and replicating.
+
+- Added a utility script to print the last committed transaction for
+  multiple storage servers.
+
+- Use the publically releases Twisted package.
+
 2.0.2 (2007-7-13)
 =================
 
