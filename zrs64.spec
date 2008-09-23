@@ -1,5 +1,5 @@
 Name: zc.zrs64
-Version: 0
+Version: 2.0.3b5
 Release: 0
 
 Summary: Zope Replication Service
