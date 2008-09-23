@@ -662,7 +662,50 @@ def close_writes_new_transactions():
 
     """
     
+def secondary_gives_a_tid_that_is_too_high():
+    r"""
+    We should error and close the connection if a secondary presents a
+    tid that is higher than the largest tid seen by the primary.
 
+    >>> import ZODB.FileStorage
+    >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
+    >>> import zc.zrs.primary
+    >>> ps = zc.zrs.primary.Primary(fs, ('', 8000), reactor)
+    INFO zc.zrs.primary:
+    Opening Data.fs ('', 8000)
+
+    >>> from ZODB.DB import DB
+    >>> import persistent.dict
+    >>> db = DB(ps)
+    >>> conn = db.open()
+    >>> ob = conn.root()
+    >>> ob.x = persistent.dict.PersistentDict()
+    >>> commit()
+
+    >>> import ZODB.utils
+    >>> too_high_tid = ZODB.utils.p64(ZODB.utils.u64(ob._p_serial)+1)
+
+    >>> connection = reactor.connect(('', 8000))
+    INFO zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47245): Connected
+
+    >>> connection.send("zrs2.0") # doctest: +NORMALIZE_WHITESPACE
+    >>> connection.send(too_high_tid)
+    ... # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
+    INFO zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47245):
+    start '\x03lk\x90\xf7wwx' (2007-03-21 20:32:58.000000)
+    ERROR zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47245): 
+    Traceback (most recent call last):
+    ...
+    TidTooHigh: '\x03lk\x90\xf7wwx'
+    INFO zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47245):
+    Disconnected
+    <twisted.python.failure.Failure twisted.internet.error.ConnectionDone>
+
+    """
     
 
 class TestReactor:

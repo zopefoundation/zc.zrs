@@ -31,6 +31,12 @@ New Features
 - Now delay primary-server shutdown to give secondaries time to
   recieve recent transactions.
 
+Bugs Fixed
+----------
+
+- If a secondary presented a transaction id that was too high, the
+  primary thread died, but the connection wasn't closed gracefully.
+
 2.0.2 (2007-7-13)
 =================
 

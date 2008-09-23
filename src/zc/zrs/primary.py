@@ -260,7 +260,14 @@ class PrimaryProducer:
         self.callFromThread(self.cfr_write, data)
 
     def run(self):
-        self.iterator = FileStorageIterator(*self.iterator_args)
+        try:
+            self.iterator = FileStorageIterator(*self.iterator_args)
+        except:
+            logger.exception(self.peer)
+            self.iterator = None
+            self.callFromThread(self.cfr_close)
+            return
+
         if self.closed:
             self.callFromThread(self.cfr_close)
             return
