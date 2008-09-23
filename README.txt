@@ -37,6 +37,9 @@ Bugs Fixed
 - If a secondary presented a transaction id that was too high, the
   primary thread died, but the connection wasn't closed gracefully.
 
+- Stop scanning in the primary for a place to stop replication if the
+  secondary goes away.
+
 2.0.2 (2007-7-13)
 =================
 
