@@ -199,8 +199,9 @@ class PrimaryProducer:
 
     def __init__(self, iterator_args, transport, peer,
                  run=lambda f, *args: f(*args)):
+        self.iterator_scan_control = ScanControl()
         self.iterator = None
-        self.iterator_args = iterator_args
+        self.iterator_args = iterator_args + (self.iterator_scan_control,)
         self.start_tid = iterator_args[2]
         self.transport = transport
         self.peer = peer
@@ -247,6 +248,9 @@ class PrimaryProducer:
         iterator = self.iterator
         if iterator is not None:
             iterator.stop()
+        else:
+            self.iterator_scan_control.not_stopped = False
+            
         self.resumeProducing() # unblock wait calls
 
     def cfr_write(self, data):
@@ -310,14 +314,22 @@ class TidTooHigh(Exception):
     """The last tid for an iterator is higher than any tids in a file.
     """
 
+class ScanControl:
+
+    not_stopped = True
+
 class FileStorageIterator(ZODB.FileStorage.format.FileStorageFormatter):
 
     _file_size = 1 << 64 # To make base class check happy.
 
-    def __init__(self, fs, condition=None, start=ZODB.utils.z64):
+    def __init__(self, fs, condition=None, start=ZODB.utils.z64,
+                 scan_control=None):
         self._ltid = start
         self._fs = fs
         self._stop = False
+        if scan_control is None:
+            scan_control = ScanControl()
+        self._scan_control = scan_control
         self._open()
         if condition is None:
             condition = threading.Condition()
@@ -382,12 +394,9 @@ class FileStorageIterator(ZODB.FileStorage.format.FileStorageFormatter):
                 else:
                     self._scan_backward(pos, ltid)
 
-    def _ltid_too_high(self, ltid):
-        raise ValueError("Transaction id too high", repr(ltid))
-
     def _scan_forward(self, pos, ltid):
         file = self._file
-        while not self._stop:
+        while self._scan_control.not_stopped:
             # Read the transaction record
             try:
                 h = self._read_txn_header(pos)
@@ -417,7 +426,7 @@ class FileStorageIterator(ZODB.FileStorage.format.FileStorageFormatter):
         file = self._file
         seek = file.seek
         read = file.read
-        while not self._stop:
+        while self._scan_control.not_stopped:
             pos -= 8
             seek(pos)
             tlen = ZODB.utils.u64(read(8))

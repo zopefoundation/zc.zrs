@@ -706,7 +706,88 @@ def secondary_gives_a_tid_that_is_too_high():
     <twisted.python.failure.Failure twisted.internet.error.ConnectionDone>
 
     """
-    
+
+
+class FauxScanControl(object):
+    _v = True
+    _n = 0
+    def get(self):
+        self._n += 1
+        if self._n > 10:
+            time.sleep(.01)
+        if self._n > 20:
+           print self._n
+        return self._v
+    def set(self, v):
+        self._v = v
+    not_stopped = property(get, set)
+
+def scan_control_stops_scans_on_client_disconnects():
+    r"""
+    We want to be able to limit iterator scans if a client disconnects, for
+    example, to limit impact on the server if a large scan is required.
+
+    >>> import ZODB.FileStorage
+    >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
+    >>> from ZODB.DB import DB
+    >>> import persistent.dict
+    >>> db = DB(fs)
+    >>> conn = db.open()
+    >>> ob = conn.root()
+    >>> for i in range(100):
+    ...     ob[i] = persistent.dict.PersistentDict()
+    ...     commit()
+    >>> tid1 = ob._p_serial
+    >>> for i in range(100, 200):
+    ...     ob[i] = persistent.dict.PersistentDict()
+    ...     commit()
+    >>> tid2 = ob._p_serial
+    >>> for i in range(200, 300):
+    ...     ob[i] = persistent.dict.PersistentDict()
+    ...     commit()
+
+    >>> import zc.zrs.primary
+    >>> ps = zc.zrs.primary.Primary(fs, ('', 8000), reactor)
+    INFO zc.zrs.primary:
+    Opening Data.fs ('', 8000)
+
+    >>> import time
+    >>> ScanControl = zc.zrs.primary.ScanControl
+    >>> zc.zrs.primary.ScanControl = FauxScanControl
+
+    >>> connection = reactor.connect(('', 8000))
+    INFO zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47245): Connected
+
+    >>> connection.send("zrs2.0") # doctest: +NORMALIZE_WHITESPACE
+    >>> connection.send(tid1) # doctest: +NORMALIZE_WHITESPACE
+    INFO zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47245):
+    start '\x03lk\x92\x9d\xdd\xdd\xdd' (2007-03-21 20:34:37.000000)
+    >>> connection.loseConnection() # doctest: +NORMALIZE_WHITESPACE
+    INFO zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47245): Disconnected
+    <twisted.python.failure.Failure twisted.internet.error.ConnectionDone>
+
+
+    >>> connection = reactor.connect(('', 8000))
+    INFO zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47246): Connected
+
+    >>> connection.send("zrs2.0") # doctest: +NORMALIZE_WHITESPACE
+    >>> connection.send(tid2) # doctest: +NORMALIZE_WHITESPACE
+    INFO zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47246):
+    start '\x03lk\x94H\x88\x88\x88' (2007-03-21 20:36:17.000000)
+
+    >>> connection.loseConnection() # doctest: +NORMALIZE_WHITESPACE
+    INFO zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47246): Disconnected
+    <twisted.python.failure.Failure twisted.internet.error.ConnectionDone>
+
+    >>> import time; time.sleep(.1)
+    >>> zc.zrs.primary.ScanControl = ScanControl
+    """
 
 class TestReactor:
 
