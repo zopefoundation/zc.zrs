@@ -317,11 +317,11 @@ class FileStorageIterator(ZODB.FileStorage.format.FileStorageFormatter):
     def __init__(self, fs, condition=None, start=ZODB.utils.z64):
         self._ltid = start
         self._fs = fs
+        self._stop = False
         self._open()
         if condition is None:
             condition = threading.Condition()
         self._condition = condition
-        self._stop = False
         self._catch_up_then_stop = False
 
     def _open(self):
@@ -387,7 +387,7 @@ class FileStorageIterator(ZODB.FileStorage.format.FileStorageFormatter):
 
     def _scan_forward(self, pos, ltid):
         file = self._file
-        while 1:
+        while not self._stop:
             # Read the transaction record
             try:
                 h = self._read_txn_header(pos)
@@ -417,7 +417,7 @@ class FileStorageIterator(ZODB.FileStorage.format.FileStorageFormatter):
         file = self._file
         seek = file.seek
         read = file.read
-        while 1:
+        while not self._stop:
             pos -= 8
             seek(pos)
             tlen = ZODB.utils.u64(read(8))
