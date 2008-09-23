@@ -6,12 +6,12 @@ Summary: Zope Replication Service
 Group: Applications/Database
 Requires: cleanpython2464
 BuildRequires: cleanpython2464
-%define python /opt/cleanpython24/bin/python
+%define python /opt/cleanpython2464/bin/python
 
 ##########################################################################
 # Lines below this point normally shouldn't change
 
-%define source %{name}-%{version}-%{release}
+%define source zc.zrs-%{version}-%{release}
 
 Copyright: ZVSL
 Vendor: Zope Corporation
