@@ -53,6 +53,7 @@ class Secondary:
             'supportsUndo', 'undoLog', 'undoInfo',
             'supportsVersions',
             'versionEmpty', 'modifiedInVersion', 'versions', 
+            'record_iternext',
             ):
             if hasattr(storage, name):
                 setattr(self, name, getattr(storage, name))

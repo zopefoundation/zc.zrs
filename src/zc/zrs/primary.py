@@ -63,7 +63,8 @@ class Primary:
             'tpc_transaction', 'getTid', 'lastInvalidations',
             'supportsUndo', 'undoLog', 'undoInfo', 'undo',
             'supportsVersions', 'abortVersion', 'commitVersion',
-            'versionEmpty', 'modifiedInVersion', 'versions', 
+            'versionEmpty', 'modifiedInVersion', 'versions',
+            'record_iternext',
             ):
             if hasattr(storage, name):
                 setattr(self, name, getattr(storage, name))

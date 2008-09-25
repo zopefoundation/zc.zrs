@@ -690,7 +690,7 @@ def secondary_gives_a_tid_that_is_too_high():
     IPv4Address(TCP, '127.0.0.1', 47245): Connected
 
     >>> connection.send("zrs2.0") # doctest: +NORMALIZE_WHITESPACE
-    >>> connection.send(too_high_tid)
+    >>> connection.send(too_high_tid); time.sleep(.01) # wait for thread :(
     ... # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47245):
@@ -727,11 +727,9 @@ def scan_control_stops_scans_on_client_disconnects():
     We want to be able to limit iterator scans if a client disconnects, for
     example, to limit impact on the server if a large scan is required.
 
-    >>> import ZODB.FileStorage
     >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
-    >>> from ZODB.DB import DB
     >>> import persistent.dict
-    >>> db = DB(fs)
+    >>> db = ZODB.DB(fs)
     >>> conn = db.open()
     >>> ob = conn.root()
     >>> for i in range(100):
@@ -746,7 +744,6 @@ def scan_control_stops_scans_on_client_disconnects():
     ...     ob[i] = persistent.dict.PersistentDict()
     ...     commit()
 
-    >>> import zc.zrs.primary
     >>> ps = zc.zrs.primary.Primary(fs, ('', 8000), reactor)
     INFO zc.zrs.primary:
     Opening Data.fs ('', 8000)
@@ -785,8 +782,28 @@ def scan_control_stops_scans_on_client_disconnects():
     IPv4Address(TCP, '127.0.0.1', 47246): Disconnected
     <twisted.python.failure.Failure twisted.internet.error.ConnectionDone>
 
-    >>> import time; time.sleep(.1)
+    >>> time.sleep(.1)
     >>> zc.zrs.primary.ScanControl = ScanControl
+    """
+
+def record_iternext():
+    """
+    >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
+    >>> ps = zc.zrs.primary.Primary(fs, ('', 8000), reactor)
+    INFO zc.zrs.primary:
+    Opening Data.fs ('', 8000)
+    >>> ss = zc.zrs.secondary.Secondary(ps, ('', 9000), reactor)
+    INFO zc.zrs.secondary:
+    Opening Data.fs ('', 9000)
+    INFO zc.zrs.reactor:
+    Starting factory <zc.zrs.secondary.SecondaryFactory instance at 0xb654796c>
+
+    >>> ps.record_iternext == fs.record_iternext
+    True
+
+    >>> ss.record_iternext == fs.record_iternext
+    True
+    
     """
 
 class TestReactor:
