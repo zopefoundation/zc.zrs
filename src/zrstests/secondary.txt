@@ -5,7 +5,7 @@ ZRS Secondary storages are "read-only" storages that get their data by
 downloading data from ZRS primary storages.  They manage downlaoded
 data by "wrapping" other storages.
 
-In this demonstration, we'll create a file storage to hold out
+In this demonstration, we'll create a file storage to hold our
 secondary data:
 
     >>> import ZODB.FileStorage
