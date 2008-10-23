@@ -20,17 +20,16 @@ monitoring software uses.
 
     >>> def faux_sleep(seconds):
     ...     global now
-    ...     sleep_event.wait(1000)
+    ...     wake_event.set()
+    ...     sleep_event.wait(10)
     ...     print 'slept', seconds, 'seconds', time.ctime(now)
     ...     sleep_event.clear()
     ...     now += seconds-1
-    ...     wake_event.set()
 
     >>> def wake():
     ...     sleep_event.set()
     ...     wake_event.wait(1)
     ...     wake_event.clear()
-    ...     real_sleep(.01)
 
     >>> def faux_ctime(t):
     ...     return time.asctime(time.gmtime(t))
