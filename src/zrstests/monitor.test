@@ -30,6 +30,7 @@ monitoring software uses.
     ...     sleep_event.set()
     ...     wake_event.wait(1)
     ...     wake_event.clear()
+    ...     real_sleep(.01)
 
     >>> def faux_ctime(t):
     ...     return time.asctime(time.gmtime(t))
