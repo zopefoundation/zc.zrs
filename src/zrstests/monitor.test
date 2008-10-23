@@ -114,8 +114,12 @@ We should get a storage created for the primary and the two secondaries:
 
     >>> primary, secondary1, secondary2 = opened
 
-Let's wake it up:
+First, we'll wait for the first sleep:
 
+    >>> wake_event.wait(10); wake_event.clear()        
+
+Let's wake it up:
+    
     >>> wake() # doctest: +NORMALIZE_WHITESPACE
     slept 175.0 seconds Sat Jul  7 01:02:05 2007
     CRITICAL monitor storage1.zope.com sample-primary
