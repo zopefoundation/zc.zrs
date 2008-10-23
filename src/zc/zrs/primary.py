@@ -21,6 +21,8 @@ import threading
 import time
 
 import ZODB.BaseStorage
+import ZODB.blob
+import ZODB.interfaces
 import ZODB.FileStorage
 import ZODB.FileStorage.format
 import ZODB.TimeStamp
@@ -45,6 +47,13 @@ class Primary:
         self._reactor = reactor
             
         self._storage = storage
+        if isinstance(storage, ZODB.blob.BlobStorage):
+            zope.interface.directlyProvides(self, ZODB.interfaces.IBlobStorage)
+            for name in ('storeBlob', 'loadBlob', 'temporaryDirectory'):
+                setattr(self, name, getattr(storage, name))
+        elif not isinstance(storage, ZODB.FileStorage.FileStorage):
+            raise ValueError("Invalid storage", storage)
+            
         self._changed = threading.Condition()
 
         # required methods
@@ -167,7 +176,11 @@ class PrimaryProtocol(twisted.internet.protocol.Protocol):
 
     def messageReceived(self, data):    # cfr
         if self.__protocol is None:
-            if data != 'zrs2.0':
+            if data == 'zrs2.0':
+                if isinstance(self.factory.storage, ZODB.blob.BlobStorage):
+                    return self.error("Invalid protocol %r. Require >= 2.1",
+                                      data)
+            elif data != 'zrs2.1':
                 return self.error("Invalid protocol %r", data)
             self.__protocol = data
         else:
@@ -201,6 +214,7 @@ class PrimaryProducer:
     def __init__(self, iterator_args, transport, peer,
                  run=lambda f, *args: f(*args)):
         self.iterator_scan_control = ScanControl()
+        self.storage = iterator_args[0]
         self.iterator = None
         self.iterator_args = iterator_args + (self.iterator_scan_control,)
         self.start_tid = iterator_args[2]
@@ -264,6 +278,7 @@ class PrimaryProducer:
         self.waitForConsumer()
         self.callFromThread(self.cfr_write, data)
 
+
     def run(self):
         try:
             self.iterator = FileStorageIterator(*self.iterator_args)
@@ -286,6 +301,8 @@ class PrimaryProducer:
         pickler.fast = 1
         self.md5 = md5.new(self.start_tid)
         
+        blob_block_size = 1 << 16
+
         try:
             for trans in self.iterator:
                 self.write(
@@ -294,6 +311,39 @@ class PrimaryProducer:
                                  1)
                     )
                 for record in trans:
+                    if record.data and is_blob_record(record.data):
+                        try:
+                            fname = self.storage.loadBlob(
+                                record.oid, record.tid)
+                            f = open(fname, 'rb')
+                        except (IOError, ZODB.POSException.POSKeyError):
+                            pass
+                        else:
+                            f.seek(0, 2)
+                            blob_size = f.tell()
+                            blocks, r = divmod(blob_size, blob_block_size)
+                            if r:
+                                blocks += 1
+
+                            self.write(
+                                pickler.dump(
+                                    ('B',
+                                     (record.oid, record.tid, record.version,
+                                      record.data_txn, long(blocks))),
+                                    1)
+                                )
+                            self.write(record.data or '')
+                            f.seek(0)
+                            while blocks > 0:
+                                data = f.read(blob_block_size)
+                                if not data:
+                                    raise AssertionError("Too much blob data")
+                                blocks -= 1
+                                self.write(data)
+
+                            f.close()
+                            continue
+                            
                     self.write(
                         pickler.dump(('S',
                                        (record.oid, record.tid, record.version,
@@ -301,8 +351,8 @@ class PrimaryProducer:
                                      1)
                         )
                     self.write(record.data or '')
+
                 self.write(pickler.dump(('C', (self.md5.digest(), )), 1))
-                #self.write(pickler.dump(('C', ()), 1))
 
         except:
             logger.exception(self.peer)
@@ -550,6 +600,7 @@ class FileStorageIterator(ZODB.FileStorage.format.FileStorageFormatter):
 
 class RecordIterator(ZODB.FileStorage.format.FileStorageFormatter):
     """Iterate over the transactions in a FileStorage file."""
+    
     def __init__(self, tid, status, user, desc, ext, pos, tend, file, tpos):
         self.tid = tid
         self.status = status
@@ -608,7 +659,7 @@ class Record:
         self.data = data
         self.data_txn = prev
         self.pos = pos
-
+        
 class ThreadCounter:
     """Keep track of running threads
 
@@ -642,4 +693,10 @@ class ThreadCounter:
             self.condition.wait(w)
         self.condition.release()
             
-    
+def is_blob_record(record):
+    try:
+        return cPickle.loads(record) is ZODB.blob.Blob
+    except (MemoryError, KeyboardInterrupt, SystemExit):
+        raise
+    except Exception:
+        return False

@@ -17,6 +17,7 @@ from zope.testing import doctest, setupstack, renormalizing
 from zrstests import loopback
 import ZEO.ClientStorage
 import ZEO.tests.testZEO
+import ZODB.blob
 import ZODB.FileStorage
 import ZODB.utils
 import cPickle
@@ -806,6 +807,29 @@ def record_iternext():
     
     """
 
+def is_blob_record():
+    r"""
+    >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
+    >>> bs = ZODB.blob.BlobStorage('blobs', fs)
+    >>> db = ZODB.DB(bs)
+    >>> conn = db.open()
+    >>> conn.root()['blob'] = ZODB.blob.Blob()
+    >>> transaction.commit()
+    >>> zc.zrs.primary.is_blob_record(fs.load(ZODB.utils.p64(0), '')[0])
+    False
+    >>> zc.zrs.primary.is_blob_record(fs.load(ZODB.utils.p64(1), '')[0])
+    True
+
+    An invalid pickle yields a false value:
+
+    >>> zc.zrs.primary.is_blob_record("Hello world!")
+    False
+    >>> zc.zrs.primary.is_blob_record('c__main__\nC\nq\x01.')
+    False
+    
+    >>> db.close()
+    """
+
 class TestReactor:
 
     def __init__(self):
@@ -1093,6 +1117,8 @@ class TestPrimary(zc.zrs.primary.Primary):
 
 class BasePrimaryStorageTests(StorageTestBase.StorageTestBase):
 
+    use_blob_storage = False
+
     def setUp(self):
         self.__pack = None
 
@@ -1139,8 +1165,12 @@ class BasePrimaryStorageTests(StorageTestBase.StorageTestBase):
         self.__port += 1
         addr = '', self.__port
         self.__pfs = ZODB.FileStorage.FileStorage('primary.fs', **kwargs)
+        if self.use_blob_storage:
+            self.__pfs = ZODB.blob.BlobStorage('primary_blobs', self.__pfs)
         self._storage = TestPrimary(self.__pfs, addr, reactor)
         self.__sfs = ZODB.FileStorage.FileStorage('secondary.fs')
+        if self.use_blob_storage:
+            self.__sfs = ZODB.blob.BlobStorage('secondary_blobs', self.__sfs)
         self.__ss = zc.zrs.secondary.Secondary(self.__sfs, addr, reactor)
 
         p_pack = self._storage.pack
@@ -1160,6 +1190,9 @@ class BasePrimaryStorageTests(StorageTestBase.StorageTestBase):
                 
             # Now, just recover from scratch to make sure we can:
             sfs = ZODB.FileStorage.FileStorage('secondary2.fs')
+            if self.use_blob_storage:
+                sfs = ZODB.blob.BlobStorage('secondarys_blobs', sfs)
+                
             ss = zc.zrs.secondary.Secondary(sfs, addr, reactor)
             self.catch_up(self.__pfs, sfs)
             self.__comparedbs(self.__pfs, sfs)
@@ -1176,6 +1209,8 @@ class BasePrimaryStorageTests(StorageTestBase.StorageTestBase):
         self.assertEqual(fs1._pos, fs2._pos)
 
         self.compare(fs1, fs2)    
+
+
 
 def comparedbs_packed(self, fs1, fs2):
 
@@ -1253,6 +1288,11 @@ class PrimaryStorageTests(
     ReadOnlyStorage.ReadOnlyStorage
     ):
     pass
+
+class PrimaryStorageTestsWithBobs(PrimaryStorageTests):
+
+    use_blob_storage = True
+
 
 #
 ##############################################################################
@@ -1334,7 +1374,9 @@ def monitor_tearDown(test):
 def test_suite():
     return unittest.TestSuite((
         doctest.DocFileSuite(
-            'fsiterator.txt', 'primary.txt', 'secondary.txt',
+            'fsiterator.txt',
+            'primary.txt', 'primary-blob.txt',
+            'secondary.txt', 'secondary-blob.txt',
             setUp=setUp, tearDown=setupstack.tearDown,
             checker=renormalizing.RENormalizing([
                 (re.compile(' at 0x[a-fA-F0-9]+'), ''),
@@ -1347,6 +1389,7 @@ def test_suite():
                 ]),
             ),
         unittest.makeSuite(PrimaryStorageTests, "check"),
+        unittest.makeSuite(PrimaryStorageTestsWithBobs, "check"),
         unittest.makeSuite(ZEOTests, "check"),
         doctest.DocFileSuite('monitor.test',
                              setUp=monitor_setUp, tearDown=monitor_tearDown,

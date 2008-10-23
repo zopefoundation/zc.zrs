@@ -1,0 +1,262 @@
+ZRS Primary Storages with Blobs
+===============================
+
+When using blobs, a ZRS primary storage is a wrapper of a blob storage
+around a file storage that also provides a network service to support
+replication.  Let's create a primary storage.  We'll first create a
+File Storage and wrap it in a blob storage:
+
+    >>> import ZODB.FileStorage, ZODB.blob
+    >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
+    >>> bs = ZODB.blob.BlobStorage('blobs', fs)
+
+Then we'll create a primary storage using this.  A primary storage
+takes the following arguments:
+
+- The underlying storage (either a file storage or a blob storage)
+
+- The address to listen on,
+
+- An optional Twisted reactor to register with.  Normally, ZRS manages
+  it's own reactor, but for demonstration/test purposes, we can pass
+  in a special reactor that lets us demonstrate primary
+  storages without actually creating network connections.
+
+- An optional blob directory name. 
+
+Let's create a primary storage:
+
+    >>> import zc.zrs.primary
+    >>> ps = zc.zrs.primary.Primary(
+    ...     bs, ('', 8000), reactor=reactor)
+    INFO zc.zrs.primary:
+    Opening Data.fs ('', 8000)
+
+Now, we can use this just like any other storage:
+
+    >>> from ZODB.DB import DB
+    >>> import persistent.dict
+    >>> db = DB(ps)
+    >>> conn = db.open()
+    >>> ob = conn.root()
+    >>> ob.x = persistent.dict.PersistentDict()
+    >>> commit()
+
+We can connect to it to get data that have been committed.  We're
+going to connect using the test reactor:
+
+    >>> connection = reactor.connect(('', 8000))
+    INFO zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47245): Connected
+
+(We see logging output.)
+
+The connection represents the server.  It accepts two string messages.
+The first message is the protocol, which must be "zrs2.1" if blobs are
+supported.  The second message is the starting transaction.  We'll
+send the messages by calling the send method on the connection:
+
+    >>> connection.send("zrs2.1")
+
+The second message is the identifier of the last transaction seen by
+the client.  We'll pass a transaction id of all zeros, indicating that
+we have no data and want all of the data the storage has:
+
+    >>> connection.send("\0"*8) # doctest: +NORMALIZE_WHITESPACE
+    INFO zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47245): 
+       start '\x00\x00\x00\x00\x00\x00\x00\x00' (1900-01-01 00:00:00.000000)
+
+The server will send back a numer of sized messages.  Most of these
+messages will be a pickles.  The testing reactor set up a transpoer
+with a read method that takes care of reading each message and
+unpickling it for us.  This will let us look at the server output as
+data.
+
+The first message is the transaction header for the first transaction
+in the database, which is the one that creates the root object.
+
+let's look at the first message:
+
+    >>> message_type, data = connection.read()
+    >>> message_type
+    'T'
+    >>> tid, status, user, description, extension = data
+
+The transaction id is a time stamp.  We can use the the ZODB TimeStamp
+module to display it.  The other data is pretty boring in this
+case. :)
+
+    >>> from ZODB.TimeStamp import TimeStamp
+    >>> def ts(v): 
+    ...     return str(TimeStamp(v))
+    >>> ts(tid), status, user, description, extension
+    ('2007-03-21 20:32:57.000000', ' ', '', 'initial database creation', {})
+
+The next message is a store message for object 0:
+
+    >>> message_type, data = connection.read()
+    >>> message_type
+    'S'
+
+    >>> oid, serial, version, data_txn = data
+    >>> from ZODB.utils import u64
+    >>> u64(oid), ts(serial), version, data_txn
+    (0L, '2007-03-21 20:32:57.000000', '', None)
+
+The data are sent as a separate (non-pickle) message:
+
+    >>> data = connection.read(raw=True)
+    >>> len(data)
+    66
+
+Finally, there will be a commit record marking the end of the
+transaction:
+
+    >>> connection.read()
+    ('C', ('Jf\xc4\x7fjMH\xdb#\xd0\xaf\x072fs\x0e',))
+
+
+We can continue reading any additional transactions. In this case
+there is only one:
+
+    >>> tid, status, user, description, extension = connection.read()[1]
+    >>> ts(tid), status, user, description, extension
+    ('2007-03-21 20:32:58.000000', ' ', '', '', {})
+
+    >>> for i in range(2):
+    ...     oid, serial, version, data_txn = connection.read()[1]
+    ...     data = connection.read(raw=True)
+    ...     print (u64(oid), ts(serial), version, len(data), data_txn)
+    (0L, '2007-03-21 20:32:58.000000', '', 116, None)
+    (1L, '2007-03-21 20:32:58.000000', '', 51, None)
+
+    >>> connection.read()
+    ('C', ('\x7f\xdc\x8d\x9e\x82\x81\x94\xa4\x9a\x07LZ\xf8\xcf3L',))
+
+    >>> import time
+    >>> time.sleep(0.1)
+    >>> connection.have_data()
+    False
+
+If we commit more data, however, the additional data will be made
+available.  We'll add some blob data.
+
+    >>> root = conn.root()
+    >>> root['blob'] = ZODB.blob.Blob()
+    >>> root['blob'].open('w').write('test\n')
+    >>> commit()
+
+    >>> tid, status, user, description, extension = connection.read()[1]
+    >>> ts(tid), status, user, description, extension
+    ('2007-03-21 20:32:59.000000', ' ', '', '', {})
+
+    >>> oid, serial, version, data_txn = connection.read()[1]
+    >>> data = connection.read(raw=True)
+    >>> print (u64(oid), ts(serial), version, len(data), data_txn)
+    (0L, '2007-03-21 20:32:59.000000', '', 158, None)
+
+The next message is a store blob message:
+
+    >>> message_type, (oid, serial, version, data_txn, blocks
+    ...                                ) = connection.read()
+    
+    >>> data = connection.read(raw=True)
+    >>> message_type, u64(oid), ts(serial), version, len(data), data_txn, blocks
+    ('B', 2L, '2007-03-21 20:32:59.000000', '', 21, None, 1L)
+
+The store blob message is like a store message, but also contains the
+number of blocks to follow. This blob was rather small, so there's
+only one block:
+
+    >>> connection.read(raw=True)
+    'test\n'
+
+    >>> connection.read()
+    ('C', ('\x00\r\xce\xb4?:\xf1\x89;\xbd\x8aj\xb0\xed\x8aH',))
+
+
+Let's try some bigger blobs:
+
+    >>> import random, struct
+    >>> random.seed(0)
+    >>> for i in range(5):
+    ...     wdata = ''.join(struct.pack(">I", random.randint(0, 1<<32))
+    ...                     for i in range(random.randint(1000, 100000)))
+    ...     root['blob'] = ZODB.blob.Blob()
+    ...     root['blob'].open('w').write(wdata)
+    ...     commit()
+    ...     tid, status, user, description, extension = connection.read()[1]
+    ...     print (ts(tid), status, user, description, extension)
+    ...     oid, serial, version, data_txn = connection.read()[1]
+    ...     data = connection.read(raw=True)
+    ...     print (u64(oid), ts(serial), version, len(data), data_txn)
+    ...     message_type, (oid, serial, version, data_txn, blocks
+    ...                              ) = connection.read()
+    ...     data = connection.read(raw=True)
+    ...     print (message_type, u64(oid), ts(serial), version, len(data),
+    ...            data_txn, blocks)
+    ...     rdata = ''.join(connection.read(raw=True) for i in range(blocks))
+    ...     print rdata == wdata
+    ...     print repr(connection.read())
+    ...     print
+    ('2007-03-21 20:33:00.000000', ' ', '', '', {})
+    (0L, '2007-03-21 20:33:00.000000', '', 158, None)
+    ('B', 3L, '2007-03-21 20:33:00.000000', '', 21, None, 6L)
+    True
+    ('C', ('\x0e\x9f*\xdaw\xa7"f\xe5ep\n\xb8\xae\x9a\xcc',))
+    <BLANKLINE>
+    ('2007-03-21 20:33:01.000000', ' ', '', '', {})
+    (0L, '2007-03-21 20:33:01.000000', '', 158, None)
+    ('B', 4L, '2007-03-21 20:33:01.000000', '', 21, None, 1L)
+    True
+    ('C', ('+\xf5\xa2\xd7\xcd\xb5QA\xc0\x8c[;\x8b\xea\x17f',))
+    <BLANKLINE>
+    ('2007-03-21 20:33:02.000000', ' ', '', '', {})
+    (0L, '2007-03-21 20:33:02.000000', '', 158, None)
+    ('B', 5L, '2007-03-21 20:33:02.000000', '', 21, None, 3L)
+    True
+    ('C', ('\xbb\xd2I\xf4$\x93\xc2\xf9\x1f<\x93\x88\x0e\xe8\xf4\x02',))
+    <BLANKLINE>
+    ('2007-03-21 20:33:03.000000', ' ', '', '', {})
+    (0L, '2007-03-21 20:33:03.000000', '', 158, None)
+    ('B', 6L, '2007-03-21 20:33:03.000000', '', 21, None, 3L)
+    True
+    ('C', ("\xcba\xea\xb3'\xc4\xae/N\xd7Zt\x96\x0em2",))
+    <BLANKLINE>
+    ('2007-03-21 20:33:04.000000', ' ', '', '', {})
+    (0L, '2007-03-21 20:33:04.000000', '', 158, None)
+    ('B', 7L, '2007-03-21 20:33:04.000000', '', 21, None, 2L)
+    True
+    ('C', ('b\x96A\xf0P~\xe0\x15\x82\x0c\x9f\xaf\xb6\xa1\xd9\xab',))
+    <BLANKLINE>
+
+When a primary storage is set up with a blob storage, it requires protocol 2.1:
+
+    >>> connection2 = reactor.connect(('', 8000))
+    INFO zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47246): Connected
+
+    >>> connection2.send("zrs2.0") # doctest: +NORMALIZE_WHITESPACE
+    ERROR zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47246):
+    Invalid protocol 'zrs2.0'. Require >= 2.1
+    INFO zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47246):
+    Disconnected <twisted.python.failure.Failure
+    twisted.internet.error.ConnectionDone>
+    INFO zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47246): Closed
+
+.. close
+
+    >>> connection.close() # doctest: +NORMALIZE_WHITESPACE
+    INFO zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47245): 
+       Disconnected <twisted.python.failure.Failure
+       twisted.internet.error.ConnectionDone>
+
+    >>> ps.close() # doctest: +NORMALIZE_WHITESPACE
+    INFO zc.zrs.primary:
+    Closing Data.fs ('', 8000)
+
