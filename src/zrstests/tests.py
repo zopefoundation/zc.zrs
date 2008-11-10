@@ -1340,6 +1340,12 @@ def test_suite():
                 (re.compile(' at 0x[a-fA-F0-9]+'), ''),
                 ]),
             ),
+        doctest.DocFileSuite(
+            'config.txt',
+            checker=renormalizing.RENormalizing([
+                (re.compile(' at 0x[a-fA-F0-9]+'), ''),
+                ]),
+            ),
         doctest.DocTestSuite(
             setUp=setUp, tearDown=setupstack.tearDown,
             checker=renormalizing.RENormalizing([

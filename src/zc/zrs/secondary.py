@@ -61,9 +61,13 @@ class Secondary:
         self._factory = SecondaryFactory(reactor, storage, reconnect_delay,
                                          check_checksums)
         self._addr = addr
-        host, port = addr
         logger.info("Opening %s %s", self.getName(), addr)
-        reactor.callFromThread(reactor.connectTCP, host, port, self._factory)
+        if isinstance(addr, basestring):
+            reactor.callFromThread(reactor.connectUNIX, addr, self._factory)
+        else:
+            host, port = addr
+            reactor.callFromThread(reactor.connectTCP, host, port,
+                                   self._factory)
 
     def isReadOnly(self):
         return True
