@@ -81,16 +81,12 @@ class Primary:
 
     _listener = None
     def cfr_listen(self):
-        import traceback, sys
-        try:
-            if isinstance(self._addr, basestring):
-                self._listener = self._reactor.listenUNIX(self._addr, self._factory)
-            else:
-                interface, port = self._addr
-                self._listener = self._reactor.listenTCP(
-                    port, self._factory, interface=interface)
-        except:
-            traceback.print_exception(*sys.exc_info())
+        if isinstance(self._addr, basestring):
+            self._listener = self._reactor.listenUNIX(self._addr, self._factory)
+        else:
+            interface, port = self._addr
+            self._listener = self._reactor.listenTCP(
+                port, self._factory, interface=interface)
 
     def cfr_stop_listening(self):
         if self._listener is not None:
