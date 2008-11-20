@@ -1088,8 +1088,6 @@ from ZODB.tests import StorageTestBase
 from ZODB.tests import BasicStorage
 from ZODB.tests import TransactionalUndoStorage
 from ZODB.tests import RevisionStorage
-from ZODB.tests import VersionStorage
-from ZODB.tests import TransactionalUndoVersionStorage
 from ZODB.tests import PackableStorage
 from ZODB.tests import Synchronization
 from ZODB.tests import ConflictResolution
@@ -1272,8 +1270,6 @@ class PrimaryStorageTests(
     BasicStorage.BasicStorage,
     TransactionalUndoStorage.TransactionalUndoStorage,
     RevisionStorage.RevisionStorage,
-    VersionStorage.VersionStorage,
-    TransactionalUndoVersionStorage.TransactionalUndoVersionStorage,
     PackableStorage.PackableStorage,
     PackableStorage.PackableUndoStorage,
     Synchronization.SynchronizedStorage,
@@ -1378,6 +1374,12 @@ def test_suite():
             'primary.txt', 'primary-blob.txt',
             'secondary.txt', 'secondary-blob.txt',
             setUp=setUp, tearDown=setupstack.tearDown,
+            checker=renormalizing.RENormalizing([
+                (re.compile(' at 0x[a-fA-F0-9]+'), ''),
+                ]),
+            ),
+        doctest.DocFileSuite(
+            'config.txt',
             checker=renormalizing.RENormalizing([
                 (re.compile(' at 0x[a-fA-F0-9]+'), ''),
                 ]),
