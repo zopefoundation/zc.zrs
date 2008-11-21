@@ -298,7 +298,8 @@ There a number of cases to consider when closing a secondary:
 - Closing while connected but between transactions
 
     >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
-    >>> ss = zc.zrs.secondary.Secondary(fs, ('', 8000), reactor)
+    >>> ss = zc.zrs.secondary.Secondary(fs, ('', 8000), reactor,
+    ...         keep_alive_delay=60)
     INFO zc.zrs.secondary:
     Opening Data.fs ('', 8000)
     INFO zc.zrs.reactor:
@@ -309,7 +310,7 @@ There a number of cases to consider when closing a secondary:
     IPv4Address(TCP, '127.0.0.1', 47248): Connected
     
     >>> reactor.later
-    []
+    [<2 60 keep_alive () {}>]
     
     >>> reactor.clients
     []
@@ -331,7 +332,8 @@ There a number of cases to consider when closing a secondary:
 - Closing while connected and recieving data
     
     >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
-    >>> ss = zc.zrs.secondary.Secondary(fs, ('', 8000), reactor)
+    >>> ss = zc.zrs.secondary.Secondary(fs, ('', 8000), reactor,
+    ...         keep_alive_delay=60)
     INFO zc.zrs.secondary:
     Opening Data.fs ('', 8000)
     INFO zc.zrs.reactor:
@@ -347,7 +349,7 @@ There a number of cases to consider when closing a secondary:
     '\x00\x00\x00\x00\x00\x00\x00\x00'
     
     >>> reactor.later
-    []
+    [<3 60 keep_alive () {}>]
     
     >>> reactor.clients
     []
@@ -386,8 +388,8 @@ There a number of cases to consider when closing a secondary:
 """
 
 def primary_data_input_errors():
-    """
-    There is not good reason for a primary to get a data input error. If
+    r"""
+    There is no good reason for a primary to get a data input error. If
     it does, it should simply close the connection.
 
     >>> import ZODB.FileStorage, zc.zrs.primary
@@ -453,6 +455,29 @@ def primary_data_input_errors():
     twisted.internet.error.ConnectionDone>
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47248): Closed
+
+    Sending any message other than an empty message to the primary
+    after the first two messages will result in an error:
+
+    >>> connection = reactor.connect((('', 8000)))
+    INFO zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47249): Connected
+
+    >>> connection.send("zrs2.0")
+    >>> connection.send("\0"*8) # doctest: +NORMALIZE_WHITESPACE
+    INFO zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47249):
+    start '\x00\x00\x00\x00\x00\x00\x00\x00' (1900-01-01 00:00:00.000000)
+
+    >>> connection.send("")
+    >>> connection.send("")
+
+    >>> connection.send("Hi")
+    ERROR zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47249): Too many messages
+    INFO zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47249): Closed
+    
     """
 
 def secondary_data_input_errors():
@@ -830,6 +855,28 @@ def is_blob_record():
     >>> db.close()
     """
 
+class DelayedCall:
+
+    def __init__(self, later, n, delay, func, args, kw):
+        self.later, self.n, self.delay = later, n, delay
+        self.func, self.args, self.kw = func, args, kw
+
+    def __repr__(self):
+        return "<%s %s %s %r %r>" % (
+            self.n, self.delay, self.func.__name__, self.args, self.kw)
+
+    def cancel(self):
+        if self in self.later:
+            self.later.remove(self)
+        self.later = None
+
+    def active(self):
+        return self.later is not None
+
+    def __call__(self):
+        self.later = None
+        self.func(*self.args, **self.kw)
+
 class TestReactor:
 
     def __init__(self):
@@ -859,13 +906,19 @@ class TestReactor:
         finally:
             self.lock.release()
 
+    callLater_n = 0
     def callLater(self, delay, f, *a, **k):
-        self.later.append((delay, f, a, k))
+        self.callLater_n += 1
+        f = DelayedCall(self.later, self.callLater_n, delay, f, a, k)
+        self.later.append(f)
+        return f
 
     def doLater(self):
-        while self.later:
-            delay, f, a, k = self.later.pop(0)
-            self.callFromThread(f, *a, **k)
+        l = len(self.later)
+        later = self.later[:l]
+        del self.later[:l]
+        while later:
+            self.callFromThread(later.pop(0))
 
     def connectTCP(self, host, port, factory, timeout=30):
         addr = host, port

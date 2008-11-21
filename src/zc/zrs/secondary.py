@@ -38,7 +38,7 @@ else:
 class Secondary:
 
     def __init__(self, storage, addr, reactor=None, reconnect_delay=60,
-                 check_checksums=True):
+                 check_checksums=True, keep_alive_delay=0):
         if reactor is None:
             reactor = zc.zrs.reactor.reactor()
         self._reactor = reactor
@@ -73,8 +73,9 @@ class Secondary:
             if hasattr(storage, name):
                 setattr(self, name, getattr(storage, name))
 
-        self._factory = SecondaryFactory(reactor, storage, reconnect_delay,
-                                         check_checksums, zrs_proto)
+        self._factory = SecondaryFactory(
+            reactor, storage, reconnect_delay,
+            check_checksums, zrs_proto, keep_alive_delay)
         self._addr = addr
         logger.info("Opening %s %s", self.getName(), addr)
         if isinstance(addr, basestring):
@@ -113,13 +114,14 @@ class SecondaryFactory(twisted.internet.protocol.ClientFactory):
     instance = None
 
     def __init__(self, reactor, storage, reconnect_delay, check_checksums,
-                 zrs_proto):
+                 zrs_proto, keep_alive_delay):
         self.protocol = SecondaryProtocol
         self.reactor = reactor
         self.storage = storage
         self.reconnect_delay = reconnect_delay
         self.check_checksums = check_checksums
         self.zrs_proto = zrs_proto
+        self.keep_alive_delay = keep_alive_delay
 
     def close(self, callback):
         self.closed = True
@@ -148,6 +150,8 @@ class SecondaryProtocol(twisted.internet.protocol.Protocol):
 
     __transaction = None
 
+    keep_alive_delayed_call = None
+
     def connectionMade(self):
         self.__stream = zc.zrs.sizedmessage.Stream(self.messageReceived)
         self.__peer = str(self.transport.getPeer()) + ': '
@@ -158,8 +162,14 @@ class SecondaryProtocol(twisted.internet.protocol.Protocol):
         self.__md5 = md5.new(tid)
         self.transport.write(zc.zrs.sizedmessage.marshal(tid))
         self.info("Connected")
+        if self.factory.keep_alive_delay > 0:
+            self.keep_alive()
 
     def connectionLost(self, reason):
+        if (self.keep_alive_delayed_call is not None
+            and self.keep_alive_delayed_call.active()):
+            self.keep_alive_delayed_call.cancel()
+                
         self.factory.instance = None
         if self.__transaction is not None:
             self.factory.storage.tpc_abort(self.__transaction)
@@ -172,6 +182,14 @@ class SecondaryProtocol(twisted.internet.protocol.Protocol):
 
     def info(self, message, *args):
         logger.info(self.__peer + message, *args)
+
+    def keep_alive(self):
+        if self.keep_alive_delayed_call is not None:
+            self.transport.write("\0\0\0\0")
+        self.keep_alive_delayed_call = self.factory.reactor.callLater(
+            self.factory.keep_alive_delay,
+            self.keep_alive,
+            )
 
     def dataReceived(self, data):
         try:
