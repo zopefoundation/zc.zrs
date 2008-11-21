@@ -1436,6 +1436,7 @@ def test_suite():
             checker=renormalizing.RENormalizing([
                 (re.compile(' at 0x[a-fA-F0-9]+'), ''),
                 ]),
+            setUp=setupstack.setUpDirectory, tearDown=setupstack.tearDown,
             ),
         doctest.DocTestSuite(
             setUp=setUp, tearDown=setupstack.tearDown,

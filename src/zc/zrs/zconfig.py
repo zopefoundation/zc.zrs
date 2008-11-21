@@ -40,10 +40,17 @@ class Primary:
                 raise ValueError(
                     "Can't specify filestorage-path if a storage section"
                     " is used.")
+            if config.blob_dir:
+                raise ValueError(
+                    "Can't specify blob-dir if a storage section"
+                    " is used.")
             base = base.open()
         elif config.filestorage_path:
             import ZODB.FileStorage
             base = ZODB.FileStorage.FileStorage(config.filestorage_path)
+            if config.blob_dir:
+                import ZODB.blob
+                base = ZODB.blob.BlobStorage(config.blob_dir, base)
         else:
             raise ValueError(
                 "You must specify a base storage or a filestorage-path.")
@@ -70,10 +77,17 @@ class Secondary(Primary):
                 raise ValueError(
                     "Can't specify filestorage-path if a storage section"
                     " is used.")
+            if config.blob_dir:
+                raise ValueError(
+                    "Can't specify blob-dir if a storage section"
+                    " is used.")
             base = base.open()
         elif config.filestorage_path:
             import ZODB.FileStorage
             base = ZODB.FileStorage.FileStorage(config.filestorage_path)
+            if config.blob_dir:
+                import ZODB.blob
+                base = ZODB.blob.BlobStorage(config.blob_dir, base)
         else:
             raise ValueError(
                 "You must specify a base storage or a filestorage-path.")
@@ -87,4 +101,7 @@ class Secondary(Primary):
             base = zc.zrs.primary.Primary(base, config.replicate_to.address)
 
         return zc.zrs.secondary.Secondary(
-            base, address.address, check_checksums=self.config.check_checksums)
+            base, address.address,
+            check_checksums=self.config.check_checksums,
+            keep_alive_delay=self.config.keep_alive_delay,
+            )
