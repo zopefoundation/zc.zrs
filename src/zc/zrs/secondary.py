@@ -23,17 +23,14 @@ import twisted.internet.protocol
 import zc.zrs.reactor
 import zc.zrs.sizedmessage
 import ZODB.blob
+import ZODB.interfaces
 import ZODB.POSException
 import zope.interface
 
-logger = logging.getLogger(__name__)
-
 if not hasattr(ZODB.blob.BlobStorage, 'restoreBlob'):
     import zc.zrs.restoreblob
-    blob_iface = ZODB.interfaces.IBlobStorage
-else:
-    blob_iface = ZODB.interfaces.IBlobStorageRestoreable
-    
+
+logger = logging.getLogger(__name__)
 
 class Secondary:
 
@@ -44,8 +41,10 @@ class Secondary:
         self._reactor = reactor
             
         self._storage = storage
-        if blob_iface.providedBy(storage) and hasattr(storage, 'restoreBlob'):
-            zope.interface.directlyProvides(self, blob_iface)
+        if (ZODB.interfaces.IBlobStorage.providedBy(storage)
+            and hasattr(storage, 'restoreBlob')
+            ):
+            zope.interface.directlyProvides(self, ZODB.interfaces.IBlobStorage)
             for name in ('loadBlob', 'temporaryDirectory', 'restoreBlob'):
                 setattr(self, name, getattr(storage, name))
             zrs_proto = 'zrs2.1'

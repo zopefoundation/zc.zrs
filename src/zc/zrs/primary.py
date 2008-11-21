@@ -19,22 +19,21 @@ import md5
 import os
 import threading
 import time
-
-import ZODB.BaseStorage
-import ZODB.blob
-import ZODB.interfaces
-import ZODB.FileStorage
-import ZODB.FileStorage.format
-import ZODB.TimeStamp
-import ZODB.utils
-
-import zope.interface
-
-import twisted.internet.protocol
 import twisted.internet.interfaces
-
+import twisted.internet.protocol
 import zc.zrs.reactor
 import zc.zrs.sizedmessage
+import ZODB.BaseStorage
+import ZODB.blob
+import ZODB.FileStorage
+import ZODB.FileStorage.format
+import ZODB.interfaces
+import ZODB.TimeStamp
+import ZODB.utils
+import zope.interface
+
+if not hasattr(ZODB.blob.BlobStorage, 'restoreBlob'):
+    import zc.zrs.restoreblob
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +48,8 @@ class Primary:
         self._storage = storage
         if isinstance(storage, ZODB.blob.BlobStorage):
             zope.interface.directlyProvides(self, ZODB.interfaces.IBlobStorage)
-            for name in ('storeBlob', 'loadBlob', 'temporaryDirectory'):
+            for name in ('storeBlob', 'loadBlob', 'temporaryDirectory',
+                         'restoreBlob'):
                 setattr(self, name, getattr(storage, name))
         elif not isinstance(storage, ZODB.FileStorage.FileStorage):
             raise ValueError("Invalid storage", storage)
