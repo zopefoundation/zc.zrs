@@ -227,16 +227,22 @@ class PrimaryProducer:
         self.peer = peer
         transport.registerProducer(self, True)
         self.callFromThread = transport.reactor.callFromThread
-        event = threading.Event()
-        self.pauseProducing = event.clear
-        self.resumeProducing = event.set
-        self.waitForConsumer = event.wait
-        self.resumeProducing()
+        self.consumer_event = threading.Event()
+        self.consumer_event.set()
         thread = threading.Thread(target=run, args=(self.run, ),
                                   name='Producer(%s)' % peer)
         thread.setDaemon(True)
         thread.start()
         self.thread = thread
+
+    def pauseProducing(self):
+        logger.info(self.peer+" pausing")
+        self.consumer_event.clear()
+
+    def resumeProducing(self):
+        logger.info(self.peer+" resuming")
+        self.consumer_event.set()
+    
 
     def close(self):
         # We use the closed flag to handle a race condition in
@@ -271,7 +277,7 @@ class PrimaryProducer:
         else:
             self.iterator_scan_control.not_stopped = False
             
-        self.resumeProducing() # unblock wait calls
+        self.consumer_event.set() # unblock wait calls
 
     def cfr_write(self, data):
         if not self.stopped:
@@ -280,7 +286,7 @@ class PrimaryProducer:
     def write(self, data):
         data = zc.zrs.sizedmessage.marshals(data)
         self.md5.update(data[1])
-        self.waitForConsumer()
+        self.consumer_event.wait()
         self.callFromThread(self.cfr_write, data)
 
 
