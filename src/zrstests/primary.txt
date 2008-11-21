@@ -62,6 +62,13 @@ we have no data and want all of the data the storage has:
     IPv4Address(TCP, '127.0.0.1', 47245): 
        start '\x00\x00\x00\x00\x00\x00\x00\x00' (1900-01-01 00:00:00.000000)
 
+The client may send empty messages, and only empty messages, after the
+initial messages:
+
+    >>> connection.send("")
+
+These empty messages are ignored.
+
 The server will send back a numer of sized messages.  Most of these
 messages will be a pickles.  The testing reactor set up a transpoer
 with a read method that takes care of reading each message and
