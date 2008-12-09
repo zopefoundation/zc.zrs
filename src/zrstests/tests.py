@@ -156,9 +156,11 @@ And a producer based on the file storage and transport:
     C
 
 We get the initial transaction, because the producer starts producing
-immediately.  Let's oause producing:
+immediately.  Let's pause producing:
 
     >>> producer.pauseProducing()
+    INFO zc.zrs.primary:
+    test pausing
 
 and we'll create another transaction:
 
@@ -177,6 +179,8 @@ and we'll create another transaction:
 No output because we are paused.  Now let's resume:
 
     >>> producer.resumeProducing(); time.sleep(0.1)
+    INFO zc.zrs.primary:
+    test resuming
     T
     S
     <class 'persistent.mapping.PersistentMapping'>
@@ -193,6 +197,9 @@ No output because we are paused.  Now let's resume:
 and pause again:
 
     >>> producer.pauseProducing()
+    INFO zc.zrs.primary:
+    test pausing
+
     >>> ob = ob.x
     >>> ob.x = persistent.mapping.PersistentMapping()
     >>> commit()
@@ -202,6 +209,8 @@ and pause again:
 and resume:
 
     >>> producer.resumeProducing(); time.sleep(0.1)
+    INFO zc.zrs.primary:
+    test resuming
     T
     S
     <class 'persistent.mapping.PersistentMapping'>
