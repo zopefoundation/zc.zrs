@@ -66,6 +66,8 @@ The client may send empty messages, and only empty messages, after the
 initial messages:
 
     >>> connection.send("")
+    DEBUG zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47245): keep-alive
 
 These empty messages are ignored.
 

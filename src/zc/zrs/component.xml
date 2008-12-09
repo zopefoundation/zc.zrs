@@ -33,13 +33,6 @@
       </description>
     </key>
 
-    <key name="blob-dir" datatype="existing-dirpath" required="no">
-      <description>
-        The path to a blob directory.  Use this instead of a
-        blobstorage section.
-      </description>
-    </key>
-
   </sectiontype>
 
   <sectiontype name="secondary" datatype="zc.zrs.zconfig.Secondary"
@@ -72,19 +65,8 @@
       </description>
     </key>
 
-    <key name="blob-dir" datatype="existing-dirpath" required="no">
-      <description>
-        The path to a blob directory.  Use this instead of a
-        blobstorage section.
-      </description>
-    </key>
-
     <key name="check_checksums" datatype="boolean" required="no"
          default="false">
-    </key>
-
-    <key name="keep-alive-delay" datatype="integer" required="no"
-         default="0">
     </key>
 
     <key name="replicate-to" datatype="socket-binding-address" required="no">

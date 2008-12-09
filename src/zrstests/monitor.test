@@ -20,11 +20,11 @@ monitoring software uses.
 
     >>> def faux_sleep(seconds):
     ...     global now
-    ...     wake_event.set()
-    ...     sleep_event.wait(10)
+    ...     sleep_event.wait(1000)
     ...     print 'slept', seconds, 'seconds', time.ctime(now)
     ...     sleep_event.clear()
     ...     now += seconds-1
+    ...     wake_event.set()
 
     >>> def wake():
     ...     sleep_event.set()
@@ -114,12 +114,8 @@ We should get a storage created for the primary and the two secondaries:
 
     >>> primary, secondary1, secondary2 = opened
 
-First, we'll wait for the first sleep:
-
-    >>> wake_event.wait(10); wake_event.clear()        
-
 Let's wake it up:
-    
+
     >>> wake() # doctest: +NORMALIZE_WHITESPACE
     slept 175.0 seconds Sat Jul  7 01:02:05 2007
     CRITICAL monitor storage1.zope.com sample-primary
