@@ -175,6 +175,8 @@ class PrimaryProtocol(twisted.internet.protocol.Protocol):
             self.__protocol = data
         else:
             if self.__start is not None:
+                if not data:
+                    return # ignore empty messages
                 return self.error("Too many messages")
             self.__start = data
             if len(data) != 8:

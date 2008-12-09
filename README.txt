@@ -10,6 +10,17 @@ replicate data from the primary storage.
 Changes
 *******
 
+2.1.x
+======
+
+Versions aren't supported any more.
+
+New Features
+------------
+
+- Secondaries have a keep-alive option to send empty messages to the
+  primary periodically.
+
 2.0.3
 =====
 

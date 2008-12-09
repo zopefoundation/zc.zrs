@@ -159,24 +159,92 @@ Then, as we expect, the data will be undone on the secondary:
     >>> conn.root()
     {}
 
+Keep alive
+----------
+
+Secondary storages can send keep-alive messages to primaries.  This
+can help in flaky network configurations in which connections are
+dropped in odd ways after periods of inactivity.
+
+.. keep alives aren't enabled by default
+
+    >>> reactor.later
+    []
+
+To enable keep alives, pass a positive keep alive delay, in seconds,
+to the secondary constructor.
+
+    >>> ss.close() # doctest: +NORMALIZE_WHITESPACE
+    INFO zc.zrs.secondary:
+    Closing Data.fs ('', 8000)
+    INFO zc.zrs.secondary:
+    IPv4Address(TCP, '127.0.0.1', 47245):
+       Disconnected <twisted.python.failure.Failure
+       twisted.internet.error.ConnectionDone>
+
+    >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
+    >>> ss = zc.zrs.secondary.Secondary(fs, ('', 8000), reactor,
+    ...                                 keep_alive_delay=60)
+    INFO zc.zrs.secondary:
+    Opening Data.fs ('', 8000)
+    INFO zc.zrs.reactor:
+    Starting factory <zc.zrs.secondary.SecondaryFactory instance at 0xb6d65e0c>
+
+    >>> db = DB(ss)
+    >>> conn = db.open()
+
+    >>> connection = reactor.accept()
+    INFO zc.zrs.secondary:
+    IPv4Address(TCP, '127.0.0.1', 47246): Connected
+    
+    >>> connection.read()
+    'zrs2.0'
+
+    >>> connection.read()
+    '\x03lk\x90\xfb\xbb\xbb\xbb'
+
+The secondary periodically sends a keep-alive message to the primary.
+It does this by scheduling a method with the reactor. Let's look at
+the test reactor's queue of things to do later:
+
+    >>> reactor.later # doctest: +NORMALIZE_WHITESPACE
+    [<1 60 keep_alive () {}>]
+
+Here we see the first entry is the keep alive. Let's tell the reactor
+to flush it's qeueue
+
+    >>> reactor.doLater()
+
+Now an empty strings has been semd to the primary:
+
+    >>> connection.read()
+    ''
+
+And a new keep alive has been scheduled:
+
+    >>> reactor.later # doctest: +NORMALIZE_WHITESPACE
+    [<2 60 keep_alive () {}>]
+
 Connection Failures
 -------------------
 
 If a connection fails, then the secondary storage will disconnect and
 and ask the reactor to reconnect 60 seconds later.  We'll demonstrate
-this by asking out test conection to fail:
+this by asking our test conection to fail:
 
     >>> connection.fail()
     INFO zc.zrs.secondary:
-    IPv4Address(TCP, '127.0.0.1', 47245): Disconnected 'failed'
+    IPv4Address(TCP, '127.0.0.1', 47246): Disconnected 'failed'
     INFO zc.zrs.reactor:
     Stopping factory <zc.zrs.secondary.SecondaryFactory instance>
     
 Our test reactor just queues later attempts:
 
     >>> reactor.later # doctest: +NORMALIZE_WHITESPACE
-    [(60, <bound method TestConnector.connect of
-          <zrstests.tests.TestConnector instance>>, (), {})]
+    [<3 60 connect () {}>]
+
+Note that our keep alive job has disappeared. This is because the keep
+alive is removed when a secondary is disconnected.
 
 We'll simulate calling these later:
 
@@ -184,14 +252,16 @@ We'll simulate calling these later:
     INFO zc.zrs.reactor:
     Starting factory <zc.zrs.secondary.SecondaryFactory instance>
 
-    >>> reactor.later
+    >>> reactor.later # doctest: +NORMALIZE_WHITESPACE
     []
+
+We still see the keep alive because it rescheduled itself.
 
 This causes a connection to be attempted, which we'll accept:
 
     >>> connection = reactor.accept()
     INFO zc.zrs.secondary:
-    IPv4Address(TCP, '127.0.0.1', 47246): Connected
+    IPv4Address(TCP, '127.0.0.1', 47247): Connected
 
 The secondary will send the protocol and a transaction, as before:
 
@@ -228,7 +298,7 @@ and then break the connection:
 
     >>> connection.fail()
     INFO zc.zrs.secondary:
-    IPv4Address(TCP, '127.0.0.1', 47246): Disconnected 'failed'
+    IPv4Address(TCP, '127.0.0.1', 47247): Disconnected 'failed'
     INFO zc.zrs.reactor:
     Stopping factory <zc.zrs.secondary.SecondaryFactory instance>
 
@@ -241,8 +311,10 @@ The secondary still shows the old data:
 Again, the secondary attempts to reconnect.  We'll accept the new connection.
 
     >>> reactor.later # doctest: +NORMALIZE_WHITESPACE
-    [(60, <bound method TestConnector.connect of
-          <zrstests.tests.TestConnector instance>>, (), {})]
+    [<5 60 connect () {}>]
+
+The reason the record increased from 3 to 5 is that a keep-alive
+record was added, but then removed when we disconnected.
 
     >>> reactor.doLater()
     INFO zc.zrs.reactor:
@@ -253,7 +325,7 @@ Again, the secondary attempts to reconnect.  We'll accept the new connection.
 
     >>> connection = reactor.accept()
     INFO zc.zrs.secondary:
-    IPv4Address(TCP, '127.0.0.1', 47247): Connected
+    IPv4Address(TCP, '127.0.0.1', 47248): Connected
 
     >>> connection.read()
     'zrs2.0'
@@ -296,13 +368,12 @@ attempt:
 
     >>> connection.fail()
     INFO zc.zrs.secondary:
-    IPv4Address(TCP, '127.0.0.1', 47247): Disconnected 'failed'
+    IPv4Address(TCP, '127.0.0.1', 47248): Disconnected 'failed'
     INFO zc.zrs.reactor:
     Stopping factory <zc.zrs.secondary.SecondaryFactory instance>
 
     >>> reactor.later # doctest: +NORMALIZE_WHITESPACE
-    [(60, <bound method TestConnector.connect of
-          <zrstests.tests.TestConnector instance>>, (), {})]
+    [<7 60 connect () {}>]
 
     >>> reactor.doLater()
     INFO zc.zrs.reactor:
@@ -319,8 +390,7 @@ As with failed connections, the secondary just tries again, waiting a
 minute between attempts.
 
     >>> reactor.later # doctest: +NORMALIZE_WHITESPACE
-    [(60, <bound method TestConnector.connect of
-          <zrstests.tests.TestConnector instance>>, (), {})]
+    [<8 60 connect () {}>]
 
 .. cleanup
 
