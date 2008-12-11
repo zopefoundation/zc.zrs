@@ -1,0 +1,244 @@
+Basic ZMH ZRS Monitor test
+==========================
+
+This document contains a basic test of the ZRS monitoring
+application.  It does so by replacing some faciliies that the
+monitoring software uses.
+
+    >>> import time, threading
+    >>> real_sleep, real_time, real_ctime = time.sleep, time.time, time.ctime
+    >>> sleep_event = threading.Event()
+    >>> wake_event = threading.Event()
+
+    >>> import ZODB.TimeStamp
+    >>> now = ZODB.TimeStamp.TimeStamp(2007, 7, 7, 1, 2, 3).timeTime()
+    >>> def faux_time():
+    ...     global now
+    ...     now += 1
+    ...     return now
+
+
+    >>> def faux_sleep(seconds):
+    ...     global now
+    ...     sleep_event.wait(1000)
+    ...     print 'slept', seconds, 'seconds', time.ctime(now)
+    ...     sleep_event.clear()
+    ...     now += seconds-1
+    ...     wake_event.set()
+
+    >>> def wake():
+    ...     sleep_event.set()
+    ...     wake_event.wait(1)
+    ...     wake_event.clear()
+
+    >>> def faux_ctime(t):
+    ...     return time.asctime(time.gmtime(t))
+
+    >>> time.sleep, time.time, time.ctime = faux_sleep, faux_time, faux_ctime
+
+    >>> import ZEO.ClientStorage, ZEO.Exceptions
+    >>> real_ClientStorage = ZEO.ClientStorage.ClientStorage
+    
+    >>> class Server:
+    ...     def lastTransaction(self):
+    ...         try:
+    ...             return self.last
+    ...         except AttributeError:
+    ...             raise ZEO.Exceptions.ClientDisconnected()
+
+    >>> opened = []
+    >>> class ClientStorage:
+    ...     def __init__(self, address, *args, **kw):
+    ...         self.address, self.args, self.kw = address, args, kw
+    ...         self._server = Server()
+    ...         opened.append(self)
+    ...     def time(self, year=2007, month=7, day=6, 
+    ...              hour=0, minute=0, second=0.0):
+    ...         self._server.last = repr(
+    ...                         ZODB.TimeStamp.TimeStamp(
+    ...                               year, month, day, hour, minute, second))
+    ...     def disconnect(self):
+    ...         try:
+    ...             del self._server.last
+    ...         except AttributeError:
+    ...             pass
+
+    >>> ZEO.ClientStorage.ClientStorage = ClientStorage
+
+Now, we can set up a monitor.  First, we'll create a config file:
+
+    >>> open('config', 'w').write(
+    ... '''
+    ... [monitor]
+    ... clusters = sample
+    ... message = %(hostname)s %(service)s %(comment)s
+    ...
+    ... [sample]
+    ... primary = storage1.zope.com:8000
+    ... secondaries = storage2.zope.com:8000 storage3.zope.com:8000
+    ...
+    ... [loggers]
+    ... keys=root
+    ...
+    ... [handlers]
+    ... keys = root
+    ...
+    ... [formatters]
+    ... keys = root
+    ...
+    ... [logger_root]
+    ... handlers=root
+    ... level=NOTSET
+    ...
+    ... [handler_root]
+    ... class=StreamHandler
+    ... args=(sys.stdout,)
+    ... formatter=root
+    ...
+    ... [formatter_root]
+    ... format=%(levelname)s %(name)s %(message)s
+    ... ''')
+
+Now, we'll run the monitor in testing mode:
+
+    >>> import zc.zrs.monitor
+    >>> clusters = zc.zrs.monitor.main(['config'], testing=True)
+
+This starts a thread for each cluster.  The thread immediately
+sleeps. Since we control sleep, we control the thread. Bwahahaha.
+
+We should get a storage created for the primary and the two secondaries:
+
+    >>> [s.address[0] for s in opened]
+    ['storage1.zope.com', 'storage2.zope.com', 'storage3.zope.com']
+
+    >>> primary, secondary1, secondary2 = opened
+
+Let's wake it up:
+
+    >>> wake() # doctest: +NORMALIZE_WHITESPACE
+    slept 175.0 seconds Sat Jul  7 01:02:05 2007
+    CRITICAL monitor storage1.zope.com sample-primary
+    Disconnected since: Never connected
+    CRITICAL monitor storage2.zope.com sample-secondary
+    Disconnected since: Never connected
+    CRITICAL monitor storage3.zope.com sample-secondary
+    Disconnected since: Never connected
+
+Here we can see that it make an initial sleep call then checked the
+servers, and slept again. Because all of our faux servers were "down",
+we got a critical warning.  In out log format, we included the message
+arguments, which are part of the log record.  The arguments are
+available to custom log handlers that need to send low-level data
+directly.  The arguments are the host name, the service name, and the
+comment.
+
+Let's start the servers and give them initial transaction-commit
+times:
+
+    >>> primary.time(hour=1)
+    >>> secondary1.time(minute=59, second=30)
+    >>> secondary2.time()
+
+Now, when we wake the process:
+
+    >>> wake() # doctest: +NORMALIZE_WHITESPACE
+    slept 297.0 seconds Sat Jul  7 01:05:03 2007
+    INFO monitor storage1.zope.com sample-primary
+    Committed: Fri Jul  6 01:00:00 2007
+    WARNING monitor storage2.zope.com sample-secondary
+    Secondary out of date: s=Fri Jul  6 00:59:30 2007 p=Fri Jul  6 01:00:00 2007
+    WARNING monitor storage3.zope.com sample-secondary
+    Secondary out of date: s=Fri Jul  6 00:00:00 2007 p=Fri Jul  6 01:00:00 2007
+
+The primary shows up as OK, because we can talk to it.  Both
+secondaries show up as out of date because they don't have the most
+recent transaction and the most recent transaction was a day ago.  We
+only get warnings because this is the first transaction we've seen for
+the secondaries.  If we catch the first secondary up:
+
+    >>> secondary1.time(hour=1)
+    >>> wake() # doctest: +NORMALIZE_WHITESPACE
+    slept 291.0 seconds Sat Jul  7 01:10:09 2007
+    INFO monitor storage1.zope.com sample-primary
+    Committed: Fri Jul  6 01:00:00 2007
+    INFO monitor storage2.zope.com sample-secondary
+    Committed: Fri Jul  6 01:00:00 2007
+    CRITICAL monitor storage3.zope.com sample-secondary
+    Secondary out of date: s=Fri Jul  6 00:00:00 2007 p=Fri Jul  6 01:00:00 2007
+
+We see the first secondary is OK.  The second secondary is critical
+because it is out of date and hasn't made any progress.
+
+If somehow the secondary gets ahead of the primary, then that is a
+critical error too:
+
+    >>> secondary2.time(hour=2)
+    >>> wake() # doctest: +NORMALIZE_WHITESPACE
+    slept 292.0 seconds Sat Jul  7 01:15:08 2007
+    INFO monitor storage1.zope.com sample-primary
+    Committed: Fri Jul  6 01:00:00 2007
+    INFO monitor storage2.zope.com sample-secondary
+    Committed: Fri Jul  6 01:00:00 2007
+    CRITICAL monitor storage3.zope.com sample-secondary
+    Secondary is ahead of primary s=Fri Jul  6 02:00:00 2007
+    p=Fri Jul  6 01:00:00 2007
+
+
+Let's hope this **never** happens. :)
+
+Let's catch the primary up to the present and bring the secondaries
+almost up:
+
+    >>> primary.time(2007, 7, 7, 1, 25)
+    >>> secondary1.time(2007, 7, 7, 1, 24, 30)
+    >>> secondary2.time(2007, 7, 7, 1, 23)
+    >>> wake() # doctest: +NORMALIZE_WHITESPACE
+    slept 292.0 seconds Sat Jul  7 01:20:08 2007
+    INFO monitor storage1.zope.com sample-primary
+    Committed: Sat Jul  7 01:25:00 2007
+    INFO monitor storage2.zope.com sample-secondary
+    Committed: Sat Jul  7 01:24:30 2007
+    WARNING monitor storage3.zope.com sample-secondary
+    Secondary out of date: s=Sat Jul  7 01:23:00 2007 p=Sat Jul  7 01:25:00 2007
+
+Here we see that the second primary is OK. Even though it is benhind
+the primary, it isn't behind by much.
+
+There's an important edge case.  A storage may never have had
+any transactions:
+
+    >>> primary._server.last = '\0'*8
+    >>> secondary1._server.last = '\0'*8
+    >>> secondary2._server.last = '\0'*8
+    >>> wake() # doctest: +NORMALIZE_WHITESPACE
+    slept 291.0 seconds Sat Jul  7 01:25:09 2007
+    INFO monitor storage1.zope.com sample-primary No transactions
+    INFO monitor storage2.zope.com sample-secondary No data
+    INFO monitor storage3.zope.com sample-secondary No data
+
+Finally, let's disconnect from the servers:
+
+    >>> _ = [s.disconnect() for s in opened]
+    >>> wake() # doctest: +NORMALIZE_WHITESPACE
+    slept 292.0 seconds Sat Jul  7 01:30:08 2007
+    CRITICAL monitor storage1.zope.com sample-primary
+    Disconnected since: Sat Jul  7 01:30:00 2007
+    CRITICAL monitor storage2.zope.com sample-secondary
+    Disconnected since: Sat Jul  7 01:30:02 2007
+    CRITICAL monitor storage3.zope.com sample-secondary
+    Disconnected since: Sat Jul  7 01:30:05 2007
+
+We see alerts for all of them because we're disconnected.
+
+.. clean up
+
+    >>> zc.zrs.monitor.stop()
+    >>> wake()
+    slept 297.0 seconds Sat Jul  7 01:35:03 2007
+    
+    >>> for cluster in clusters:
+    ...     cluster.thread.join()
+
+    >>> time.sleep, time.time, time.ctime = real_sleep, real_time, real_ctime
+    >>> ZEO.ClientStorage.ClientStorage = real_ClientStorage
