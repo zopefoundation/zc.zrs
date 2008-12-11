@@ -131,6 +131,11 @@ shorter version, we we do with a primary storage:
 
 .. address is an alias for replicate-to
 
+   There is also a keep-alive option that defaults to 0:
+
+    >>> secondary._factory.keep_alive_delay
+    0
+
     >>> secondary.close()
     >>> time.sleep(.01) # Wait for close (in separate thread)
     >>> os.remove('secondary.fs')
@@ -141,6 +146,7 @@ shorter version, we we do with a primary storage:
     ...   <secondary>
     ...      address ./primary.sock
     ...      filestorage-path secondary.fs
+    ...      keep-alive-delay 60
     ...   </secondary>
     ... """)
     >>> time.sleep(.01) # Wait for server to start
@@ -150,6 +156,9 @@ shorter version, we we do with a primary storage:
 
     >>> os.path.exists('secondary.fs')
     True
+
+    >>> secondary._factory.keep_alive_delay
+    60
 
 A primary storage can be nested inside a secondary.  This allows a
 secondary to replicate from another secondary:
