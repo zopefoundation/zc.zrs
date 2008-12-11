@@ -87,4 +87,7 @@ class Secondary(Primary):
             base = zc.zrs.primary.Primary(base, config.replicate_to.address)
 
         return zc.zrs.secondary.Secondary(
-            base, address.address, check_checksums=self.config.check_checksums)
+            base, address.address,
+            check_checksums=self.config.check_checksums,
+            keep_alive_delay=self.config.keep_alive_delay,
+            )

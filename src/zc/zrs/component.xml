@@ -69,6 +69,10 @@
          default="false">
     </key>
 
+    <key name="keep-alive-delay" datatype="integer" required="no"
+         default="0">
+    </key>
+
     <key name="replicate-to" datatype="socket-binding-address" required="no">
       <description>
         The address at which the server should listen.  This can be in
