@@ -1,6 +1,6 @@
 Name: zc.zrs
-Version: 0
-Release: 0
+Version: zc.zrs-2.0.3b8
+Release: 2
 
 Summary: Zope Replication Service
 Group: Applications/Database
