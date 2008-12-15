@@ -160,7 +160,7 @@ We get the initial transaction, because the producer starts producing
 immediately.  Let's pause producing:
 
     >>> producer.pauseProducing()
-    INFO zc.zrs.primary:
+    DEBUG zc.zrs.primary:
     test pausing
 
 and we'll create another transaction:
@@ -180,7 +180,7 @@ and we'll create another transaction:
 No output because we are paused.  Now let's resume:
 
     >>> producer.resumeProducing(); time.sleep(0.1)
-    INFO zc.zrs.primary:
+    DEBUG zc.zrs.primary:
     test resuming
     T
     S
@@ -198,7 +198,7 @@ No output because we are paused.  Now let's resume:
 and pause again:
 
     >>> producer.pauseProducing()
-    INFO zc.zrs.primary:
+    DEBUG zc.zrs.primary:
     test pausing
 
     >>> ob = ob.x
@@ -210,7 +210,7 @@ and pause again:
 and resume:
 
     >>> producer.resumeProducing(); time.sleep(0.1)
-    INFO zc.zrs.primary:
+    DEBUG zc.zrs.primary:
     test resuming
     T
     S
@@ -479,7 +479,11 @@ def primary_data_input_errors():
     start '\x00\x00\x00\x00\x00\x00\x00\x00' (1900-01-01 00:00:00.000000)
 
     >>> connection.send("")
+    DEBUG zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47249): keep-alive
     >>> connection.send("")
+    DEBUG zc.zrs.primary:
+    IPv4Address(TCP, '127.0.0.1', 47249): keep-alive
 
     >>> connection.send("Hi")
     ERROR zc.zrs.primary:

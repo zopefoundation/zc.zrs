@@ -189,6 +189,7 @@ class PrimaryProtocol(twisted.internet.protocol.Protocol):
         else:
             if self.__start is not None:
                 if not data:
+                    logger.debug(self.__peer + "keep-alive")
                     return # ignore empty messages
                 return self.error("Too many messages")
             self.__start = data
@@ -236,11 +237,11 @@ class PrimaryProducer:
         self.thread = thread
 
     def pauseProducing(self):
-        logger.info(self.peer+" pausing")
+        logger.debug(self.peer+" pausing")
         self.consumer_event.clear()
 
     def resumeProducing(self):
-        logger.info(self.peer+" resuming")
+        logger.debug(self.peer+" resuming")
         self.consumer_event.set()
     
 
