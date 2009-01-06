@@ -39,13 +39,14 @@ class Secondary:
         if reactor is None:
             reactor = zc.zrs.reactor.reactor()
         self._reactor = reactor
-            
+
         self._storage = storage
         if (ZODB.interfaces.IBlobStorage.providedBy(storage)
             and hasattr(storage, 'restoreBlob')
             ):
             zope.interface.directlyProvides(self, ZODB.interfaces.IBlobStorage)
-            for name in ('loadBlob', 'temporaryDirectory', 'restoreBlob'):
+            for name in ('loadBlob', 'openCommittedBlobFile',
+                         'temporaryDirectory', 'restoreBlob'):
                 setattr(self, name, getattr(storage, name))
             zrs_proto = 'zrs2.1'
         else:
@@ -54,7 +55,7 @@ class Secondary:
         # required methods
         for name in (
             'getName', 'getSize', 'history', 'lastTransaction',
-            '__len__', 'load', 'loadBefore', 'loadSerial', 'pack', 
+            '__len__', 'load', 'loadBefore', 'loadSerial', 'pack',
             'sortKey',
             ):
             setattr(self, name, getattr(storage, name))
@@ -66,7 +67,7 @@ class Secondary:
             'tpc_transaction', 'getTid', 'lastInvalidations',
             'supportsUndo', 'undoLog', 'undoInfo',
             'supportsVersions',
-            'versionEmpty', 'modifiedInVersion', 'versions', 
+            'versionEmpty', 'modifiedInVersion', 'versions',
             'record_iternext',
             ):
             if hasattr(storage, name):
@@ -168,7 +169,7 @@ class SecondaryProtocol(twisted.internet.protocol.Protocol):
         if (self.keep_alive_delayed_call is not None
             and self.keep_alive_delayed_call.active()):
             self.keep_alive_delayed_call.cancel()
-                
+
         self.factory.instance = None
         if self.__transaction is not None:
             self.factory.storage.tpc_abort(self.__transaction)
@@ -217,11 +218,11 @@ class SecondaryProtocol(twisted.internet.protocol.Protocol):
             if self.__blob_file_blocks:
                 # We have to collect blob data
                 self.__blob_record = oid, serial, data, version, data_txn
-                
+
                 (self.__blob_file_handle, self.__blob_file_name
                  ) = tempfile.mkstemp('blob', 'secondary',
                                       self.factory.storage.temporaryDirectory()
-                                      )                
+                                      )
             else:
                 self.factory.storage.restore(
                     oid, serial, data, version, data_txn,
@@ -260,7 +261,7 @@ class SecondaryProtocol(twisted.internet.protocol.Protocol):
                     data[0] != self.__md5.digest()):
                     raise AssertionError(
                         "Bad checksum", data[0], self.__md5.digest())
-                assert self.__transaction is not None            
+                assert self.__transaction is not None
                 assert self.__record is None
                 self.factory.storage.tpc_vote(self.__transaction)
 

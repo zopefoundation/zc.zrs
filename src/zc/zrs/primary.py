@@ -42,24 +42,27 @@ class Primary:
     def __init__(self, storage, addr, reactor=None):
         if reactor is None:
             reactor = zc.zrs.reactor.reactor()
-            
+
         self._reactor = reactor
-            
+
         self._storage = storage
-        if isinstance(storage, ZODB.blob.BlobStorage):
+        if ZODB.interfaces.IBlobStorage.providedBy(storage):
             zope.interface.directlyProvides(self, ZODB.interfaces.IBlobStorage)
             for name in ('storeBlob', 'loadBlob', 'temporaryDirectory',
-                         'restoreBlob'):
+                         'restoreBlob', 'openCommittedBlobFile'):
                 setattr(self, name, getattr(storage, name))
-        elif not isinstance(storage, ZODB.FileStorage.FileStorage):
+
+        if not isinstance(storage, (ZODB.blob.BlobStorage,
+                                    ZODB.FileStorage.FileStorage)
+                          ):
             raise ValueError("Invalid storage", storage)
-            
+
         self._changed = threading.Condition()
 
         # required methods
         for name in (
             'getName', 'getSize', 'history', 'isReadOnly', 'lastTransaction',
-            '__len__', 'load', 'loadBefore', 'loadSerial', 'new_oid', 'pack', 
+            '__len__', 'load', 'loadBefore', 'loadSerial', 'new_oid', 'pack',
             'registerDB', 'sortKey', 'store', 'tpc_abort', 'tpc_begin',
             'tpc_vote',
             ):
@@ -73,7 +76,7 @@ class Primary:
             'supportsUndo', 'undoLog', 'undoInfo', 'undo',
             'supportsVersions', 'abortVersion', 'commitVersion',
             'versionEmpty', 'modifiedInVersion', 'versions',
-            'record_iternext',
+            'record_iternext', 'deleteObject',
             ):
             if hasattr(storage, name):
                 setattr(self, name, getattr(storage, name))
@@ -162,7 +165,7 @@ class PrimaryProtocol(twisted.internet.protocol.Protocol):
         else:
             self.transport.reactor.callFromThread(
                 self.transport.loseConnection)
-        
+
 
     def error(self, message, *args):
         logger.error(self.__peer + message, *args)
@@ -180,7 +183,8 @@ class PrimaryProtocol(twisted.internet.protocol.Protocol):
     def messageReceived(self, data):    # cfr
         if self.__protocol is None:
             if data == 'zrs2.0':
-                if isinstance(self.factory.storage, ZODB.blob.BlobStorage):
+                if ZODB.interfaces.IBlobStorage.providedBy(
+                    self.factory.storage):
                     return self.error("Invalid protocol %r. Require >= 2.1",
                                       data)
             elif data != 'zrs2.1':
@@ -204,7 +208,7 @@ class PrimaryProtocol(twisted.internet.protocol.Protocol):
 
 PrimaryFactory.protocol = PrimaryProtocol
 
- 
+
 class PrimaryProducer:
 
     zope.interface.implements(twisted.internet.interfaces.IPushProducer)
@@ -243,7 +247,7 @@ class PrimaryProducer:
     def resumeProducing(self):
         logger.debug(self.peer+" resuming")
         self.consumer_event.set()
-    
+
 
     def close(self):
         # We use the closed flag to handle a race condition in
@@ -268,8 +272,8 @@ class PrimaryProducer:
             self.transport.unregisterProducer()
             self.stopProducing()
             self.transport.loseConnection()
-        
-    
+
+
     def stopProducing(self): # cfr
         self.stopped = True
         iterator = self.iterator
@@ -277,7 +281,7 @@ class PrimaryProducer:
             iterator.stop()
         else:
             self.iterator_scan_control.not_stopped = False
-            
+
         self.consumer_event.set() # unblock wait calls
 
     def cfr_write(self, data):
@@ -308,11 +312,11 @@ class PrimaryProducer:
             # make sure our iterator gets stopped, as stopProducing might
             # have been called while we were creating the iterator.
             self.iterator.stop()
-        
+
         pickler = cPickle.Pickler(1)
         pickler.fast = 1
         self.md5 = md5.new(self.start_tid)
-        
+
         blob_block_size = 1 << 16
 
         try:
@@ -355,7 +359,7 @@ class PrimaryProducer:
 
                             f.close()
                             continue
-                            
+
                     self.write(
                         pickler.dump(('S',
                                        (record.oid, record.tid, record.version,
@@ -370,7 +374,7 @@ class PrimaryProducer:
             logger.exception(self.peer)
 
         self.iterator = None
-        self.callFromThread(self.cfr_close)        
+        self.callFromThread(self.cfr_close)
 
 
 class TidTooHigh(Exception):
@@ -409,13 +413,13 @@ class FileStorageIterator(ZODB.FileStorage.format.FileStorageFormatter):
 
             # The file is gone.  It must have been removed -- probably
             # in a test.  We won't die here because we're probably
-            # never going to be used.  If we are ever used 
+            # never going to be used.  If we are ever used
 
             def _next():
                 raise v
             self._next = _next
             return
-        
+
         self._file = file
         self._pos = 4L
         ltid = self._ltid
@@ -427,7 +431,7 @@ class FileStorageIterator(ZODB.FileStorage.format.FileStorageFormatter):
             tid = file.read(8)
             if len(tid) < 8:
                 raise TidTooHigh(repr(ltid))
-            
+
             t1 = ZODB.TimeStamp.TimeStamp(tid).timeTime()
             tid = self._fs.lastTransaction()
             t2 = ZODB.TimeStamp.TimeStamp(tid).timeTime()
@@ -442,14 +446,14 @@ class FileStorageIterator(ZODB.FileStorage.format.FileStorageFormatter):
                 if pos < 27:
                     # strangely small position
                     return self._scan_forward(4, ltid)
-                
+
                 file.seek(pos)
                 tlen = ZODB.utils.u64(file.read(8))
                 pos -= tlen
                 if pos <= 4:
                     # strangely small position
                     return self._scan_forward(4, ltid)
-                    
+
                 file.seek(pos)
                 h = self._read_txn_header(pos)
                 if h.tid <= ltid:
@@ -478,13 +482,13 @@ class FileStorageIterator(ZODB.FileStorage.format.FileStorageFormatter):
                 # This is the one we want to read next
                 self._pos = pos
                 return
-            
+
             pos += h.tlen + 8
             if h.tid == ltid:
                 # We just read the one we want to skip past
                 self._pos = pos
                 return
-        
+
     def _scan_backward(self, pos, ltid):
         file = self._file
         seek = file.seek
@@ -498,7 +502,7 @@ class FileStorageIterator(ZODB.FileStorage.format.FileStorageFormatter):
             if h.tid <= ltid:
                 self._pos = pos + tlen + 8
                 return
-            
+
     def __iter__(self):
         return self
 
@@ -535,7 +539,7 @@ class FileStorageIterator(ZODB.FileStorage.format.FileStorageFormatter):
             # Our file-storage must have been packed.  We need to
             # reopen the file:
             self._open()
-        
+
         file = self._file
         pos = self._pos
 
@@ -598,7 +602,7 @@ class FileStorageIterator(ZODB.FileStorage.format.FileStorageFormatter):
                 e = cPickle.loads(h.ext)
             else:
                 e = {}
-                
+
             result = RecordIterator(
                 h.tid, h.status, h.user, h.descr,
                 e, pos, tend, self._file, tpos)
@@ -612,7 +616,7 @@ class FileStorageIterator(ZODB.FileStorage.format.FileStorageFormatter):
 
 class RecordIterator(ZODB.FileStorage.format.FileStorageFormatter):
     """Iterate over the transactions in a FileStorage file."""
-    
+
     def __init__(self, tid, status, user, desc, ext, pos, tend, file, tpos):
         self.tid = tid
         self.status = status
@@ -671,7 +675,7 @@ class Record:
         self.data = data
         self.data_txn = prev
         self.pos = pos
-        
+
 class ThreadCounter:
     """Keep track of running threads
 
@@ -704,7 +708,7 @@ class ThreadCounter:
                 break
             self.condition.wait(w)
         self.condition.release()
-            
+
 def is_blob_record(record):
     try:
         return cPickle.loads(record) is ZODB.blob.Blob
