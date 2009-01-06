@@ -176,7 +176,7 @@ and we'll create another transaction:
     >>> commit()
     >>> producer.iterator.notify()
     >>> time.sleep(0.1)
-    
+
 No output because we are paused.  Now let's resume:
 
     >>> producer.resumeProducing(); time.sleep(0.1)
@@ -265,12 +265,12 @@ There a number of cases to consider when closing a secondary:
 
     >>> reactor.later
     []
-    
+
 - Closing while waiting to connect
 
   We'll reject the connection attempt, which will make the secondary
   queue a connection attempt for later:
-  
+
     >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
     >>> ss = zc.zrs.secondary.Secondary(fs, ('', 8000), reactor)
     INFO zc.zrs.secondary:
@@ -300,7 +300,7 @@ There a number of cases to consider when closing a secondary:
 
     >>> reactor.later
     []
-    
+
     >>> reactor.clients
     []
 
@@ -317,10 +317,10 @@ There a number of cases to consider when closing a secondary:
     >>> connection = reactor.accept()
     INFO zc.zrs.secondary:
     IPv4Address(TCP, '127.0.0.1', 47248): Connected
-    
+
     >>> reactor.later
     [<2 60 keep_alive () {}>]
-    
+
     >>> reactor.clients
     []
 
@@ -331,15 +331,15 @@ There a number of cases to consider when closing a secondary:
     IPv4Address(TCP, '127.0.0.1', 47248):
     Disconnected <twisted.python.failure.Failure
     twisted.internet.error.ConnectionDone>
-        
+
     >>> reactor.later
     []
-    
+
     >>> reactor.clients
     []
 
 - Closing while connected and recieving data
-    
+
     >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
     >>> ss = zc.zrs.secondary.Secondary(fs, ('', 8000), reactor,
     ...         keep_alive_delay=60)
@@ -356,10 +356,10 @@ There a number of cases to consider when closing a secondary:
     'zrs2.0'
     >>> connection.read()
     '\x00\x00\x00\x00\x00\x00\x00\x00'
-    
+
     >>> reactor.later
     [<3 60 keep_alive () {}>]
-    
+
     >>> reactor.clients
     []
 
@@ -381,16 +381,16 @@ There a number of cases to consider when closing a secondary:
     IPv4Address(TCP, '127.0.0.1', 47249):
     Disconnected <twisted.python.failure.Failure
     twisted.internet.error.ConnectionDone>
-        
+
     >>> reactor.later
     []
-    
+
     >>> reactor.clients
     []
 
     >>> print fs._transaction
     None
-    
+
     >>> fs._pos
     4L
 
@@ -490,12 +490,12 @@ def primary_data_input_errors():
     IPv4Address(TCP, '127.0.0.1', 47249): Too many messages
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47249): Closed
-    
+
     """
 
 def secondary_data_input_errors():
     r"""
-    
+
 There is not good reason for a secondary to get a data input error. If
 it does, it should simply close.
 
@@ -527,13 +527,13 @@ it does, it should simply close.
     IPv4Address(TCP, '127.0.0.1', 47245):
     Disconnected <twisted.python.failure.Failure
     twisted.internet.error.ConnectionDone>
-        
+
     >>> reactor.later
     []
-    
+
     >>> reactor.clients
     []
-    
+
     """
 
 
@@ -542,7 +542,7 @@ def crashing_reactor_logs_as_such():
 
 We'll write a silly script that simply starts the reactor and tells it
 to crash:
-    
+
     >>> open('t.py', 'w').write('''
     ... import logging, time
     ... import twisted.internet
@@ -635,10 +635,10 @@ def leaking_file_handles_when_secondaries_disconnect():
     >>> time.sleep(.01)
     >>> sys.getrefcount(zc.zrs.primary.FileStorageIterator) == oldrc
     True
-    
+
     >>> db.close() # doctest: +ELLIPSIS
     INFO ...
-    
+
     """
 
 def close_writes_new_transactions():
@@ -684,7 +684,7 @@ def close_writes_new_transactions():
     >>> db.close()
     ...     # doctest: +ELLIPSIS
     INFO zc.zrs.primary:...
-    
+
     >>> for i in range(nconnections):
     ...     connection = connections[i]
     ...     trans = message_type = x = None
@@ -700,7 +700,7 @@ def close_writes_new_transactions():
     ...         print i, message_type, ntrans
 
     """
-    
+
 def secondary_gives_a_tid_that_is_too_high():
     r"""
     We should error and close the connection if a secondary presents a
@@ -735,7 +735,7 @@ def secondary_gives_a_tid_that_is_too_high():
     IPv4Address(TCP, '127.0.0.1', 47245):
     start '\x03lk\x90\xf7wwx' (2007-03-21 20:32:58.000000)
     ERROR zc.zrs.primary:
-    IPv4Address(TCP, '127.0.0.1', 47245): 
+    IPv4Address(TCP, '127.0.0.1', 47245):
     Traceback (most recent call last):
     ...
     TidTooHigh: '\x03lk\x90\xf7wwx'
@@ -842,14 +842,13 @@ def record_iternext():
 
     >>> ss.record_iternext == fs.record_iternext
     True
-    
+
     """
 
 def is_blob_record():
     r"""
-    >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
-    >>> bs = ZODB.blob.BlobStorage('blobs', fs)
-    >>> db = ZODB.DB(bs)
+    >>> fs = ZODB.FileStorage.FileStorage('Data.fs', blob_dir='blobs')
+    >>> db = ZODB.DB(fs)
     >>> conn = db.open()
     >>> conn.root()['blob'] = ZODB.blob.Blob()
     >>> transaction.commit()
@@ -864,7 +863,7 @@ def is_blob_record():
     False
     >>> zc.zrs.primary.is_blob_record('c__main__\nC\nq\x01.')
     False
-    
+
     >>> db.close()
     """
 
@@ -897,7 +896,7 @@ class TestReactor:
         self.clients = []
         self.client_port = 47245
         self.later = []
-            
+
     def listenTCP(self, port, factory, backlog=50, interface=''):
         addr = interface, port
         assert addr not in self._factories
@@ -956,7 +955,7 @@ class TestListener:
     def stopListening(self):
         if self.addr in self.reactor._factories:
             del self.reactor._factories[self.addr]
-        
+
 close_reason = twisted.python.failure.Failure(
     twisted.internet.error.ConnectionDone())
 
@@ -974,7 +973,7 @@ class MessageTransport:
 
     def getPeer(self):
         return self.peer
-        
+
     def write(self, data):
         self.cond.acquire()
         self.data += data
@@ -992,7 +991,7 @@ class MessageTransport:
             assert len(self.data) >= 4
         l, = struct.unpack(">I", self.data[:4])
         self.data = self.data[4:]
-        
+
         if len(self.data) < l:
             self.cond.wait(5)
             assert len(self.data) >= l, (l, len(self.data))
@@ -1011,7 +1010,7 @@ class MessageTransport:
         self.md5.update(record[4:])
         dataReceived = self.proto.dataReceived
 
-        # send data in parts to try to confuse the protocol 
+        # send data in parts to try to confuse the protocol
         n = 1
         while record:
             data, record = record[:n], record[n:]
@@ -1049,7 +1048,7 @@ class PrimaryTransport(MessageTransport):
         return cPickle.loads(data)
 
 class SecondaryTransport(MessageTransport):
-    
+
     def send(self, data, raw=False):
         if not raw:
             data = cPickle.dumps(data)
@@ -1065,7 +1064,7 @@ class SecondaryTransport(MessageTransport):
         """
         self.proto.connectionLost(reason)
         self.connector.connectionLost(reason)
-        
+
 
     def failIfNotConnected(self, reason):
         if self.connector in self.reactor.clients:
@@ -1107,7 +1106,7 @@ class TestConnector(twisted.internet.base.BaseConnector):
 
     def reject(self):
         self.connectionFailed('rejected')
-  
+
 
 class Stdout:
     def write(self, data):
@@ -1228,13 +1227,16 @@ class BasePrimaryStorageTests(StorageTestBase.StorageTestBase):
         reactor = self.globs['reactor']
         self.__port += 1
         addr = '', self.__port
-        self.__pfs = ZODB.FileStorage.FileStorage('primary.fs', **kwargs)
         if self.use_blob_storage:
-            self.__pfs = ZODB.blob.BlobStorage('primary_blobs', self.__pfs)
+            self.__pfs = ZODB.FileStorage.FileStorage(
+                'primary.fs', blob_dir='primary_blobs', **kwargs)
+            self.__sfs = ZODB.FileStorage.FileStorage(
+                'secondary.fs', blob_dir='secondary_blobs')
+        else:
+            self.__pfs = ZODB.FileStorage.FileStorage('primary.fs', **kwargs)
+            self.__sfs = ZODB.FileStorage.FileStorage('secondary.fs')
+
         self._storage = TestPrimary(self.__pfs, addr, reactor)
-        self.__sfs = ZODB.FileStorage.FileStorage('secondary.fs')
-        if self.use_blob_storage:
-            self.__sfs = ZODB.blob.BlobStorage('secondary_blobs', self.__sfs)
         self.__ss = zc.zrs.secondary.Secondary(self.__sfs, addr, reactor)
 
         p_pack = self._storage.pack
@@ -1242,7 +1244,7 @@ class BasePrimaryStorageTests(StorageTestBase.StorageTestBase):
             p_pack(*args, **kw)
             self.__pack = True
         self._storage.pack = pack
-        
+
         p_close = self._storage.close
         def close():
             self.catch_up(self.__pfs, self.__sfs)
@@ -1251,12 +1253,14 @@ class BasePrimaryStorageTests(StorageTestBase.StorageTestBase):
                 comparedbs_packed(self, self.__pfs, self.__sfs)
             else:
                 self.__comparedbs(self.__pfs, self.__sfs)
-                
+
             # Now, just recover from scratch to make sure we can:
-            sfs = ZODB.FileStorage.FileStorage('secondary2.fs')
             if self.use_blob_storage:
-                sfs = ZODB.blob.BlobStorage('secondarys_blobs', sfs)
-                
+                sfs = ZODB.FileStorage.FileStorage(
+                    'secondary2.fs', blob_dir='secondarys_blobs')
+            else:
+                sfs = ZODB.FileStorage.FileStorage('secondary2.fs')
+
             ss = zc.zrs.secondary.Secondary(sfs, addr, reactor)
             self.catch_up(self.__pfs, sfs)
             self.__comparedbs(self.__pfs, sfs)
@@ -1272,7 +1276,7 @@ class BasePrimaryStorageTests(StorageTestBase.StorageTestBase):
             time.sleep(0.1)
         self.assertEqual(fs1._pos, fs2._pos)
 
-        self.compare(fs1, fs2)    
+        self.compare(fs1, fs2)
 
 
 
@@ -1409,7 +1413,7 @@ class ZEOTests(ZEO.tests.testZEO.FullGenericTests):
                 if i == 999:
                     raise
                 time.sleep(.1)
-            
+
         fsp.close()
         self.__s.close()
         ZEO.tests.testZEO.FullGenericTests.tearDown(self)
@@ -1437,8 +1441,8 @@ def test_suite():
     return unittest.TestSuite((
         doctest.DocFileSuite(
             'fsiterator.txt',
-            'primary.txt', 'primary-blob.txt',
-            'secondary.txt', 'secondary-blob.txt',
+            'primary.txt', 'primary-blob.txt', 'primary-blobstorage.txt',
+            'secondary.txt', 'secondary-blob.txt', 'secondary-blobstorage.txt',
             setUp=setUp, tearDown=setupstack.tearDown,
             checker=renormalizing.RENormalizing([
                 (re.compile(' at 0x[a-fA-F0-9]+'), ''),

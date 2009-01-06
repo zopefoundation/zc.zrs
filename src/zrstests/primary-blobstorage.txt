@@ -1,13 +1,14 @@
 ZRS Primary Storages with Blobs
 ===============================
 
-When using blobs, a ZRS primary storage is a wrapper of a file storage
-with blob support that also provides a network service to support
+When using blobs, a ZRS primary storage is a wrapper of a blob storage
+around a file storage that also provides a network service to support
 replication.  Let's create a primary storage.  We'll first create a
 File Storage and wrap it in a blob storage:
 
     >>> import ZODB.FileStorage, ZODB.blob
-    >>> fs = ZODB.FileStorage.FileStorage('Data.fs', blob_dir='blobs')
+    >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
+    >>> bs = ZODB.blob.BlobStorage('blobs', fs)
 
 Then we'll create a primary storage using this.  A primary storage
 takes the following arguments:
@@ -26,7 +27,8 @@ takes the following arguments:
 Let's create a primary storage:
 
     >>> import zc.zrs.primary
-    >>> ps = zc.zrs.primary.Primary(fs, ('', 8000), reactor=reactor)
+    >>> ps = zc.zrs.primary.Primary(
+    ...     bs, ('', 8000), reactor=reactor)
     INFO zc.zrs.primary:
     Opening Data.fs ('', 8000)
 
