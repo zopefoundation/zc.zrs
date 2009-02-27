@@ -1443,6 +1443,7 @@ def test_suite():
             'fsiterator.txt',
             'primary.txt', 'primary-blob.txt', 'primary-blobstorage.txt',
             'secondary.txt', 'secondary-blob.txt', 'secondary-blobstorage.txt',
+            'log.txt',
             setUp=setUp, tearDown=setupstack.tearDown,
             checker=renormalizing.RENormalizing([
                 (re.compile(' at 0x[a-fA-F0-9]+'), ''),

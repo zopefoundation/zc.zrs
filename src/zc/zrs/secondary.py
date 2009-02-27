@@ -32,125 +32,14 @@ if not hasattr(ZODB.blob.BlobStorage, 'restoreBlob'):
 
 logger = logging.getLogger(__name__)
 
-class Secondary:
-
-    def __init__(self, storage, addr, reactor=None, reconnect_delay=60,
-                 check_checksums=True, keep_alive_delay=0):
-        if reactor is None:
-            reactor = zc.zrs.reactor.reactor()
-        self._reactor = reactor
-
-        self._storage = storage
-        if (ZODB.interfaces.IBlobStorage.providedBy(storage)
-            and hasattr(storage, 'restoreBlob')
-            ):
-            zope.interface.directlyProvides(self, ZODB.interfaces.IBlobStorage)
-            for name in ('loadBlob', 'openCommittedBlobFile',
-                         'temporaryDirectory', 'restoreBlob'):
-                setattr(self, name, getattr(storage, name))
-            zrs_proto = 'zrs2.1'
-        else:
-            zrs_proto = 'zrs2.0'
-
-        # required methods
-        for name in (
-            'getName', 'getSize', 'history', 'lastTransaction',
-            '__len__', 'load', 'loadBefore', 'loadSerial', 'pack',
-            'sortKey',
-            ):
-            setattr(self, name, getattr(storage, name))
-
-        # Optional methods:
-        for name in (
-            'iterator', 'cleanup', 'loadEx', 'getSerial',
-            'getExtensionMethods', 'supportsTransactionalUndo',
-            'tpc_transaction', 'getTid', 'lastInvalidations',
-            'supportsUndo', 'undoLog', 'undoInfo',
-            'supportsVersions',
-            'versionEmpty', 'modifiedInVersion', 'versions',
-            'record_iternext',
-            ):
-            if hasattr(storage, name):
-                setattr(self, name, getattr(storage, name))
-
-        self._factory = SecondaryFactory(
-            reactor, storage, reconnect_delay,
-            check_checksums, zrs_proto, keep_alive_delay)
-        self._addr = addr
-        logger.info("Opening %s %s", self.getName(), addr)
-        if isinstance(addr, basestring):
-            reactor.callFromThread(reactor.connectUNIX, addr, self._factory)
-        else:
-            host, port = addr
-            reactor.callFromThread(reactor.connectTCP, host, port,
-                                   self._factory)
-
-    def isReadOnly(self):
-        return True
-
-    def write_method(*args, **kw):
-        raise ZODB.POSException.ReadOnlyError()
-    new_oid = tpc_begin = undo = write_method
-
-    def registerDB(self, db, limit=None):
-        self._factory.db = db
-
-    def close(self):
-        logger.info('Closing %s %s', self.getName(), self._addr)
-        event = threading.Event()
-        self._reactor.callFromThread(self._factory.close, event.set)
-        event.wait()
-        self._storage.close()
-
-class SecondaryFactory(twisted.internet.protocol.ClientFactory):
-
-    db = None
-    connector = None
-    closed = False
-
-    # We'll keep track of the connected instance, if any mainly
-    # for the convenience of some tests that want to force disconnects to
-    # stress the secondaries.
-    instance = None
-
-    def __init__(self, reactor, storage, reconnect_delay, check_checksums,
-                 zrs_proto, keep_alive_delay):
-        self.protocol = SecondaryProtocol
-        self.reactor = reactor
-        self.storage = storage
-        self.reconnect_delay = reconnect_delay
-        self.check_checksums = check_checksums
-        self.zrs_proto = zrs_proto
-        self.keep_alive_delay = keep_alive_delay
-
-    def close(self, callback):
-        self.closed = True
-        if self.connector is not None:
-            self.connector.disconnect()
-        callback()
-
-    def startedConnecting(self, connector):
-        if self.closed:
-            connector.disconnect()
-        else:
-            self.connector = connector
-
-    def clientConnectionFailed(self, connector, reason):
-        self.connector = None
-        if not self.closed:
-            self.reactor.callLater(self.reconnect_delay, connector.connect)
-
-    def clientConnectionLost(self, connector, reason):
-        self.connector = None
-        if not self.closed:
-            self.reactor.callLater(self.reconnect_delay, connector.connect)
-
 
 class SecondaryProtocol(twisted.internet.protocol.Protocol):
 
-    __transaction = None
+    _zrs_transaction = None
 
     keep_alive_delayed_call = None
+
+    logger = logger
 
     def connectionMade(self):
         self.__stream = zc.zrs.sizedmessage.Stream(self.messageReceived)
@@ -159,7 +48,7 @@ class SecondaryProtocol(twisted.internet.protocol.Protocol):
         self.transport.write(zc.zrs.sizedmessage.marshal(
             self.factory.zrs_proto))
         tid = self.factory.storage.lastTransaction()
-        self.__md5 = md5.new(tid)
+        self._replication_stream_md5 = md5.new(tid)
         self.transport.write(zc.zrs.sizedmessage.marshal(tid))
         self.info("Connected")
         if self.factory.keep_alive_delay > 0:
@@ -171,17 +60,17 @@ class SecondaryProtocol(twisted.internet.protocol.Protocol):
             self.keep_alive_delayed_call.cancel()
 
         self.factory.instance = None
-        if self.__transaction is not None:
-            self.factory.storage.tpc_abort(self.__transaction)
-            self.__transaction = None
+        if self._zrs_transaction is not None:
+            self.factory.storage.tpc_abort(self._zrs_transaction)
+            self._zrs_transaction = None
         self.info("Disconnected %r", reason)
 
     def error(self, message, *args, **kw):
-        logger.critical(self.__peer + message, *args, **kw)
+        self.logger.critical(self.__peer + message, *args, **kw)
         self.factory.connector.disconnect()
 
     def info(self, message, *args):
-        logger.info(self.__peer + message, *args)
+        self.logger.info(self.__peer + message, *args)
 
     def keep_alive(self):
         if self.keep_alive_delayed_call is not None:
@@ -226,7 +115,7 @@ class SecondaryProtocol(twisted.internet.protocol.Protocol):
             else:
                 self.factory.storage.restore(
                     oid, serial, data, version, data_txn,
-                    self.__transaction)
+                    self._zrs_transaction)
 
         elif self.__blob_record:
             os.write(self.__blob_file_handle, message)
@@ -238,32 +127,29 @@ class SecondaryProtocol(twisted.internet.protocol.Protocol):
                 self.__blob_record = None
                 self.factory.storage.restoreBlob(
                     oid, serial, data, self.__blob_file_name, data_txn,
-                    self.__transaction)
+                    self._zrs_transaction)
 
         else:
             # Ordinary message
             message_type, data = cPickle.loads(message)
             if message_type == 'T':
-                assert self.__transaction is None
+                assert self._zrs_transaction is None
                 assert self.__record is None
                 transaction = Transaction(*data)
                 self.__inval = {}
                 self.factory.storage.tpc_begin(
                     transaction, transaction.id, transaction.status)
-                self.__transaction = transaction
+                self._zrs_transaction = transaction
             elif message_type == 'S':
                 self.__record = data
             elif message_type == 'B':
                 self.__record = data[:-1]
                 self.__blob_file_blocks = data[-1]
             elif message_type == 'C':
-                if self.factory.check_checksums and (
-                    data[0] != self.__md5.digest()):
-                    raise AssertionError(
-                        "Bad checksum", data[0], self.__md5.digest())
-                assert self.__transaction is not None
+                self._check_replication_stream_checksum(data[0])
+                assert self._zrs_transaction is not None
                 assert self.__record is None
-                self.factory.storage.tpc_vote(self.__transaction)
+                self.factory.storage.tpc_vote(self._zrs_transaction)
 
                 def invalidate(tid):
                     if self.factory.db is not None:
@@ -271,12 +157,142 @@ class SecondaryProtocol(twisted.internet.protocol.Protocol):
                             self.factory.db.invalidate(
                                 tid, oids, version=version)
 
-                self.factory.storage.tpc_finish(self.__transaction, invalidate)
-                self.__transaction = None
+                self.factory.storage.tpc_finish(self._zrs_transaction, invalidate)
+                self._zrs_transaction = None
             else:
                 raise ValueError("Invalid message type, %r" % message_type)
 
-        self.__md5.update(message)
+        self._replication_stream_md5.update(message)
+
+    def _check_replication_stream_checksum(self, checksum):
+        if self.factory.check_checksums and (
+            checksum != self._replication_stream_md5.digest()):
+            raise AssertionError(
+                "Bad checksum", checksum, self._replication_stream_md5.digest())
+
+class SecondaryFactory(twisted.internet.protocol.ClientFactory):
+
+    db = None
+    connector = None
+    closed = False
+    protocol = SecondaryProtocol
+
+    # We'll keep track of the connected instance, if any mainly
+    # for the convenience of some tests that want to force disconnects to
+    # stress the secondaries.
+    instance = None
+
+    def __init__(self, reactor, storage, reconnect_delay, check_checksums,
+                 zrs_proto, keep_alive_delay):
+        self.reactor = reactor
+        self.storage = storage
+        self.reconnect_delay = reconnect_delay
+        self.check_checksums = check_checksums
+        self.zrs_proto = zrs_proto
+        self.keep_alive_delay = keep_alive_delay
+
+    def close(self, callback):
+        self.closed = True
+        if self.connector is not None:
+            self.connector.disconnect()
+        callback()
+
+    def startedConnecting(self, connector):
+        if self.closed:
+            connector.disconnect()
+        else:
+            self.connector = connector
+
+    def clientConnectionFailed(self, connector, reason):
+        self.connector = None
+        if not self.closed:
+            self.reactor.callLater(self.reconnect_delay, connector.connect)
+
+    def clientConnectionLost(self, connector, reason):
+        self.connector = None
+        if not self.closed:
+            self.reactor.callLater(self.reconnect_delay, connector.connect)
+
+
+class Secondary:
+
+    factoryClass = SecondaryFactory
+    logger = logger
+
+    def __init__(self, storage, addr, reactor=None, reconnect_delay=60,
+                 check_checksums=True, keep_alive_delay=0):
+        if reactor is None:
+            reactor = zc.zrs.reactor.reactor()
+        self._reactor = reactor
+
+        self._storage = storage
+
+        zrs_proto = self.copyMethods(storage)
+
+        self._factory = self.factoryClass(
+            reactor, storage, reconnect_delay,
+            check_checksums, zrs_proto, keep_alive_delay)
+        self._addr = addr
+        self.logger.info("Opening %s %s", self.getName(), addr)
+        if isinstance(addr, basestring):
+            reactor.callFromThread(reactor.connectUNIX, addr, self._factory)
+        else:
+            host, port = addr
+            reactor.callFromThread(reactor.connectTCP, host, port,
+                                   self._factory)
+
+    def copyMethods(self, storage):
+        if (ZODB.interfaces.IBlobStorage.providedBy(storage)
+            and hasattr(storage, 'restoreBlob')
+            ):
+            zope.interface.directlyProvides(self, ZODB.interfaces.IBlobStorage)
+            for name in ('loadBlob', 'openCommittedBlobFile',
+                         'temporaryDirectory', 'restoreBlob'):
+                setattr(self, name, getattr(storage, name))
+            zrs_proto = 'zrs2.1'
+        else:
+            zrs_proto = 'zrs2.0'
+
+        # required methods
+        for name in (
+            'getName', 'getSize', 'history', 'lastTransaction',
+            '__len__', 'load', 'loadBefore', 'loadSerial', 'pack',
+            'sortKey',
+            ):
+            setattr(self, name, getattr(storage, name))
+
+        # Optional methods:
+        for name in (
+            'iterator', 'cleanup', 'loadEx', 'getSerial',
+            'getExtensionMethods', 'supportsTransactionalUndo',
+            'tpc_transaction', 'getTid', 'lastInvalidations',
+            'supportsUndo', 'undoLog', 'undoInfo',
+            'supportsVersions',
+            'versionEmpty', 'modifiedInVersion', 'versions',
+            'record_iternext',
+            ):
+            if hasattr(storage, name):
+                setattr(self, name, getattr(storage, name))
+
+        return zrs_proto
+
+    def isReadOnly(self):
+        return True
+
+    def write_method(*args, **kw):
+        raise ZODB.POSException.ReadOnlyError()
+    new_oid = tpc_begin = undo = write_method
+
+    def registerDB(self, db, limit=None):
+        self._factory.db = db
+
+    def close(self):
+        self.logger.info('Closing %s %s', self.getName(), self._addr)
+        event = threading.Event()
+        self._reactor.callFromThread(self._factory.close, event.set)
+        event.wait()
+        self._storage.close()
+
 
 class Transaction:
 
