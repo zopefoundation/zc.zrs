@@ -688,6 +688,33 @@ one transaction:
     036c6b9111111111 1027
     036c6b911ddddddd 165
 
+Let's commit the last transaction and make sure replay can recreate
+the original database:
+
+
+    >>> connection = reactor.accept()
+    INFO zc.zrs.log:
+    IPv4Address(TCP, '127.0.0.1', 47252): Connected
+
+    >>> connection.read()
+    'zrs2.1'
+
+    >>> tid = connection.read()
+
+    >>> connection.init_md5(tid)
+
+    >>> primary_data = zc.zrs.primary.FileStorageIterator(primary_fs, start=tid)
+
+    >>> send_transaction()
+
+    >>> fs = ZODB.FileStorage.FileStorage('Data.fs', blob_dir='blobs',
+    ...                                   create=True)
+    >>> zc.zrs.log.replay('log', fs)
+    >>> fs.close()
+
+    >>> open('Data.fs', 'rb').read() == open('primary.fs', 'rb').read()
+    True
+
 .. cleanup
 
     >>> primary_db.close()
@@ -695,8 +722,10 @@ one transaction:
     >>> recorder.close() # doctest: +NORMALIZE_WHITESPACE
     INFO zc.zrs.log:
     Closing ZRSReplayLog('log') ('', 8000)
-    INFO zc.zrs.reactor:
-    Stopping factory <zc.zrs.log.RecorderFactory instance>
+    INFO zc.zrs.log:
+    IPv4Address(TCP, '127.0.0.1', 47252):
+    Disconnected <twisted.python.failure.Failure
+    twisted.internet.error.ConnectionDone>
 
     >>> reactor.doLater()
 
