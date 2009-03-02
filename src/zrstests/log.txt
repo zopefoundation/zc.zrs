@@ -145,7 +145,7 @@ Let's send some more data.
     ...                     blocks += 1
     ...                 connection.send(('B',
     ...                                 (record.oid, record.tid, record.version,
-    ...                                  record.data_txn, blocks)))
+    ...                                  record.data_txn, long(blocks))))
     ...                 connection.send(record.data, raw=True)
     ...                 f.seek(0)
     ...                 while blocks > 0:
