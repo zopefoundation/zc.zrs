@@ -36,7 +36,7 @@ ZRS to supply checksums.
 Let's look at the log directory:
 
     >>> def listdir(dname):
-    ...     for name in os.listdir(dname):
+    ...     for name in sorted(os.listdir(dname)):
     ...         print name, os.stat(os.path.join(dname, name)).st_size
 
     >>> listdir('log')
