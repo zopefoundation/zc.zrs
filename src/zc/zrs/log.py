@@ -88,7 +88,7 @@ class LogFile:
         os.remove(filename)
 
     def __repr__(self):
-        return "ZRSReplayLog(%r)" % self.destination
+        return "ZRSReplicationLog(%r)" % self.destination
 
     def lastTransaction(self):
         return self.tid

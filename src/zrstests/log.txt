@@ -1,9 +1,9 @@
-ZRS Recovery Log
-================
+ZRS Replication Log
+===================
 
-A ZRS recovery log is a colection of files that record replication
+A ZRS replication log is a colection of files that record replication
 data records.  If a database is lost or damaged, it can be rebuilt by
-applying records from the recovery log.  A recover log can also be
+applying records from the replication log.  A replication log can also be
 used for auditing purposes, as it can record every transaction written
 to a database.
 
@@ -18,7 +18,7 @@ recorder object. Let's create a recoder object manually:
     ...     ('', 8000), 'log', 1000, reactor=reactor,
     ...     keep_alive_delay=60, check_checksums=True)
     INFO zc.zrs.log:
-    Opening ZRSReplayLog('log') ('', 8000)
+    Opening ZRSReplicationLog('log') ('', 8000)
     INFO zc.zrs.reactor:
     Starting factory <zc.zrs.log.RecorderFactory instance>
 
@@ -512,7 +512,7 @@ size:
 
     >>> recorder.close() # doctest: +NORMALIZE_WHITESPACE
     INFO zc.zrs.log:
-    Closing ZRSReplayLog('log') ('', 8000)
+    Closing ZRSReplicationLog('log') ('', 8000)
     INFO zc.zrs.log:
     IPv4Address(TCP, '127.0.0.1', 47249):
     Disconnected <twisted.python.failure.Failure
@@ -547,7 +547,7 @@ it was before:
     ...     ('', 8000), 'log', 1000, reactor=reactor,
     ...     keep_alive_delay=60, check_checksums=True)
     INFO zc.zrs.log:
-    Opening ZRSReplayLog('log') ('', 8000)
+    Opening ZRSReplicationLog('log') ('', 8000)
     INFO zc.zrs.reactor:
     Starting factory <zc.zrs.log.RecorderFactory instance at 0xb6461bec>
 
@@ -564,7 +564,7 @@ Similarly, if the file is broken, it will be removed and recreated:
 
     >>> recorder.close() # doctest: +NORMALIZE_WHITESPACE
     INFO zc.zrs.log:
-    Closing ZRSReplayLog('log') ('', 8000)
+    Closing ZRSReplicationLog('log') ('', 8000)
     INFO zc.zrs.reactor:
     Stopping factory <zc.zrs.log.RecorderFactory instance at 0xb6475bec>
 
@@ -590,7 +590,7 @@ Similarly, if the file is broken, it will be removed and recreated:
     ...
     IOError: [Errno 22] Invalid argument
     INFO zc.zrs.log:
-    Opening ZRSReplayLog('log') ('', 8000)
+    Opening ZRSReplicationLog('log') ('', 8000)
     INFO zc.zrs.reactor:
     Starting factory <zc.zrs.log.RecorderFactory instance at 0xb63fbf0c>
 
@@ -646,7 +646,7 @@ one transaction:
 
     >>> recorder.close() # doctest: +NORMALIZE_WHITESPACE
     INFO zc.zrs.log:
-    Closing ZRSReplayLog('log') ('', 8000)
+    Closing ZRSReplicationLog('log') ('', 8000)
     INFO zc.zrs.log:
     IPv4Address(TCP, '127.0.0.1', 47251):
     Disconnected <twisted.python.failure.Failure
@@ -675,7 +675,7 @@ one transaction:
     ...     ('', 8000), 'log', 1000, reactor=reactor,
     ...     keep_alive_delay=60, check_checksums=True)
     INFO zc.zrs.log:
-    Opening ZRSReplayLog('log') ('', 8000)
+    Opening ZRSReplicationLog('log') ('', 8000)
     INFO zc.zrs.reactor:
     Starting factory <zc.zrs.log.RecorderFactory instance at 0xb642798c>
 
@@ -721,7 +721,7 @@ the original database:
 
     >>> recorder.close() # doctest: +NORMALIZE_WHITESPACE
     INFO zc.zrs.log:
-    Closing ZRSReplayLog('log') ('', 8000)
+    Closing ZRSReplicationLog('log') ('', 8000)
     INFO zc.zrs.log:
     IPv4Address(TCP, '127.0.0.1', 47252):
     Disconnected <twisted.python.failure.Failure
