@@ -198,7 +198,7 @@ provide lastTransaction and getSize:
     >>> log.lastTransaction() == primary.lastTransaction()
     True
 
-    >>> log.getSize()
+    >>> print log.getSize()
     4810
 
 The file-size, keep-alive-delay and check-checksums options are
