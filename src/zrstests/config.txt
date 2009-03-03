@@ -18,7 +18,6 @@ use these, you have to import zc.zrs:
     ...      </filestorage>
     ...   </zrs>
     ... """)
-    >>> time.sleep(.01) # Wait for server to start
 
 In this example, we created a primary storage that listens on a
 unix-domain socket. Normally, we'd use a TCP address instead, but we
@@ -29,8 +28,8 @@ The primary storage wraps a file storage.
     >>> primary
     <zc.zrs.primary.Primary instance at 0x2aaaab0c53f8>
 
-    >>> os.path.exists('primary.sock')
-    True
+    >>> from ZEO.tests.forker import wait_until
+    >>> wait_until("server starts", lambda: os.path.exists('primary.sock'))
     >>> os.path.exists('primary.fs')
     True
 
