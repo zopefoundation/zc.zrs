@@ -1,0 +1,329 @@
+Configuration with ZConfig
+==========================
+
+ZRS supports configuration of primary and secondary storages via
+ZConfig.  ZRS provides primary and secondary-storage directives. Tp
+use these, you have to import zc.zrs:
+
+    >>> import os, time, ZODB.config, shutil
+    >>> primary = ZODB.config.storageFromString("""
+    ...   %import zc.zrs
+    ... 
+    ...   <primary>
+    ...      replicate-to ./primary.sock
+    ...      <filestorage>
+    ...          path primary.fs
+    ...      </filestorage>
+    ...   </primary>
+    ... """)
+    >>> time.sleep(.01) # Wait for server to start
+
+In this example, we created a primary storage that listens on a
+unix-domain socket. Normally, we'd use a TCP address instead, but we
+used a unix-domain socket to avoid having to pick an unused port. :)
+
+The primary storage wraps a file storage.
+
+    >>> primary
+    <zc.zrs.primary.Primary instance at 0x2aaaab0c53f8>
+
+    >>> os.path.exists('primary.sock')
+    True
+    >>> os.path.exists('primary.fs')
+    True
+
+    >>> primary.close()
+    >>> time.sleep(.01) # Wait for close (in separate thread)
+    >>> os.path.exists('primary.sock')
+    False
+    >>> os.remove('primary.fs')
+
+We can also include a blob storage:
+
+    >>> primary = ZODB.config.storageFromString("""
+    ...   %import zc.zrs
+    ... 
+    ...   <primary>
+    ...      replicate-to ./primary.sock
+    ...      <blobstorage>
+    ...        blob-dir primary-blobs
+    ...        <filestorage>
+    ...            path primary.fs
+    ...        </filestorage>
+    ...      </blobstorage>
+    ...   </primary>
+    ... """)
+    >>> time.sleep(.01) # Wait for server to start
+
+    >>> os.path.exists('primary.sock')
+    True
+    >>> os.path.exists('primary.fs')
+    True
+    >>> os.path.isdir('primary-blobs')
+    True
+
+    >>> primary.close()
+    >>> time.sleep(.01) # Wait for close (in separate thread)
+    >>> os.path.exists('primary.sock')
+    False
+    >>> os.remove('primary.fs')
+    >>> shutil.rmtree('primary-blobs')
+
+.. address is an alias for replicate-to
+
+    >>> primary = ZODB.config.storageFromString("""
+    ...   %import zc.zrs
+    ... 
+    ...   <primary>
+    ...      address ./primary.sock
+    ...      <filestorage>
+    ...          path primary.fs
+    ...      </filestorage>
+    ...   </primary>
+    ... """)
+    >>> time.sleep(.01) # Wait for server to start
+
+    >>> primary
+    <zc.zrs.primary.Primary instance at 0x2aaaab369b90>
+
+    >>> os.path.exists('primary.sock')
+    True
+    >>> os.path.exists('primary.fs')
+    True
+
+    >>> primary.close()
+    >>> time.sleep(.01) # Wait for close (in separate thread)
+    >>> os.path.exists('primary.sock')
+    False
+    >>> os.remove('primary.fs')
+
+Only file storages, or blob-adapted file storages are currently
+supported for use with ZRS primaries. There's a shorter version of the
+primary configuration:
+    
+    >>> primary = ZODB.config.storageFromString("""
+    ...   %import zc.zrs
+    ... 
+    ...   <primary>
+    ...      replicate-to ./primary.sock
+    ...      filestorage-path primary.fs
+    ...      blob-dir primary-blobs
+    ...   </primary>
+    ... """)
+    >>> time.sleep(.01) # Wait for server to start
+
+    >>> primary
+    <zc.zrs.primary.Primary instance at 0x2aaaab36d518>
+
+    >>> os.path.exists('primary.sock')
+    True
+    >>> os.path.exists('primary.fs')
+    True
+    >>> os.path.isdir('primary-blobs')
+    True
+
+Defining a secondary storage is similar:
+
+    >>> secondary = ZODB.config.storageFromString("""
+    ...   %import zc.zrs
+    ... 
+    ...   <secondary>
+    ...      replicate-from ./primary.sock
+    ...      <blobstorage>
+    ...         blob-dir secondary-blobs
+    ...         <filestorage>
+    ...            path secondary.fs
+    ...         </filestorage>
+    ...      </blobstorage>
+    ...   </secondary>
+    ... """)
+    >>> time.sleep(.01) # Wait for server to start
+
+    >>> secondary
+    <zc.zrs.secondary.Secondary instance at 0x2aaaab0e8d40>
+
+    >>> os.path.exists('secondary.fs')
+    True
+    >>> os.path.isdir('secondary-blobs')
+    True
+
+Since it's common to use a file storage with a secondary, we can use a
+shorter version, we we do with a primary storage:
+
+    >>> secondary.close()
+    >>> time.sleep(.01) # Wait for close (in separate thread)
+    >>> os.remove('secondary.fs')
+    >>> shutil.rmtree('secondary-blobs')
+
+    >>> secondary = ZODB.config.storageFromString("""
+    ...   %import zc.zrs
+    ... 
+    ...   <secondary>
+    ...      replicate-from ./primary.sock
+    ...      filestorage-path secondary.fs
+    ...      blob-dir secondary-blobs
+    ...   </secondary>
+    ... """)
+    >>> time.sleep(.01) # Wait for server to start
+
+    >>> secondary
+    <zc.zrs.secondary.Secondary instance at 0x2aaaaadd19e0>
+
+    >>> os.path.exists('secondary.fs')
+    True
+    >>> os.path.isdir('secondary-blobs')
+    True
+
+.. address is an alias for replicate-to
+
+   There is also a keep-alive option that defaults to 0:
+
+    >>> secondary._factory.keep_alive_delay
+    0
+
+    >>> secondary.close()
+    >>> time.sleep(.01) # Wait for close (in separate thread)
+    >>> os.remove('secondary.fs')
+    >>> shutil.rmtree('secondary-blobs')
+
+    >>> secondary = ZODB.config.storageFromString("""
+    ...   %import zc.zrs
+    ... 
+    ...   <secondary>
+    ...      address ./primary.sock
+    ...      filestorage-path secondary.fs
+    ...      blob-dir secondary-blobs
+    ...      keep-alive-delay 60
+    ...   </secondary>
+    ... """)
+    >>> time.sleep(.01) # Wait for server to start
+
+    >>> secondary
+    <zc.zrs.secondary.Secondary instance at 0x2aaaab370b00>
+
+    >>> os.path.exists('secondary.fs')
+    True
+    >>> os.path.isdir('secondary-blobs')
+    True
+
+    >>> secondary._factory.keep_alive_delay
+    60
+
+A primary storage can be nested inside a secondary.  This allows a
+secondary to replicate from another secondary.  If a blob storage is
+used, it must be in the primary storage:
+
+    >>> secondary.close()
+    >>> time.sleep(.01) # Wait for close (in separate thread)
+    >>> os.remove('secondary.fs')
+    >>> shutil.rmtree('secondary-blobs')
+
+    >>> secondary = ZODB.config.storageFromString("""
+    ...   %import zc.zrs
+    ... 
+    ...   <secondary>
+    ...      replicate-from ./primary.sock
+    ...      keep-alive-delay 60
+    ...      <primary>
+    ...         replicate-to ./secondary.sock
+    ...         filestorage-path secondary.fs
+    ...         blob-dir secondary-blobs
+    ...      </primary>
+    ...   </secondary>
+    ... """)
+    >>> time.sleep(.01) # Wait for server to start
+
+    >>> secondary
+    <zc.zrs.secondary.Secondary instance at 0x2aaaab0f5680>
+
+    >>> os.path.exists('secondary.fs')
+    True
+    >>> os.path.exists('secondary.sock')
+    True
+    >>> os.path.isdir('secondary-blobs')
+    True
+
+As you might guess, there's a shorter version of this common
+configuration:
+
+    >>> secondary.close()
+    >>> time.sleep(.01) # Wait for close (in separate thread)
+    >>> os.remove('secondary.fs')
+    >>> shutil.rmtree('secondary-blobs')
+    >>> os.path.exists('secondary.sock')
+    False
+
+    >>> secondary = ZODB.config.storageFromString("""
+    ...   %import zc.zrs
+    ... 
+    ...   <secondary>
+    ...      replicate-from ./primary.sock
+    ...      replicate-to ./secondary.sock
+    ...      filestorage-path secondary.fs
+    ...      blob-dir secondary-blobs
+    ...   </secondary>
+    ... """)
+    >>> time.sleep(.01) # Wait for server to start
+
+In this example, we also used the replicate-from option. This is an
+alias for the address option.
+
+    >>> secondary
+    <zc.zrs.secondary.Secondary instance at 0x2aaaab36fcf8>
+
+    >>> os.path.exists('secondary.fs')
+    True
+    >>> os.path.exists('secondary.sock')
+    True
+    >>> os.path.isdir('secondary-blobs')
+    True
+
+Let's create a secondary secondary and commit some data to the primary storage.
+
+    >>> secondary2 = ZODB.config.storageFromString("""
+    ...   %import zc.zrs
+    ... 
+    ...   <secondary>
+    ...      replicate-from ./secondary.sock
+    ...      filestorage-path secondary2.fs
+    ...      blob-dir secondary2-blobs
+    ...   </secondary>
+    ... """)
+    >>> time.sleep(.01) # Wait for server to start
+    
+    >>> import time, transaction, ZODB, ZODB.blob
+    >>> db = ZODB.DB(primary)
+    >>> conn = db.open()
+    >>> conn.root()[1] = conn.root().__class__()
+    >>> conn.root()[2] = ZODB.blob.Blob()
+    >>> conn.root()[2].open('w').write("some blob data")
+    >>> transaction.commit()
+
+    >>> conn.root()
+    {1: {}, 2: <ZODB.blob.Blob object at 0xb6463cec>}
+
+.. wait a little while to replicate
+
+    >>> time.sleep(1)
+
+Now, we see that we have the data replicated to our secondary
+secondary:
+    
+    >>> db2 = ZODB.DB(secondary2)
+    >>> conn2 = db2.open()
+    >>> conn2.root()
+    {1: {}, 2: <ZODB.blob.Blob object at 0xb63c8c6c>}
+
+    >>> conn.root()[2].open().read()
+    'some blob data'
+
+    >>> os.path.getsize('primary.fs') == os.path.getsize('secondary2.fs')
+    True
+
+    
+
+.. cleanup 
+
+   >>> db2.close()
+   >>> secondary.close()
+   >>> db.close()

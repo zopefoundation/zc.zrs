@@ -34,13 +34,15 @@ def readback(f, pos):
     assert l == readlen(f, pos)
     return pos, f.read(1)
 
+
+islogfilename = re.compile("[0-9a-f]{16}$").match
+
 class LogFile:
 
     def __init__(self, destination, max_size):
         self.destination = destination
         self.max_size = max_size
-        files = sorted(name for name in os.listdir(destination)
-                       if re.match("[0-9a-f]{16}$", name))
+        files = sorted(filter(islogfilename, os.listdir(destination)))
 
         while files:
             filename = files.pop()
@@ -89,6 +91,13 @@ class LogFile:
 
     def __repr__(self):
         return "ZRSReplicationLog(%r)" % self.destination
+    getName = __repr__
+
+    def getSize(self):
+        size = 0
+        for filename in filter(islogfilename, os.listdir(self.destination)):
+            size += os.stat(os.path.join(self.destination, filename)).st_size
+        return size
 
     def lastTransaction(self):
         return self.tid
@@ -175,12 +184,27 @@ class Recorder(zc.zrs.secondary.Secondary):
         storage = LogFile(destination, size)
         zc.zrs.secondary.Secondary.__init__(self, storage, addr, *args, **kw)
 
-    def getName(self):
-        return str(self._storage)
-
     def copyMethods(self, storage):
+        for name in ('getName', 'getSize', 'lastTransaction'):
+            setattr(self, name, getattr(storage, name))
+
         return 'zrs2.1'
 
+    def __len__(self):
+        return 1
+
+    def getTid(*args, **kw):
+        raise NotImplemented
+    load = loadSerial = getTid
+
+    def isReadOnly(self):
+        return True
+
+    def tpc_transaction(self):
+        pass
+
+    def history(self):
+        return ()
 
 def replay(log, storage):
     stid = storage.lastTransaction().encode('hex')

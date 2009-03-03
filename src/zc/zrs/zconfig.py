@@ -16,11 +16,54 @@
 import zc.zrs.primary
 import zc.zrs.secondary
 
-class Primary:
+class ZRS:
 
     def __init__(self, config):
         self.config = config
         self.name = config.getSectionName()
+
+    def open(self):
+        config = self.config
+        replicate_to = config.replicate_to
+        replicate_from = config.replicate_from
+
+        storage = config.base.open()
+
+        if replicate_to is not None:
+            if replicate_from is not None:
+                if replicate_to.address == replicate_from.address:
+                    raise ValueError(
+                        "Values for replicate-to and "
+                        "replicate-from must be different.")
+
+            storage = zc.zrs.primary.Primary(storage, replicate_to.address)
+
+        elif replicate_from is None:
+            raise ValueError(
+                "You must specify replicate-to and/or replicate-from.")
+
+        if replicate_from is not None:
+            storage = zc.zrs.secondary.Secondary(
+                storage, replicate_from.address,
+                check_checksums=self.config.check_checksums,
+                keep_alive_delay=self.config.keep_alive_delay,
+                )
+
+        return storage
+
+class Log(ZRS):
+
+    def open(self):
+        import zc.zrs.log
+        return zc.zrs.log.Recorder(
+            self.config.replicate_from.address,
+            self.config.destination,
+            self.config.file_size,
+            check_checksums=self.config.check_checksums,
+            keep_alive_delay=self.config.keep_alive_delay,
+            )
+
+class Primary(ZRS):
 
     def open(self):
         config = self.config

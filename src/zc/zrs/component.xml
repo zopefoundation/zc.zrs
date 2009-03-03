@@ -3,6 +3,90 @@
      Definitions for ZRS primary and secondary storages.
   </description>
 
+  <sectiontype name="zrs" datatype="zc.zrs.zconfig.ZRS"
+               implements="ZODB.storage">
+
+    <section type="ZODB.storage" name="*" attribute="base" required="yes" />
+
+    <key name="replicate-to" datatype="socket-binding-address" required="no">
+      <description>
+        The address at which the server should listen.  This can be in
+        the form 'host:port' to signify a TCP/IP connection or a
+        pathname string to signify a Unix domain socket connection (at
+        least one '/' is required).  A hostname may be a DNS name or a
+        dotted IP address.  If the hostname is omitted, the platform's
+        default behavior is used when binding the listening socket (''
+        is passed to socket.bind() as the hostname portion of the
+        address).
+      </description>
+    </key>
+
+    <key name="replicate-from" datatype="socket-address" required="no">
+      <description>
+        The address of a primary storage to connect to.  This can be in
+        the form 'host:port' to signify a TCP/IP connection or a
+        pathname string to signify a Unix domain socket connection (at
+        least one '/' is required).  A hostname may be a DNS name or a
+        dotted IP address.  If the hostname is omitted, the platform's
+        default behavior is used when binding the listening socket (''
+        is passed to socket.bind() as the hostname portion of the
+        address).
+      </description>
+    </key>
+
+    <key name="check-checksums" datatype="boolean" required="no"
+         default="false">
+    </key>
+
+    <key name="keep-alive-delay" datatype="integer" required="no"
+         default="0">
+    </key>
+
+  </sectiontype>
+
+  <sectiontype name="replicationlog" datatype="zc.zrs.zconfig.Log"
+               implements="ZODB.storage">
+
+    <key name="replicate-from" datatype="socket-address" required="no">
+      <description>
+        The address of a primary storage to connect to.  This can be in
+        the form 'host:port' to signify a TCP/IP connection or a
+        pathname string to signify a Unix domain socket connection (at
+        least one '/' is required).  A hostname may be a DNS name or a
+        dotted IP address.  If the hostname is omitted, the platform's
+        default behavior is used when binding the listening socket (''
+        is passed to socket.bind() as the hostname portion of the
+        address).
+      </description>
+    </key>
+
+    <key name="destination" datatype="existing-directory" required="yes">
+      <description>
+        The name of an existing directory to store individual log
+        files into.
+      </description>
+    </key>
+
+    <key name="file-size" datatype="byte-size" required="no" default="500MB">
+      <description>
+        The target size of individual log files.  A new log file is
+        started when this size is exceeded after committing a
+        transaction.  Individual log files sizes will end up being larger
+        than or equal to this size, depending on the size of the last
+        transaction.  This is not an upper limit.
+      </description>
+    </key>
+
+    <key name="check-checksums" datatype="boolean" required="no"
+         default="false">
+    </key>
+
+    <key name="keep-alive-delay" datatype="integer" required="no"
+         default="0">
+    </key>
+
+  </sectiontype>
+
   <sectiontype name="primary" datatype="zc.zrs.zconfig.Primary"
                implements="ZODB.storage">
 

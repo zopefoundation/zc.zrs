@@ -16,6 +16,7 @@ from ZODB.TimeStamp import TimeStamp
 from zope.testing import doctest, setupstack, renormalizing
 from zrstests import loopback
 import ZEO.ClientStorage
+import ZEO.tests.forker
 import ZEO.tests.testZEO
 import ZODB.blob
 import ZODB.FileStorage
@@ -867,6 +868,7 @@ def is_blob_record():
     >>> db.close()
     """
 
+
 class DelayedCall:
 
     def __init__(self, later, n, delay, func, args, kw):
@@ -1124,7 +1126,7 @@ def join(old):
         if thread not in old:
             thread.join(1.0)
 
-def setUp(test):
+def setUpTime(test):
     setupstack.register(test, join, threading.enumerate())
     setupstack.setUpDirectory(test)
     global now
@@ -1137,6 +1139,9 @@ def setUp(test):
         now += 1
         transaction.commit()
     test.globs['commit'] = commit
+
+def setUp(test):
+    setUpTime(test)
 
     test.globs['reactor'] = TestReactor()
 
@@ -1450,11 +1455,15 @@ def test_suite():
                 ]),
             ),
         doctest.DocFileSuite(
-            'config.txt',
+            'config-old.txt', 'config.txt',
             checker=renormalizing.RENormalizing([
                 (re.compile(' at 0x[a-fA-F0-9]+'), ''),
                 ]),
-            setUp=setupstack.setUpDirectory, tearDown=setupstack.tearDown,
+            setUp=setUpTime, tearDown=setupstack.tearDown,
+            ),
+        doctest.DocFileSuite(
+            'log-in-zeo.txt',
+            setUp=ZEO.tests.forker.setUp, tearDown=setupstack.tearDown,
             ),
         doctest.DocTestSuite(
             setUp=setUp, tearDown=setupstack.tearDown,
