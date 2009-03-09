@@ -1407,7 +1407,7 @@ def test_suite():
                 ]),
             ),
         doctest.DocFileSuite(
-            'config.txt',
+            'config.txt', 'config-old.txt',
             checker=renormalizing.RENormalizing([
                 (re.compile(' at 0x[a-fA-F0-9]+'), ''),
                 ]),
