@@ -14,7 +14,7 @@
 
 from ZODB.TimeStamp import TimeStamp
 from zope.testing import doctest, setupstack, renormalizing
-from zrstests import loopback
+from zc.zrstests import loopback
 import ZEO.ClientStorage
 import ZEO.tests.forker
 import ZEO.tests.testZEO

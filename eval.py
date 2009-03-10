@@ -13,10 +13,16 @@ entry_points = """
 zrsmonitor-script = zc.zrs.monitor:main
 """
 
+version = open('zrsversion.cfg').read().strip().split()[-1]+'.eval'
+
+import shutil
+if os.path.isdir('build'):
+    shutil.rmtree('build')
+
 try:
     setup(
-        name = 'zc.zrs_eval',
-        version = open('version.txt').read().strip(),
+        name = 'zc.zrs',
+        version = version,
         author = "Jim Fulton",
         author_email = "jim#zope.com",
         description = "Zope Replication Server",
