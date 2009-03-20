@@ -14,7 +14,7 @@
 ##############################################################################
 
 name = 'zc.zrstests'
-version = '0'
+version = '2.2.1'
 
 from setuptools import setup, find_packages
 
