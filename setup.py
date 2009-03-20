@@ -18,7 +18,7 @@ version = open('zrsversion.cfg').read().strip().split()[-1]
 
 from setuptools import setup, find_packages
 
-import shutil
+import os, shutil
 if os.path.isdir('build'):
     shutil.rmtree('build')
 
