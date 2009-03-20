@@ -1,6 +1,6 @@
 ##############################################################################
 #
-# Copyright (c) 2005 Zope Corporation. All Rights Reserved.
+# Copyright (c) Zope Corporation. All Rights Reserved.
 #
 # This software is subject to the provisions of the Zope Visible Source
 # License, Version 1.0 (ZVSL).  A copy of the ZVSL should accompany this
