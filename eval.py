@@ -13,8 +13,11 @@
 #
 ##############################################################################
 
-import os
 from setuptools import setup
+import datetime
+import os
+import random
+import time
 
 open('setup.cfg', 'w').write("""
 [bdist_egg]
@@ -28,31 +31,51 @@ entry_points = """
 zrsmonitor-script = zc.zrs.monitor:main
 """
 
+
 version = open('zrsversion.cfg').read().strip().split()[-1]+'.eval'
+version += datetime.date.today().isoformat().replace('-', '')
+
+timeout_template="""
+
+if __import__('time').time() > %s:
+    raise SystemError('Your ZRS evaluation has expired.')
+"""
 
 import shutil
 if os.path.isdir('build'):
     shutil.rmtree('build')
 
-try:
-    setup(
-        name = 'zc.zrs',
-        version = version,
-        author = "Jim Fulton",
-        author_email = "jim#zope.com",
-        description = "Zope Replication Server",
-        license = "Zope Evaluation License 1.0",
-        keywords = "ZODB",
+options = dict(
+    name = 'zc.zrs',
+    version = version,
+    author = "Jim Fulton",
+    author_email = "jim#zope.com",
+    description = "Zope Replication Server",
+    license = "Zope Evaluation License 1.0",
+    keywords = "ZODB",
 
-        packages = ['zc', 'zc.zrs'],
-        include_package_data = True,
-        data_files = [('.', ['README.txt', 'LICENSE.txt'])],
-        zip_safe = True,
-        entry_points = entry_points,
-        package_dir = {'':'src'},
-        namespace_packages = ['zc'],
-        install_requires = ['setuptools', 'ZODB3', 'Twisted'],
-        )
+    packages = ['zc', 'zc.zrs'],
+    include_package_data = True,
+    data_files = [('.', ['README.txt', 'LICENSE.txt'])],
+    zip_safe = True,
+    entry_points = entry_points,
+    package_dir = {'':'src'},
+    namespace_packages = ['zc'],
+    install_requires = ['setuptools', 'ZODB3', 'Twisted'],
+    )
+
+try:
+    setup(**options)
+
+    deadline = random.randint(32, 60)
+    deadline = time.time()+(86400*deadline)
+    deadline = timeout_template % deadline
+    for name in 'primary', 'reactor', 'secondary', 'sizedmessage':
+        open(os.path.join('build', 'lib', 'zc', 'zrs', name+'.py'), 'a').write(
+            deadline)
+
+    setup(**options)
 finally:
     os.remove('setup.cfg')
     os.remove('LICENSE.txt')
+
