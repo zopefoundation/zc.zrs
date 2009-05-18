@@ -67,7 +67,7 @@ options = dict(
 try:
     setup(**options)
 
-    deadline = random.randint(32, 60)
+    deadline = random.randint(40, 60)
     deadline = time.time()+(86400*deadline)
     deadline = timeout_template % deadline
     for name in 'primary', 'reactor', 'secondary', 'sizedmessage':
