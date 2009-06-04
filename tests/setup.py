@@ -40,6 +40,6 @@ setup(
         'setuptools',
         'ZODB3',
         'Twisted',
-        'zc.zrs ==%s, ==%s.eval' % (version, version),
+        'zc.zrs >=%s.eval, <%s.eval99999999' % (version, version),
         ],
     )

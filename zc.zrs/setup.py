@@ -16,6 +16,9 @@
 name = 'zc.zrs'
 version = open('zrsversion.cfg').read().strip().split()[-1]
 
+from ez_setup import use_setuptools
+use_setuptools()
+
 from setuptools import setup, find_packages
 
 import os, shutil
@@ -39,6 +42,7 @@ setup(
 
     packages = ['zc', 'zc.zrs'],
     include_package_data = True,
+    data_files = [('.', ['LICENSE.txt', 'README.txt', 'zrsversion.cfg'])],
     zip_safe = True,
     entry_points = entry_points,
     package_dir = {'':'src'},
@@ -48,4 +52,6 @@ setup(
         'ZODB3',
         'Twisted',
         ],
+    tests_require = ['zope.testing'],
+    test_suite = 'zc.zrstests.tests.test_suite',
     )
