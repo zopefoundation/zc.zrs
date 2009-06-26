@@ -70,7 +70,7 @@ file storage and database that we can use for this:
     >>> primary_db = DB(primary_fs)
 
 The first transaction initializes the database.  Let's send that to
-the secondary.  
+the secondary.
 
     >>> trans = primary_data.next()
 
@@ -115,8 +115,8 @@ our secondary storage:
     >>> conn.root()
     {}
 
-Let's send some more data.  
- 
+Let's send some more data.
+
     >>> primary_conn = primary_db.open()
     >>> ob = primary_conn.root()
     >>> import persistent.mapping
@@ -196,7 +196,7 @@ to the secondary constructor.
     >>> connection = reactor.accept()
     INFO zc.zrs.secondary:
     IPv4Address(TCP, '127.0.0.1', 47246): Connected
-    
+
     >>> connection.read()
     'zrs2.0'
 
@@ -237,7 +237,7 @@ this by asking our test conection to fail:
     IPv4Address(TCP, '127.0.0.1', 47246): Disconnected 'failed'
     INFO zc.zrs.reactor:
     Stopping factory <zc.zrs.secondary.SecondaryFactory instance>
-    
+
 Our test reactor just queues later attempts:
 
     >>> reactor.later # doctest: +NORMALIZE_WHITESPACE
@@ -280,7 +280,7 @@ the last transaction that was sent to the secondary:
     >>> tid == trans.tid
     True
 
-Let's create a new transaction.  
+Let's create a new transaction.
 
     >>> ob['y'] = persistent.mapping.PersistentMapping()
     >>> commit()
@@ -364,7 +364,7 @@ Now we see the new data:
 So far we've seen the effect of breaking successful connections.
 Secondaries also try to reconnect if connections are rejected.  We'll
 again break the connection, but this time we'll reject the connection
-attempt: 
+attempt:
 
     >>> connection.fail()
     INFO zc.zrs.secondary:
@@ -405,7 +405,7 @@ minute between attempts.
     INFO zc.zrs.reactor:
     Stopping factory <zc.zrs.secondary.SecondaryFactory instance>
 
-    >>> reactor.later 
+    >>> reactor.later
     []
 
     Because we closed the secondary, the connector doesn't try to connect:
