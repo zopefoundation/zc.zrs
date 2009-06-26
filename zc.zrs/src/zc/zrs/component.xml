@@ -35,7 +35,7 @@
     </key>
 
     <key name="check-checksums" datatype="boolean" required="no"
-         default="false">
+         default="true">
     </key>
 
     <key name="keep-alive-delay" datatype="integer" required="no"
@@ -78,7 +78,7 @@
     </key>
 
     <key name="check-checksums" datatype="boolean" required="no"
-         default="false">
+         default="true">
     </key>
 
     <key name="keep-alive-delay" datatype="integer" required="no"

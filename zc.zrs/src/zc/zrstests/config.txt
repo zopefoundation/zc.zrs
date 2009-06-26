@@ -62,7 +62,7 @@ Defining a secondary storage is similar:
     0
 
     >>> secondary._factory.check_checksums
-    False
+    True
 
 We can combine a primary and a secondary by providing both
 replicate-from and replicate-to:
@@ -79,7 +79,7 @@ replicate-from and replicate-to:
     ...      replicate-from ./primary.sock
     ...      replicate-to ./secondary.sock
     ...      keep-alive-delay 60
-    ...      check-checksums true
+    ...      check-checksums false
     ...      <filestorage>
     ...         path secondary.fs
     ...         blob-dir secondary-blobs
@@ -100,7 +100,7 @@ replicate-from and replicate-to:
     60
 
     >>> secondary._factory.check_checksums
-    True
+    False
 
 Let's create a secondary secondary and commit some data to the primary storage.
 
@@ -220,7 +220,7 @@ optional:
     0
 
     >>> log2._factory.check_checksums
-    False
+    True
 
 .. wait for replication
 
