@@ -868,6 +868,51 @@ def is_blob_record():
     >>> db.close()
     """
 
+def secondary_replicate_from_old_zrs_that_doesnt_send_checksums():
+    r"""
+    >>> import ZODB.FileStorage
+    >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
+
+    >>> import zc.zrs.secondary
+    >>> ss = zc.zrs.secondary.Secondary(fs, ('', 8000), reactor,
+    ...                                 check_checksums=False)
+    INFO zc.zrs.secondary:
+    Opening Data.fs ('', 8000)
+    INFO zc.zrs.reactor:
+    Starting factory <zc.zrs.secondary.SecondaryFactory instance>
+
+    >>> connection = reactor.accept()
+    INFO zc.zrs.secondary:
+    IPv4Address(TCP, '127.0.0.1', 47245): Connected
+
+    >>> connection.read()
+    'zrs2.0'
+
+    >>> connection.read()
+    '\x00\x00\x00\x00\x00\x00\x00\x00'
+
+    >>> primary_fs = ZODB.FileStorage.FileStorage('primary.fs')
+    >>> import zc.zrs.primary
+    >>> primary_data = zc.zrs.primary.FileStorageIterator(primary_fs)
+
+    >>> from ZODB.DB import DB
+    >>> primary_db = DB(primary_fs)
+
+    >>> trans = primary_data.next()
+
+    >>> connection.send(('T', (trans.tid, trans.status, trans.user,
+    ...                        trans.description, trans._extension)))
+
+    >>> for record in trans:
+    ...     connection.send(('S', (record.oid, record.tid, record.version,
+    ...                            record.data_txn)))
+    ...     connection.send(record.data, raw=True)
+
+    >>> connection.send(('C', ()))
+
+    >>> _ = fs.load('\0'*8, '')
+
+    """
 
 class DelayedCall:
 

@@ -10,6 +10,15 @@ replicate data from the primary storage.
 Changes
 *******
 
+2.2.3 (2009-06-26)
+==================
+
+- Fixed bug: ZRS didn't work with older versions of ZRS 2 that didn't send
+  checksum data.
+
+- Made checking checkums the default behavior. Previously, the default
+  behavior was to not check checksums when configuring with ZConfig.
+
 2.2.2
 ======
 

@@ -154,7 +154,7 @@ class RecorderProtocol(zc.zrs.secondary.SecondaryProtocol):
                 assert not self.__blob_file_blocks
                 self.__blob_file_blocks = data[-1]
             elif message_type == 'C':
-                self._check_replication_stream_checksum(data[0])
+                self._check_replication_stream_checksum(data)
                 assert self._zrs_transaction is not None
                 data = self._zrs_transaction
                 self._zrs_transaction = None

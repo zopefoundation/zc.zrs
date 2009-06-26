@@ -146,7 +146,7 @@ class SecondaryProtocol(twisted.internet.protocol.Protocol):
                 self.__record = data[:-1]
                 self.__blob_file_blocks = data[-1]
             elif message_type == 'C':
-                self._check_replication_stream_checksum(data[0])
+                self._check_replication_stream_checksum(data)
                 assert self._zrs_transaction is not None
                 assert self.__record is None
                 self.factory.storage.tpc_vote(self._zrs_transaction)
@@ -164,11 +164,13 @@ class SecondaryProtocol(twisted.internet.protocol.Protocol):
 
         self._replication_stream_md5.update(message)
 
-    def _check_replication_stream_checksum(self, checksum):
-        if self.factory.check_checksums and (
-            checksum != self._replication_stream_md5.digest()):
-            raise AssertionError(
-                "Bad checksum", checksum, self._replication_stream_md5.digest())
+    def _check_replication_stream_checksum(self, data):
+        if self.factory.check_checksums:
+            checksum = data[0]
+            if checksum != self._replication_stream_md5.digest():
+                raise AssertionError(
+                    "Bad checksum", checksum,
+                    self._replication_stream_md5.digest())
 
 class SecondaryFactory(twisted.internet.protocol.ClientFactory):
 
