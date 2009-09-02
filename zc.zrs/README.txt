@@ -10,6 +10,11 @@ replicate data from the primary storage.
 Changes
 *******
 
+2.2.4 (2009-09-02)
+==================
+
+Updated tests to reflect changes to PersistentMapping pickle sizes.
+
 2.2.3 (2009-06-26)
 ==================
 
