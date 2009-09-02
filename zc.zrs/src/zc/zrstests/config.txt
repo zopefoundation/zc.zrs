@@ -186,9 +186,9 @@ If we look at the log directory, we can see the log files that were created:
 
     >>> for name in sorted(os.listdir('log')):
     ...     print name, os.stat(os.path.join('log', name)).st_size
-    0000000000000000 1989
-    036c6b90f3333335 1401
-    036c6b90f3333336 1420
+    0000000000000000 1965
+    036c6b90f3333335 1395
+    036c6b90f3333336 1414
     036c6b90f3333337 0
 
 The log recorders don't provide most storage methods, howver, they do
@@ -198,7 +198,7 @@ provide lastTransaction and getSize:
     True
 
     >>> print log.getSize()
-    4810
+    4774
 
 The file-size, keep-alive-delay and check-checksums options are
 optional:
@@ -231,7 +231,7 @@ because the default size is much larger than what we specifiled before:
 
     >>> for name in sorted(os.listdir('log2')):
     ...     print name, os.stat(os.path.join('log2', name)).st_size
-    0000000000000000 4810
+    0000000000000000 4774
 
 .. cleanup
 

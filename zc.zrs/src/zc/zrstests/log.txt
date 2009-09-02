@@ -113,7 +113,7 @@ Finally, a commit message is sent marking the end of the transaction:
 If we look at the log file, we can see we have some data now.
 
     >>> listdir('log')
-    0000000000000000 188
+    0000000000000000 182
 
 Let's send some more data.
 
@@ -165,7 +165,7 @@ Let's send some more data.
     >>> send_transaction()
 
     >>> listdir('log')
-    0000000000000000 478
+    0000000000000000 460
 
 Now, let's create some blob data:
 
@@ -175,7 +175,7 @@ Now, let's create some blob data:
     >>> send_transaction()
 
     >>> listdir('log')
-    0000000000000000 786
+    0000000000000000 762
 
 Let's create some more interesting blob data.
 
@@ -198,12 +198,12 @@ Let's create some more interesting blob data.
     >>> send_transaction()
 
     >>> listdir('log')
-    0000000000000000 339545
-    036c6b9100000000 37629
-    036c6b9104444444 147042
-    036c6b9108888888 168337
-    036c6b910ccccccc 123639
-    036c6b9111111111 554
+    0000000000000000 339515
+    036c6b9100000000 37623
+    036c6b9104444444 147036
+    036c6b9108888888 168331
+    036c6b910ccccccc 123633
+    036c6b9111111111 548
 
 Here we see we generated enough data to get multiple files.  Note that
 the files are much larger than the maximum size of 1000 we passed to
@@ -334,12 +334,12 @@ If we look at the log directory, we'll see the last log file has grown:
 
     >>> recorder._storage.file.flush()
     >>> listdir('log')
-    0000000000000000 339545
-    036c6b9100000000 37629
-    036c6b9104444444 147042
-    036c6b9108888888 168337
-    036c6b910ccccccc 123639
-    036c6b9111111111 901
+    0000000000000000 339515
+    036c6b9100000000 37623
+    036c6b9104444444 147036
+    036c6b9108888888 168331
+    036c6b910ccccccc 123633
+    036c6b9111111111 889
 
 But if the connection is lost, the trailing incomplete transaction
 will be lost:
@@ -353,12 +353,12 @@ will be lost:
 The log still shows the same data we had before:
 
     >>> listdir('log')
-    0000000000000000 339545
-    036c6b9100000000 37629
-    036c6b9104444444 147042
-    036c6b9108888888 168337
-    036c6b910ccccccc 123639
-    036c6b9111111111 554
+    0000000000000000 339515
+    036c6b9100000000 37623
+    036c6b9104444444 147036
+    036c6b9108888888 168331
+    036c6b910ccccccc 123633
+    036c6b9111111111 548
 
 Again, the secondary attempts to reconnect.  We'll accept the new connection.
 
@@ -473,12 +473,12 @@ connect and send a partial transaction:
     True
 
     >>> listdir('log')
-    0000000000000000 339545
-    036c6b9100000000 37629
-    036c6b9104444444 147042
-    036c6b9108888888 168337
-    036c6b910ccccccc 123639
-    036c6b9111111111 1027
+    0000000000000000 339515
+    036c6b9100000000 37623
+    036c6b9104444444 147036
+    036c6b9108888888 168331
+    036c6b910ccccccc 123633
+    036c6b9111111111 1009
     036c6b911ddddddd 0
 
     >>> proot['y'][0] = ''
@@ -495,13 +495,13 @@ We see partial data in the last log file:
 
     >>> recorder._storage.file.flush()
     >>> listdir('log')
-    0000000000000000 339545
-    036c6b9100000000 37629
-    036c6b9104444444 147042
-    036c6b9108888888 168337
-    036c6b910ccccccc 123639
-    036c6b9111111111 1027
-    036c6b911ddddddd 148
+    0000000000000000 339515
+    036c6b9100000000 37623
+    036c6b9104444444 147036
+    036c6b9108888888 168331
+    036c6b910ccccccc 123633
+    036c6b9111111111 1009
+    036c6b911ddddddd 142
 
 Let's save that data:
 
@@ -519,12 +519,12 @@ size:
     twisted.internet.error.ConnectionDone>
 
     >>> listdir('log')
-    0000000000000000 339545
-    036c6b9100000000 37629
-    036c6b9104444444 147042
-    036c6b9108888888 168337
-    036c6b910ccccccc 123639
-    036c6b9111111111 1027
+    0000000000000000 339515
+    036c6b9100000000 37623
+    036c6b9104444444 147036
+    036c6b9108888888 168331
+    036c6b910ccccccc 123633
+    036c6b9111111111 1009
     036c6b911ddddddd 0
 
 Now, we'll restore it:
@@ -532,13 +532,13 @@ Now, we'll restore it:
     >>> open(os.path.join('log', '036c6b911ddddddd'), 'wb').write(data)
 
     >>> listdir('log')
-    0000000000000000 339545
-    036c6b9100000000 37629
-    036c6b9104444444 147042
-    036c6b9108888888 168337
-    036c6b910ccccccc 123639
-    036c6b9111111111 1027
-    036c6b911ddddddd 148
+    0000000000000000 339515
+    036c6b9100000000 37623
+    036c6b9104444444 147036
+    036c6b9108888888 168331
+    036c6b910ccccccc 123633
+    036c6b9111111111 1009
+    036c6b911ddddddd 142
 
 Now, if we recreate the recorder, it will restore the file to the size
 it was before:
@@ -552,12 +552,12 @@ it was before:
     Starting factory <zc.zrs.log.RecorderFactory instance at 0xb6461bec>
 
     >>> listdir('log')
-    0000000000000000 339545
-    036c6b9100000000 37629
-    036c6b9104444444 147042
-    036c6b9108888888 168337
-    036c6b910ccccccc 123639
-    036c6b9111111111 1027
+    0000000000000000 339515
+    036c6b9100000000 37623
+    036c6b9104444444 147036
+    036c6b9108888888 168331
+    036c6b910ccccccc 123633
+    036c6b9111111111 1009
     036c6b911ddddddd 0
 
 Similarly, if the file is broken, it will be removed and recreated:
@@ -572,13 +572,13 @@ Similarly, if the file is broken, it will be removed and recreated:
     >>> open(os.path.join('log', '036c6b911ddddddd'), 'wb').write(data[:-2])
 
     >>> listdir('log')
-    0000000000000000 339545
-    036c6b9100000000 37629
-    036c6b9104444444 147042
-    036c6b9108888888 168337
-    036c6b910ccccccc 123639
-    036c6b9111111111 1027
-    036c6b911ddddddd 146
+    0000000000000000 339515
+    036c6b9100000000 37623
+    036c6b9104444444 147036
+    036c6b9108888888 168331
+    036c6b910ccccccc 123633
+    036c6b9111111111 1009
+    036c6b911ddddddd 140
 
     >>> recorder = zc.zrs.log.Recorder(
     ...     ('', 8000), 'log', 1000, reactor=reactor,
@@ -595,12 +595,12 @@ Similarly, if the file is broken, it will be removed and recreated:
     Starting factory <zc.zrs.log.RecorderFactory instance at 0xb63fbf0c>
 
     >>> listdir('log')
-    0000000000000000 339545
-    036c6b9100000000 37629
-    036c6b9104444444 147042
-    036c6b9108888888 168337
-    036c6b910ccccccc 123639
-    036c6b9111111111 1027
+    0000000000000000 339515
+    036c6b9100000000 37623
+    036c6b9104444444 147036
+    036c6b9108888888 168331
+    036c6b910ccccccc 123633
+    036c6b9111111111 1009
     036c6b911ddddddd 0
 
 Finally, lets look at a situation in which the last file has more than
@@ -634,13 +634,13 @@ one transaction:
 
     >>> recorder._storage.file.flush()
     >>> listdir('log')
-    0000000000000000 339545
-    036c6b9100000000 37629
-    036c6b9104444444 147042
-    036c6b9108888888 168337
-    036c6b910ccccccc 123639
-    036c6b9111111111 1027
-    036c6b911ddddddd 313
+    0000000000000000 339515
+    036c6b9100000000 37623
+    036c6b9104444444 147036
+    036c6b9108888888 168331
+    036c6b910ccccccc 123633
+    036c6b9111111111 1009
+    036c6b911ddddddd 301
 
     >>> data = open(os.path.join('log', '036c6b911ddddddd'), 'rb').read()
 
@@ -653,23 +653,23 @@ one transaction:
     twisted.internet.error.ConnectionDone>
 
     >>> listdir('log')
-    0000000000000000 339545
-    036c6b9100000000 37629
-    036c6b9104444444 147042
-    036c6b9108888888 168337
-    036c6b910ccccccc 123639
-    036c6b9111111111 1027
-    036c6b911ddddddd 165
+    0000000000000000 339515
+    036c6b9100000000 37623
+    036c6b9104444444 147036
+    036c6b9108888888 168331
+    036c6b910ccccccc 123633
+    036c6b9111111111 1009
+    036c6b911ddddddd 159
 
     >>> open(os.path.join('log', '036c6b911ddddddd'), 'wb').write(data)
     >>> listdir('log')
-    0000000000000000 339545
-    036c6b9100000000 37629
-    036c6b9104444444 147042
-    036c6b9108888888 168337
-    036c6b910ccccccc 123639
-    036c6b9111111111 1027
-    036c6b911ddddddd 313
+    0000000000000000 339515
+    036c6b9100000000 37623
+    036c6b9104444444 147036
+    036c6b9108888888 168331
+    036c6b910ccccccc 123633
+    036c6b9111111111 1009
+    036c6b911ddddddd 301
 
     >>> recorder = zc.zrs.log.Recorder(
     ...     ('', 8000), 'log', 1000, reactor=reactor,
@@ -680,13 +680,13 @@ one transaction:
     Starting factory <zc.zrs.log.RecorderFactory instance at 0xb642798c>
 
     >>> listdir('log')
-    0000000000000000 339545
-    036c6b9100000000 37629
-    036c6b9104444444 147042
-    036c6b9108888888 168337
-    036c6b910ccccccc 123639
-    036c6b9111111111 1027
-    036c6b911ddddddd 165
+    0000000000000000 339515
+    036c6b9100000000 37623
+    036c6b9104444444 147036
+    036c6b9108888888 168331
+    036c6b910ccccccc 123633
+    036c6b9111111111 1009
+    036c6b911ddddddd 159
 
 Let's commit the last transaction and make sure replay can recreate
 the original database:

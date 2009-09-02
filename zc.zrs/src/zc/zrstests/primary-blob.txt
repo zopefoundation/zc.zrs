@@ -106,13 +106,13 @@ The data are sent as a separate (non-pickle) message:
 
     >>> data = connection.read(raw=True)
     >>> len(data)
-    66
+    60
 
 Finally, there will be a commit record marking the end of the
 transaction:
 
     >>> connection.read()
-    ('C', ('Jf\xc4\x7fjMH\xdb#\xd0\xaf\x072fs\x0e',))
+    ('C', ('\x1a\x14\x0e\x11^\xf2\xe3\x15\xdb\xcb[z\x03+\xf2"',))
 
 
 We can continue reading any additional transactions. In this case
@@ -126,11 +126,11 @@ there is only one:
     ...     oid, serial, version, data_txn = connection.read()[1]
     ...     data = connection.read(raw=True)
     ...     print (u64(oid), ts(serial), version, len(data), data_txn)
-    (0L, '2007-03-21 20:32:58.000000', '', 116, None)
-    (1L, '2007-03-21 20:32:58.000000', '', 51, None)
+    (0L, '2007-03-21 20:32:58.000000', '', 78, None)
+    (1L, '2007-03-21 20:32:58.000000', '', 57, None)
 
     >>> connection.read()
-    ('C', ('\x7f\xdc\x8d\x9e\x82\x81\x94\xa4\x9a\x07LZ\xf8\xcf3L',))
+    ('C', ('\x04\xc8\x8d\xd0e\xe2\xdba:\x10uTk\x85\x04\xa7',))
 
     >>> import time
     >>> time.sleep(0.1)
@@ -152,7 +152,7 @@ available.  We'll add some blob data.
     >>> oid, serial, version, data_txn = connection.read()[1]
     >>> data = connection.read(raw=True)
     >>> print (u64(oid), ts(serial), version, len(data), data_txn)
-    (0L, '2007-03-21 20:32:59.000000', '', 158, None)
+    (0L, '2007-03-21 20:32:59.000000', '', 120, None)
 
 The next message is a store blob message:
 
@@ -171,7 +171,7 @@ only one block:
     'test\n'
 
     >>> connection.read()
-    ('C', ('\x00\r\xce\xb4?:\xf1\x89;\xbd\x8aj\xb0\xed\x8aH',))
+    ('C', ("\x86:\x0f\x97<`\xb5l'\x87/:\xa4\xa5\xc6\x1c",))
 
 
 Let's try some bigger blobs:
@@ -199,34 +199,34 @@ Let's try some bigger blobs:
     ...     print repr(connection.read())
     ...     print
     ('2007-03-21 20:33:00.000000', ' ', '', '', {})
-    (0L, '2007-03-21 20:33:00.000000', '', 158, None)
+    (0L, '2007-03-21 20:33:00.000000', '', 120, None)
     ('B', 3L, '2007-03-21 20:33:00.000000', '', 21, None, 6L)
     True
-    ('C', ('\x0e\x9f*\xdaw\xa7"f\xe5ep\n\xb8\xae\x9a\xcc',))
+    ('C', ('k\xd1]\xd6\xb3E\xbd\xa6\x0f)`\x9f\xe4 GM',))
     <BLANKLINE>
     ('2007-03-21 20:33:01.000000', ' ', '', '', {})
-    (0L, '2007-03-21 20:33:01.000000', '', 158, None)
+    (0L, '2007-03-21 20:33:01.000000', '', 120, None)
     ('B', 4L, '2007-03-21 20:33:01.000000', '', 21, None, 1L)
     True
-    ('C', ('+\xf5\xa2\xd7\xcd\xb5QA\xc0\x8c[;\x8b\xea\x17f',))
+    ('C', ('W\xbb.\xcd\xab(\xfc\xf5\xf3GQ|B\xedMg',))
     <BLANKLINE>
     ('2007-03-21 20:33:02.000000', ' ', '', '', {})
-    (0L, '2007-03-21 20:33:02.000000', '', 158, None)
+    (0L, '2007-03-21 20:33:02.000000', '', 120, None)
     ('B', 5L, '2007-03-21 20:33:02.000000', '', 21, None, 3L)
     True
-    ('C', ('\xbb\xd2I\xf4$\x93\xc2\xf9\x1f<\x93\x88\x0e\xe8\xf4\x02',))
+    ('C', ('2-\x91\xf0\x93T\x9f\xeaLL\xa8\xd6 \xd0\x80)',))
     <BLANKLINE>
     ('2007-03-21 20:33:03.000000', ' ', '', '', {})
-    (0L, '2007-03-21 20:33:03.000000', '', 158, None)
+    (0L, '2007-03-21 20:33:03.000000', '', 120, None)
     ('B', 6L, '2007-03-21 20:33:03.000000', '', 21, None, 3L)
     True
-    ('C', ("\xcba\xea\xb3'\xc4\xae/N\xd7Zt\x96\x0em2",))
+    ('C', ('\xe9Cq\xab\xd3\x93\xf6\xe3\x96\x01!U`\r\xad\x10',))
     <BLANKLINE>
     ('2007-03-21 20:33:04.000000', ' ', '', '', {})
-    (0L, '2007-03-21 20:33:04.000000', '', 158, None)
+    (0L, '2007-03-21 20:33:04.000000', '', 120, None)
     ('B', 7L, '2007-03-21 20:33:04.000000', '', 21, None, 2L)
     True
-    ('C', ('b\x96A\xf0P~\xe0\x15\x82\x0c\x9f\xaf\xb6\xa1\xd9\xab',))
+    ('C', ('\x18\x92\xa8q\xd7\xf1\x7f\x82Q\xba\xbcW\xe3\xb1\xcc\x85',))
     <BLANKLINE>
 
 When a primary storage is set up with a blob storage, it requires protocol 2.1:

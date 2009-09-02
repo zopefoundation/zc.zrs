@@ -39,7 +39,7 @@ of the ZEO protocol it supports is lastTransaction.
     ...     )
 
     >>> print os.stat(os.path.join('log', '0000000000000000')).st_size
-    353
+    341
 
     >>> db.close()
     >>> log.close()
