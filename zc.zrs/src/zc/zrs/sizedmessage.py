@@ -62,5 +62,5 @@ class Stream:
             if self.length == 0:
                 self._callback('')
             elif self.length > self.limit:
-                raise LimitExceeded(self.limit, self.length)
+                raise LimitExceeded(self.limit, long(self.length))
 
