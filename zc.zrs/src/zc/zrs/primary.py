@@ -15,8 +15,8 @@
 
 import cPickle
 import logging
-import md5
 import os
+import sys
 import threading
 import time
 import twisted.internet.interfaces
@@ -31,6 +31,11 @@ import ZODB.interfaces
 import ZODB.TimeStamp
 import ZODB.utils
 import zope.interface
+
+if sys.version_info > (2, 5):
+    from hashlib import md5
+else:
+    from md5 import md5
 
 if not hasattr(ZODB.blob.BlobStorage, 'restoreBlob'):
     import zc.zrs.restoreblob
@@ -315,7 +320,7 @@ class PrimaryProducer:
 
         pickler = cPickle.Pickler(1)
         pickler.fast = 1
-        self.md5 = md5.new(self.start_tid)
+        self.md5 = md5(self.start_tid)
 
         blob_block_size = 1 << 16
 
