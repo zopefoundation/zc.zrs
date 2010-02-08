@@ -516,7 +516,7 @@ size:
     INFO zc.zrs.log:
     IPv4Address(TCP, '127.0.0.1', 47249):
     Disconnected <twisted.python.failure.Failure
-    twisted.internet.error.ConnectionDone>
+    <class 'twisted.internet.error.ConnectionDone'>>
 
     >>> listdir('log')
     0000000000000000 339515
@@ -650,7 +650,7 @@ one transaction:
     INFO zc.zrs.log:
     IPv4Address(TCP, '127.0.0.1', 47251):
     Disconnected <twisted.python.failure.Failure
-    twisted.internet.error.ConnectionDone>
+    <class 'twisted.internet.error.ConnectionDone'>>
 
     >>> listdir('log')
     0000000000000000 339515
@@ -725,7 +725,7 @@ the original database:
     INFO zc.zrs.log:
     IPv4Address(TCP, '127.0.0.1', 47252):
     Disconnected <twisted.python.failure.Failure
-    twisted.internet.error.ConnectionDone>
+        <class 'twisted.internet.error.ConnectionDone'>>
 
     >>> reactor.doLater()
 

@@ -105,8 +105,8 @@ The next message is a store message for object 0:
 
     >>> oid, serial, version, data_txn = data
     >>> from ZODB.utils import u64
-    >>> u64(oid), ts(serial), version, data_txn
-    (0L, '2007-03-21 20:32:57.000000', '', None)
+    >>> int(u64(oid)), ts(serial), version, data_txn
+    (0, '2007-03-21 20:32:57.000000', '', None)
 
 The data are sent as a separate (non-pickle) message:
 
@@ -135,9 +135,9 @@ there is only one:
     >>> for i in range(2):
     ...     oid, serial, version, data_txn = connection.read()[1]
     ...     data = connection.read(raw=True)
-    ...     print (u64(oid), ts(serial), version, len(data), data_txn)
-    (0L, '2007-03-21 20:32:58.000000', '', 78, None)
-    (1L, '2007-03-21 20:32:58.000000', '', 57, None)
+    ...     print (int(u64(oid)), ts(serial), version, len(data), data_txn)
+    (0, '2007-03-21 20:32:58.000000', '', 78, None)
+    (1, '2007-03-21 20:32:58.000000', '', 57, None)
 
     >>> connection.read()
     ('C', ('\x04\xc8\x8d\xd0e\xe2\xdba:\x10uTk\x85\x04\xa7',))
@@ -161,9 +161,9 @@ available:
     >>> for i in range(2):
     ...     oid, serial, version, data_txn = connection.read()[1]
     ...     data = connection.read(raw=True)
-    ...     print (u64(oid), ts(serial), version, len(data), data_txn)
-    (1L, '2007-03-21 20:32:59.000000', '', 78, None)
-    (2L, '2007-03-21 20:32:59.000000', '', 57, None)
+    ...     print (int(u64(oid)), ts(serial), version, len(data), data_txn)
+    (1, '2007-03-21 20:32:59.000000', '', 78, None)
+    (2, '2007-03-21 20:32:59.000000', '', 57, None)
 
     >>> connection.read()
     ('C', ('\xe4\xd4\xbc\xb5Im\xb6\x01\x80\xf0r"\x97\xeb[\x8a',))
@@ -183,10 +183,10 @@ Now, the undo transaction will be available:
     >>> for i in range(2):
     ...     oid, serial, version, data_txn = connection.read()[1]
     ...     data = connection.read(raw=True)
-    ...     print (u64(oid), ts(serial), version, len(data),
+    ...     print (int(u64(oid)), ts(serial), version, len(data),
     ...            data_txn and ts(data_txn))
-    (1L, '2007-03-21 20:33:00.000000', '', 57, '2007-03-21 20:32:58.000000')
-    (2L, '2007-03-21 20:33:00.000000', '', 0, None)
+    (1, '2007-03-21 20:33:00.000000', '', 57, '2007-03-21 20:32:58.000000')
+    (2, '2007-03-21 20:33:00.000000', '', 0, None)
 
     >>> connection.read()
     ('C', ('2\xb1\x136\xff\xaa\xd0\x9f\x01H\xe9\xe2?\xca\xf6\xcd',))
@@ -207,9 +207,9 @@ Of course, we'll see this new data:
     >>> for i in range(2):
     ...     oid, serial, version, data_txn = connection.read()[1]
     ...     data = connection.read(raw=True)
-    ...     print (u64(oid), ts(serial), version, len(data), data_txn)
-    (0L, '2007-03-21 20:33:01.000000', '', 98, None)
-    (3L, '2007-03-21 20:33:01.000000', '', 57, None)
+    ...     print (int(u64(oid)), ts(serial), version, len(data), data_txn)
+    (0, '2007-03-21 20:33:01.000000', '', 98, None)
+    (3, '2007-03-21 20:33:01.000000', '', 57, None)
 
     >>> connection.read()
     ('C', ('\xbd\x16\x10\xab\x8c\x9b\xedB\xe9do%]\xb7\xe7v',))
@@ -237,9 +237,9 @@ after the saved transaction:
     >>> for i in range(2):
     ...     oid, serial, version, data_txn = connection2.read()[1]
     ...     data = connection2.read(raw=True)
-    ...     print (u64(oid), ts(serial), version, len(data), data_txn)
-    (0L, '2007-03-21 20:33:01.000000', '', 98, None)
-    (3L, '2007-03-21 20:33:01.000000', '', 57, None)
+    ...     print (int(u64(oid)), ts(serial), version, len(data), data_txn)
+    (0, '2007-03-21 20:33:01.000000', '', 98, None)
+    (3, '2007-03-21 20:33:01.000000', '', 57, None)
 
     >>> connection2.read()
     ('C', ('_\x95\x8a\xcb\r\xb9/\x1cz\x88\x1d\x1bm\xd0h\x86',))
@@ -251,7 +251,7 @@ closed:
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47245):
        Disconnected <twisted.python.failure.Failure
-       twisted.internet.error.ConnectionDone>
+       <class 'twisted.internet.error.ConnectionDone'>>
 
 Or until the storage is closed:
 
@@ -263,4 +263,4 @@ Or until the storage is closed:
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47246):
        Disconnected <twisted.python.failure.Failure
-       twisted.internet.error.ConnectionDone>
+       <class 'twisted.internet.error.ConnectionDone'>>

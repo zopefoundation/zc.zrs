@@ -38,7 +38,8 @@ printing some information.
     >>> from ZODB import utils
     >>> def list(iterator, event):
     ...     for trans in iterator:
-    ...         print TimeStamp(trans.tid), [utils.u64(r.oid) for r in trans]
+    ...         print TimeStamp(trans.tid), [long(utils.u64(r.oid))
+    ...                                      for r in trans]
     ...     print 'iteration stopped!'
     ...     event.set()
 
@@ -139,8 +140,8 @@ start at the beginning:
     >>> tid = tid_from_time(time.time()-100)
     >>> it = zc.zrs.primary.FileStorageIterator(fs, condition, tid)
     >>> trans = it.next()
-    >>> print TimeStamp(trans.tid), [utils.u64(r.oid) for r in trans]
-    2007-03-21 20:32:58.000000 [1L]
+    >>> print TimeStamp(trans.tid), [int(utils.u64(r.oid)) for r in trans]
+    2007-03-21 20:32:58.000000 [1]
 
 (You might be wondering why we didn't get the first transaction
 written. The answer is because it, and part of the first transaction
@@ -157,8 +158,8 @@ there:
     >>> tid = tid_from_time(time.time()-3)
     >>> it = zc.zrs.primary.FileStorageIterator(fs, condition, tid)
     >>> trans = it.next()
-    >>> print TimeStamp(trans.tid), [utils.u64(r.oid) for r in trans]
-    2007-03-21 20:33:07.000000 [0L, 10L]
+    >>> print TimeStamp(trans.tid), [int(utils.u64(r.oid)) for r in trans]
+    2007-03-21 20:33:07.000000 [0, 10]
 
 
 .. Clean up

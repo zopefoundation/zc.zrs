@@ -99,8 +99,8 @@ The next message is a store message for object 0:
 
     >>> oid, serial, version, data_txn = data
     >>> from ZODB.utils import u64
-    >>> u64(oid), ts(serial), version, data_txn
-    (0L, '2007-03-21 20:32:57.000000', '', None)
+    >>> int(u64(oid)), ts(serial), version, data_txn
+    (0, '2007-03-21 20:32:57.000000', '', None)
 
 The data are sent as a separate (non-pickle) message:
 
@@ -125,9 +125,9 @@ there is only one:
     >>> for i in range(2):
     ...     oid, serial, version, data_txn = connection.read()[1]
     ...     data = connection.read(raw=True)
-    ...     print (u64(oid), ts(serial), version, len(data), data_txn)
-    (0L, '2007-03-21 20:32:58.000000', '', 78, None)
-    (1L, '2007-03-21 20:32:58.000000', '', 57, None)
+    ...     print (int(u64(oid)), ts(serial), version, len(data), data_txn)
+    (0, '2007-03-21 20:32:58.000000', '', 78, None)
+    (1, '2007-03-21 20:32:58.000000', '', 57, None)
 
     >>> connection.read()
     ('C', ('\x04\xc8\x8d\xd0e\xe2\xdba:\x10uTk\x85\x04\xa7',))
@@ -151,8 +151,8 @@ available.  We'll add some blob data.
 
     >>> oid, serial, version, data_txn = connection.read()[1]
     >>> data = connection.read(raw=True)
-    >>> print (u64(oid), ts(serial), version, len(data), data_txn)
-    (0L, '2007-03-21 20:32:59.000000', '', 120, None)
+    >>> print (int(u64(oid)), ts(serial), version, len(data), data_txn)
+    (0, '2007-03-21 20:32:59.000000', '', 120, None)
 
 The next message is a store blob message:
 
@@ -160,8 +160,8 @@ The next message is a store blob message:
     ...                                ) = connection.read()
 
     >>> data = connection.read(raw=True)
-    >>> message_type, u64(oid), ts(serial), version, len(data), data_txn, blocks
-    ('B', 2L, '2007-03-21 20:32:59.000000', '', 21, None, 1L)
+    >>> message_type, int(u64(oid)), ts(serial), version, len(data), data_txn, blocks
+    ('B', 2, '2007-03-21 20:32:59.000000', '', 21, None, 1L)
 
 The store blob message is like a store message, but also contains the
 number of blocks to follow. This blob was rather small, so there's
@@ -188,43 +188,43 @@ Let's try some bigger blobs:
     ...     print (ts(tid), status, user, description, extension)
     ...     oid, serial, version, data_txn = connection.read()[1]
     ...     data = connection.read(raw=True)
-    ...     print (u64(oid), ts(serial), version, len(data), data_txn)
+    ...     print (int(u64(oid)), ts(serial), version, len(data), data_txn)
     ...     message_type, (oid, serial, version, data_txn, blocks
     ...                              ) = connection.read()
     ...     data = connection.read(raw=True)
-    ...     print (message_type, u64(oid), ts(serial), version, len(data),
+    ...     print (message_type, int(u64(oid)), ts(serial), version, len(data),
     ...            data_txn, blocks)
     ...     rdata = ''.join(connection.read(raw=True) for i in range(blocks))
     ...     print rdata == wdata
     ...     print repr(connection.read())
     ...     print
     ('2007-03-21 20:33:00.000000', ' ', '', '', {})
-    (0L, '2007-03-21 20:33:00.000000', '', 120, None)
-    ('B', 3L, '2007-03-21 20:33:00.000000', '', 21, None, 6L)
+    (0, '2007-03-21 20:33:00.000000', '', 120, None)
+    ('B', 3, '2007-03-21 20:33:00.000000', '', 21, None, 6L)
     True
     ('C', ('k\xd1]\xd6\xb3E\xbd\xa6\x0f)`\x9f\xe4 GM',))
     <BLANKLINE>
     ('2007-03-21 20:33:01.000000', ' ', '', '', {})
-    (0L, '2007-03-21 20:33:01.000000', '', 120, None)
-    ('B', 4L, '2007-03-21 20:33:01.000000', '', 21, None, 1L)
+    (0, '2007-03-21 20:33:01.000000', '', 120, None)
+    ('B', 4, '2007-03-21 20:33:01.000000', '', 21, None, 1L)
     True
     ('C', ('W\xbb.\xcd\xab(\xfc\xf5\xf3GQ|B\xedMg',))
     <BLANKLINE>
     ('2007-03-21 20:33:02.000000', ' ', '', '', {})
-    (0L, '2007-03-21 20:33:02.000000', '', 120, None)
-    ('B', 5L, '2007-03-21 20:33:02.000000', '', 21, None, 3L)
+    (0, '2007-03-21 20:33:02.000000', '', 120, None)
+    ('B', 5, '2007-03-21 20:33:02.000000', '', 21, None, 3L)
     True
     ('C', ('2-\x91\xf0\x93T\x9f\xeaLL\xa8\xd6 \xd0\x80)',))
     <BLANKLINE>
     ('2007-03-21 20:33:03.000000', ' ', '', '', {})
-    (0L, '2007-03-21 20:33:03.000000', '', 120, None)
-    ('B', 6L, '2007-03-21 20:33:03.000000', '', 21, None, 3L)
+    (0, '2007-03-21 20:33:03.000000', '', 120, None)
+    ('B', 6, '2007-03-21 20:33:03.000000', '', 21, None, 3L)
     True
     ('C', ('\xe9Cq\xab\xd3\x93\xf6\xe3\x96\x01!U`\r\xad\x10',))
     <BLANKLINE>
     ('2007-03-21 20:33:04.000000', ' ', '', '', {})
-    (0L, '2007-03-21 20:33:04.000000', '', 120, None)
-    ('B', 7L, '2007-03-21 20:33:04.000000', '', 21, None, 2L)
+    (0, '2007-03-21 20:33:04.000000', '', 120, None)
+    ('B', 7, '2007-03-21 20:33:04.000000', '', 21, None, 2L)
     True
     ('C', ('\x18\x92\xa8q\xd7\xf1\x7f\x82Q\xba\xbcW\xe3\xb1\xcc\x85',))
     <BLANKLINE>
@@ -242,7 +242,7 @@ When a primary storage is set up with a blob storage, it requires protocol 2.1:
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47246):
     Disconnected <twisted.python.failure.Failure
-    twisted.internet.error.ConnectionDone>
+    <class 'twisted.internet.error.ConnectionDone'>>
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47246): Closed
 
@@ -252,7 +252,7 @@ When a primary storage is set up with a blob storage, it requires protocol 2.1:
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47245):
        Disconnected <twisted.python.failure.Failure
-       twisted.internet.error.ConnectionDone>
+       <class 'twisted.internet.error.ConnectionDone'>>
 
     >>> ps.close() # doctest: +NORMALIZE_WHITESPACE
     INFO zc.zrs.primary:

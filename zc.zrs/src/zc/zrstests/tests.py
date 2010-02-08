@@ -93,8 +93,8 @@ But, if we iterate from near the end, we'll be OK:
     >>> it = zc.zrs.primary.FileStorageIterator(fs, condition, tid)
     >>> trans = it.next()
     >>> from ZODB import utils
-    >>> print TimeStamp(trans.tid), [utils.u64(r.oid) for r in trans]
-    2007-03-21 20:34:09.000000 [0L, 72L]
+    >>> print TimeStamp(trans.tid), [int(utils.u64(r.oid)) for r in trans]
+    2007-03-21 20:34:09.000000 [0, 72]
 
     >>> print TimeStamp(tid)
     2007-03-21 20:34:08.000000
@@ -103,8 +103,8 @@ But, if we iterate from near the end, we'll be OK:
     >>> it = zc.zrs.primary.FileStorageIterator(fs, condition, tid)
     >>> trans = it.next()
     >>> from ZODB import utils
-    >>> print TimeStamp(trans.tid), [utils.u64(r.oid) for r in trans]
-    2007-03-21 20:34:09.000000 [0L, 72L]
+    >>> print TimeStamp(trans.tid), [int(utils.u64(r.oid)) for r in trans]
+    2007-03-21 20:34:09.000000 [0, 72]
 
     >>> print TimeStamp(tid)
     2007-03-21 20:34:08.500000
@@ -331,7 +331,7 @@ There a number of cases to consider when closing a secondary:
     INFO zc.zrs.secondary:
     IPv4Address(TCP, '127.0.0.1', 47248):
     Disconnected <twisted.python.failure.Failure
-    twisted.internet.error.ConnectionDone>
+      <class 'twisted.internet.error.ConnectionDone'>>
 
     >>> reactor.later
     []
@@ -381,7 +381,7 @@ There a number of cases to consider when closing a secondary:
     INFO zc.zrs.secondary:
     IPv4Address(TCP, '127.0.0.1', 47249):
     Disconnected <twisted.python.failure.Failure
-    twisted.internet.error.ConnectionDone>
+      <class 'twisted.internet.error.ConnectionDone'>>
 
     >>> reactor.later
     []
@@ -418,7 +418,7 @@ def primary_data_input_errors():
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47245):
     Disconnected <twisted.python.failure.Failure
-    twisted.internet.error.ConnectionDone>
+    <class 'twisted.internet.error.ConnectionDone'>>
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47245): Closed
 
@@ -432,7 +432,7 @@ def primary_data_input_errors():
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47246):
     Disconnected <twisted.python.failure.Failure
-    twisted.internet.error.ConnectionDone>
+      <class 'twisted.internet.error.ConnectionDone'>>
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47246): Closed
 
@@ -447,7 +447,7 @@ def primary_data_input_errors():
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47247):
     Disconnected <twisted.python.failure.Failure
-    twisted.internet.error.ConnectionDone>
+      <class 'twisted.internet.error.ConnectionDone'>>
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47247): Closed
 
@@ -462,7 +462,7 @@ def primary_data_input_errors():
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47248):
     Disconnected <twisted.python.failure.Failure
-    twisted.internet.error.ConnectionDone>
+      <class 'twisted.internet.error.ConnectionDone'>>
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47248): Closed
 
@@ -527,7 +527,7 @@ it does, it should simply close.
     INFO zc.zrs.secondary:
     IPv4Address(TCP, '127.0.0.1', 47245):
     Disconnected <twisted.python.failure.Failure
-    twisted.internet.error.ConnectionDone>
+      <class 'twisted.internet.error.ConnectionDone'>>
 
     >>> reactor.later
     []
@@ -743,7 +743,8 @@ def secondary_gives_a_tid_that_is_too_high():
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47245):
     Disconnected
-    <twisted.python.failure.Failure twisted.internet.error.ConnectionDone>
+    <twisted.python.failure.Failure
+      <class 'twisted.internet.error.ConnectionDone'>>
 
     """
 
@@ -804,7 +805,8 @@ def scan_control_stops_scans_on_client_disconnects():
     >>> connection.loseConnection() # doctest: +NORMALIZE_WHITESPACE
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47245): Disconnected
-    <twisted.python.failure.Failure twisted.internet.error.ConnectionDone>
+    <twisted.python.failure.Failure
+      <class 'twisted.internet.error.ConnectionDone'>>
 
 
     >>> connection = reactor.connect(('', 8000))
@@ -820,7 +822,8 @@ def scan_control_stops_scans_on_client_disconnects():
     >>> connection.loseConnection() # doctest: +NORMALIZE_WHITESPACE
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47246): Disconnected
-    <twisted.python.failure.Failure twisted.internet.error.ConnectionDone>
+    <twisted.python.failure.Failure
+      <class 'twisted.internet.error.ConnectionDone'>>
 
     >>> time.sleep(.1)
     >>> zc.zrs.primary.ScanControl = ScanControl
