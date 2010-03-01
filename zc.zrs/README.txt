@@ -10,6 +10,11 @@ replicate data from the primary storage.
 Changes
 *******
 
+2.3.0 (2010-03-01)
+==================
+
+- Updated tests to work with Python 2.6 and Twisted 9.
+
 2.2.4 (2009-09-02)
 ==================
 
