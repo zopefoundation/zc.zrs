@@ -8,7 +8,7 @@ use these, you have to import zc.zrs:
     >>> import os, time, ZODB.config, shutil
     >>> primary = ZODB.config.storageFromString("""
     ...   %import zc.zrs
-    ... 
+    ...
     ...   <primary>
     ...      replicate-to ./primary.sock
     ...      <filestorage>
@@ -42,7 +42,7 @@ We can also include a blob storage:
 
     >>> primary = ZODB.config.storageFromString("""
     ...   %import zc.zrs
-    ... 
+    ...
     ...   <primary>
     ...      replicate-to ./primary.sock
     ...      <blobstorage>
@@ -73,7 +73,7 @@ We can also include a blob storage:
 
     >>> primary = ZODB.config.storageFromString("""
     ...   %import zc.zrs
-    ... 
+    ...
     ...   <primary>
     ...      address ./primary.sock
     ...      <filestorage>
@@ -100,10 +100,10 @@ We can also include a blob storage:
 Only file storages, or blob-adapted file storages are currently
 supported for use with ZRS primaries. There's a shorter version of the
 primary configuration:
-    
+
     >>> primary = ZODB.config.storageFromString("""
     ...   %import zc.zrs
-    ... 
+    ...
     ...   <primary>
     ...      replicate-to ./primary.sock
     ...      filestorage-path primary.fs
@@ -126,7 +126,7 @@ Defining a secondary storage is similar:
 
     >>> secondary = ZODB.config.storageFromString("""
     ...   %import zc.zrs
-    ... 
+    ...
     ...   <secondary>
     ...      replicate-from ./primary.sock
     ...      <blobstorage>
@@ -157,7 +157,7 @@ shorter version, we we do with a primary storage:
 
     >>> secondary = ZODB.config.storageFromString("""
     ...   %import zc.zrs
-    ... 
+    ...
     ...   <secondary>
     ...      replicate-from ./primary.sock
     ...      filestorage-path secondary.fs
@@ -188,7 +188,7 @@ shorter version, we we do with a primary storage:
 
     >>> secondary = ZODB.config.storageFromString("""
     ...   %import zc.zrs
-    ... 
+    ...
     ...   <secondary>
     ...      address ./primary.sock
     ...      filestorage-path secondary.fs
@@ -220,7 +220,7 @@ used, it must be in the primary storage:
 
     >>> secondary = ZODB.config.storageFromString("""
     ...   %import zc.zrs
-    ... 
+    ...
     ...   <secondary>
     ...      replicate-from ./primary.sock
     ...      keep-alive-delay 60
@@ -255,7 +255,7 @@ configuration:
 
     >>> secondary = ZODB.config.storageFromString("""
     ...   %import zc.zrs
-    ... 
+    ...
     ...   <secondary>
     ...      replicate-from ./primary.sock
     ...      replicate-to ./secondary.sock
@@ -282,7 +282,7 @@ Let's create a secondary secondary and commit some data to the primary storage.
 
     >>> secondary2 = ZODB.config.storageFromString("""
     ...   %import zc.zrs
-    ... 
+    ...
     ...   <secondary>
     ...      replicate-from ./secondary.sock
     ...      filestorage-path secondary2.fs
@@ -290,7 +290,7 @@ Let's create a secondary secondary and commit some data to the primary storage.
     ...   </secondary>
     ... """)
     >>> time.sleep(.01) # Wait for server to start
-    
+
     >>> import time, transaction, ZODB, ZODB.blob
     >>> db = ZODB.DB(primary)
     >>> conn = db.open()
@@ -308,7 +308,7 @@ Let's create a secondary secondary and commit some data to the primary storage.
 
 Now, we see that we have the data replicated to our secondary
 secondary:
-    
+
     >>> db2 = ZODB.DB(secondary2)
     >>> conn2 = db2.open()
     >>> conn2.root()
@@ -320,9 +320,9 @@ secondary:
     >>> os.path.getsize('primary.fs') == os.path.getsize('secondary2.fs')
     True
 
-    
 
-.. cleanup 
+
+.. cleanup
 
    >>> db2.close()
    >>> secondary.close()
