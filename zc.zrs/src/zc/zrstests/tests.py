@@ -12,9 +12,14 @@
 #
 ##############################################################################
 
+try:
+    from hashlib import md5
+except ImportError:
+    from md5 import new as md5
 from ZODB.TimeStamp import TimeStamp
-from zope.testing import doctest, setupstack, renormalizing
+from zope.testing import setupstack, renormalizing
 from zc.zrstests import loopback
+import doctest
 import ZEO.ClientStorage
 import ZEO.tests.forker
 import ZEO.tests.testZEO
@@ -23,7 +28,6 @@ import ZODB.FileStorage
 import ZODB.utils
 import cPickle
 import logging
-import md5
 import os
 import re
 import shutil
@@ -42,6 +46,7 @@ import zc.zrs.primary
 import zc.zrs.reactor
 import zc.zrs.secondary
 import zc.zrs.sizedmessage
+
 
 # start the reactor thread so that it isn't reported as left over:
 zc.zrs.reactor.reactor()
@@ -486,10 +491,10 @@ def primary_data_input_errors():
     DEBUG zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47249): keep-alive
 
-    >>> connection.send("Hi")
+    >>> connection.send("Hi") # doctest: +ELLIPSIS
     ERROR zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47249): Too many messages
-    INFO zc.zrs.primary:
+    ...
     IPv4Address(TCP, '127.0.0.1', 47249): Closed
 
     """
@@ -1053,7 +1058,7 @@ class MessageTransport:
         return result
 
     def init_md5(self, data):
-        self.md5 = md5.new(data)
+        self.md5 = md5(data)
 
     def send(self, data):
         record = zc.zrs.sizedmessage.marshal(data)
