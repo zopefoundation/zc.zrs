@@ -1,6 +1,13 @@
 Configuration with ZConfig
 ==========================
 
+.. On ubuntu, there seems to be some problem with cleanup of
+   linux-domain sockets created in config-old.txt.  It's sad, but
+   without the following sleep, the this test hangs when run after
+   config.txt.
+
+    >>> import time; time.sleep(.1)
+
 ZRS supports configuration using
 ZConfig.  ZRS provides a zrs directive to create storages that can
 replicate from other storages and that can be replicated from. To
