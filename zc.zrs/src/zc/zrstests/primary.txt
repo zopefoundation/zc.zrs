@@ -255,12 +255,7 @@ closed:
 
 Or until the storage is closed:
 
-    >>> ps.close() # doctest: +NORMALIZE_WHITESPACE
+    >>> ps.close() # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     INFO zc.zrs.primary:
     Closing Data.fs ('', 8000)
-    INFO zc.zrs.primary:
-    IPv4Address(TCP, '127.0.0.1', 47246): Closed
-    INFO zc.zrs.primary:
-    IPv4Address(TCP, '127.0.0.1', 47246):
-       Disconnected <twisted.python.failure.Failure
-       <class 'twisted.internet.error.ConnectionDone'>>
+    ...
