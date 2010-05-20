@@ -10,6 +10,11 @@ replicate data from the primary storage.
 Changes
 *******
 
+2.3.1 (2010-05-20)
+==================
+
+- Fixed some spurious test failures.
+
 2.3.0 (2010-03-01)
 ==================
 
