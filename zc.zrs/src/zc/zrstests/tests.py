@@ -25,6 +25,9 @@ import ZEO.tests.forker
 import ZEO.tests.testZEO
 import ZODB.blob
 import ZODB.FileStorage
+import ZODB.tests.testblob
+import ZODB.tests.testFileStorage
+import ZODB.tests.StorageTestBase
 import ZODB.utils
 import cPickle
 import logging
@@ -46,6 +49,7 @@ import zc.zrs.primary
 import zc.zrs.reactor
 import zc.zrs.secondary
 import zc.zrs.sizedmessage
+import zc.zrstests.xformstorage
 
 
 # start the reactor thread so that it isn't reported as left over:
@@ -1494,9 +1498,80 @@ def monitor_tearDown(test):
 #
 ##############################################################################
 
+##############################################################################
+# Run ZODB hex tests with our hex storage. We're doing this mainly
+# to test our hex storage so we can use it to test zrs. :)
+# The reason we need our own hex storage is that we need one
+# that won't choke if records are already hexed to test some of the scenarios
+# we care about.
+
+class FileStorageHexTests(ZODB.tests.testFileStorage.FileStorageTests):
+    def open(self, **kwargs):
+        self._storage = zc.zrstests.xformstorage.HexStorage(
+            ZODB.FileStorage.FileStorage('FileStorageTests.fs',**kwargs))
+
+class FileStorageHexTestsWithBlobsEnabled(
+    ZODB.tests.testFileStorage.FileStorageTests
+    ):
+    def open(self, **kwargs):
+        if 'blob_dir' not in kwargs:
+            kwargs = kwargs.copy()
+            kwargs['blob_dir'] = 'blobs'
+        ZODB.tests.testFileStorage.FileStorageTests.open(self, **kwargs)
+        self._storage = zc.zrstests.xformstorage.HexStorage(self._storage)
+
+class FileStorageHexRecoveryTest(
+    ZODB.tests.testFileStorage.FileStorageRecoveryTest):
+    def setUp(self):
+        ZODB.tests.StorageTestBase.StorageTestBase.setUp(self)
+        self._storage = zc.zrstests.xformstorage.HexStorage(
+            ZODB.FileStorage.FileStorage("Source.fs", create=True))
+        self._dst = zc.zrstests.xformstorage.HexStorage(
+            ZODB.FileStorage.FileStorage("Dest.fs", create=True))
+
+class FileStorageHexTests(ZEO.tests.testZEO.FileStorageTests):
+    _expected_interfaces = (
+        ('ZODB.interfaces', 'IStorageRestoreable'),
+        ('ZODB.interfaces', 'IStorageIteration'),
+        ('ZODB.interfaces', 'IStorageUndoable'),
+        ('ZODB.interfaces', 'IStorageCurrentRecordIteration'),
+        ('ZODB.interfaces', 'IExternalGC'),
+        ('ZODB.interfaces', 'IStorage'),
+        ('ZODB.interfaces', 'IStorageWrapper'),
+        ('zope.interface', 'Interface'),
+        )
+
+    def getConfig(self):
+        return """\
+        %import zc.zrstests
+        <hexstorage>
+        <filestorage 1>
+        path Data.fs
+        </filestorage>
+        </hexstorage>
+        """
+
+class FileStorageClientHexTests(FileStorageHexTests):
+
+    def getConfig(self):
+        return """\
+        %import zc.zrstests
+        <serverhexstorage>
+        <filestorage 1>
+        path Data.fs
+        </filestorage>
+        </serverhexstorage>
+        """
+
+    def _wrap_client(self, client):
+        return ZODB.tests.hexstorage.HexStorage(client)
+
+
+#
+##############################################################################
 
 def test_suite():
-    return unittest.TestSuite((
+    suite = unittest.TestSuite((
         doctest.DocFileSuite(
             'fsiterator.txt',
             'primary.txt', 'primary-blob.txt', 'primary-blobstorage.txt',
@@ -1524,13 +1599,34 @@ def test_suite():
                 (re.compile(' at 0x[a-fA-F0-9]+'), ''),
                 ]),
             ),
-        unittest.makeSuite(PrimaryStorageTests, "check"),
-        unittest.makeSuite(PrimaryStorageTestsWithBobs, "check"),
-        unittest.makeSuite(ZEOTests, "check"),
         doctest.DocFileSuite('monitor.test',
                              setUp=monitor_setUp, tearDown=monitor_tearDown,
                              ),
+        ZODB.tests.testblob.storage_reusable_suite(
+            'BlobFileHexStorage',
+            lambda name, blob_dir:
+            zc.zrstests.xformstorage.HexStorage(
+                ZODB.FileStorage.FileStorage(
+                    '%s.fs' % name, blob_dir=blob_dir)),
+            test_blob_storage_recovery=True,
+            test_packing=True,
+            ),
         ))
+
+    def make(class_, *args):
+        s = unittest.makeSuite(class_, *args)
+        s.layer = ZODB.tests.util.MininalTestLayer(class_.__name__)
+        suite.addTest(s)
+
+    make(PrimaryStorageTests, "check")
+    make(PrimaryStorageTestsWithBobs, "check")
+    make(ZEOTests, "check")
+    make(FileStorageHexTests, "check")
+    make(FileStorageHexTestsWithBlobsEnabled, "check")
+    make(FileStorageHexRecoveryTest, "check")
+
+
+    return suite
 
 if __name__ == '__main__':
     unittest.main(defaultTest='test_suite')
