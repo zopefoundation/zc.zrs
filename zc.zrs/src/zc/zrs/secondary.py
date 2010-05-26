@@ -157,7 +157,8 @@ class SecondaryProtocol(twisted.internet.protocol.Protocol):
                             self.factory.db.invalidate(
                                 tid, oids, version=version)
 
-                self.factory.storage.tpc_finish(self._zrs_transaction, invalidate)
+                self.factory.storage.tpc_finish(
+                    self._zrs_transaction, invalidate)
                 self._zrs_transaction = None
             else:
                 raise ValueError("Invalid message type, %r" % message_type)

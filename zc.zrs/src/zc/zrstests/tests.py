@@ -25,6 +25,7 @@ import ZEO.tests.forker
 import ZEO.tests.testZEO
 import ZODB.blob
 import ZODB.FileStorage
+import ZODB.TimeStamp
 import ZODB.tests.testblob
 import ZODB.tests.testFileStorage
 import ZODB.tests.StorageTestBase
@@ -882,7 +883,6 @@ def is_blob_record():
 
 def secondary_replicate_from_old_zrs_that_doesnt_send_checksums():
     r"""
-    >>> import ZODB.FileStorage
     >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
 
     >>> import zc.zrs.secondary
@@ -1298,8 +1298,9 @@ class BasePrimaryStorageTests(StorageTestBase.StorageTestBase):
             self.__pfs = ZODB.FileStorage.FileStorage('primary.fs', **kwargs)
             self.__sfs = ZODB.FileStorage.FileStorage('secondary.fs')
 
-        self._storage = TestPrimary(self.__pfs, addr, reactor)
-        self.__ss = zc.zrs.secondary.Secondary(self.__sfs, addr, reactor)
+        self._storage = self._wrap(TestPrimary(self.__pfs, addr, reactor))
+        self.__ss = zc.zrs.secondary.Secondary(
+            self._wrap(self.__sfs), addr, reactor)
 
         p_pack = self._storage.pack
         def pack(*args, **kw):
@@ -1332,6 +1333,8 @@ class BasePrimaryStorageTests(StorageTestBase.StorageTestBase):
             self.__ss.close()
 
         self._storage.close = close
+
+    _wrap = lambda self, s: s
 
     def __comparedbs(self, fs1, fs2):
         if fs1._pos != fs2._pos:
@@ -1421,6 +1424,10 @@ class PrimaryStorageTestsWithBobs(PrimaryStorageTests):
 
     use_blob_storage = True
 
+class PrimaryHexStorageTestsWithBobs(PrimaryStorageTestsWithBobs):
+
+    def _wrap(self, s):
+        return zc.zrstests.xformstorage.HexStorage(s)
 
 #
 ##############################################################################
@@ -1431,7 +1438,7 @@ class PrimaryStorageTestsWithBobs(PrimaryStorageTests):
 class ZEOTests(ZEO.tests.testZEO.FullGenericTests):
 
     def getConfig(self):
-        port = self.__port = ZEO.tests.testZEO.get_port()
+        port = self._ZEOTests_port = ZEO.tests.testZEO.get_port()
         return """
         %%import zc.zrs
 
@@ -1450,7 +1457,8 @@ class ZEOTests(ZEO.tests.testZEO.FullGenericTests):
         ZEO.tests.testZEO.FullGenericTests.setUp(self)
         self.__sfs = ZODB.FileStorage.FileStorage('secondary.fs')
         self.__s = zc.zrs.secondary.Secondary(
-            self.__sfs, ('', self.__port), reconnect_delay=0.1)
+            self._wrap(self.__sfs),
+            ('', self._ZEOTests_port), reconnect_delay=0.1)
         zc.zrs.reactor.reactor().callLater(0.1, self.__breakConnection)
 
     def __breakConnection(self):
@@ -1480,6 +1488,59 @@ class ZEOTests(ZEO.tests.testZEO.FullGenericTests):
         self.__s.close()
         ZEO.tests.testZEO.FullGenericTests.tearDown(self)
         setupstack.tearDown(self)
+
+    _wrap = lambda self, s: s
+
+class ZEOHexTests(ZEOTests):
+
+    def getConfig(self):
+        port = self._ZEOTests_port = ZEO.tests.testZEO.get_port()
+        return """
+        %%import zc.zrs
+        %%import zc.zrstests
+
+        <hexstorage>
+          <primary 1>
+            address %s
+            <filestorage 1>
+              path primary.fs
+            </filestorage>
+          </primary>
+        </hexstorage>
+        """ % port
+
+    def _wrap(self, s):
+        return zc.zrstests.xformstorage.HexStorage(s)
+
+class ZEOHexClientHexTests(ZEOHexTests):
+
+    def _wrap_client(self, s):
+        return zc.zrstests.xformstorage.HexStorage(s)
+
+class ZEOHexClientTests(ZEOHexTests):
+
+    def getConfig(self):
+        port = self._ZEOTests_port = ZEO.tests.testZEO.get_port()
+        return """
+        %%import zc.zrs
+        %%import zc.zrstests
+
+        <serverhexstorage>
+          <primary 1>
+            address %s
+            <filestorage 1>
+              path primary.fs
+            </filestorage>
+          </primary>
+        </serverhexstorage>
+        """ % port
+
+    def _wrap(self, s):
+        return zc.zrstests.xformstorage.HexStorage(s, True)
+
+    def _wrap_client(self, s):
+        return zc.zrstests.xformstorage.HexStorage(s)
+
 
 #
 ##############################################################################
@@ -1624,6 +1685,9 @@ def test_suite():
     make(FileStorageHexTests, "check")
     make(FileStorageHexTestsWithBlobsEnabled, "check")
     make(FileStorageHexRecoveryTest, "check")
+    make(ZEOHexTests, "check")
+    make(ZEOHexClientHexTests, "check")
+    make(ZEOHexClientTests, "check")
 
 
     return suite
