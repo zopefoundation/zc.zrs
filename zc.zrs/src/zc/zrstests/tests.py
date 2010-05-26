@@ -50,7 +50,6 @@ import zc.zrs.primary
 import zc.zrs.reactor
 import zc.zrs.secondary
 import zc.zrs.sizedmessage
-import zc.zrstests.xformstorage
 
 
 # start the reactor thread so that it isn't reported as left over:
@@ -1663,15 +1662,6 @@ def test_suite():
         doctest.DocFileSuite('monitor.test',
                              setUp=monitor_setUp, tearDown=monitor_tearDown,
                              ),
-        ZODB.tests.testblob.storage_reusable_suite(
-            'BlobFileHexStorage',
-            lambda name, blob_dir:
-            zc.zrstests.xformstorage.HexStorage(
-                ZODB.FileStorage.FileStorage(
-                    '%s.fs' % name, blob_dir=blob_dir)),
-            test_blob_storage_recovery=True,
-            test_packing=True,
-            ),
         ))
 
     def make(class_, *args):
@@ -1682,13 +1672,29 @@ def test_suite():
     make(PrimaryStorageTests, "check")
     make(PrimaryStorageTestsWithBobs, "check")
     make(ZEOTests, "check")
-    make(FileStorageHexTests, "check")
-    make(FileStorageHexTestsWithBlobsEnabled, "check")
-    make(FileStorageHexRecoveryTest, "check")
-    make(ZEOHexTests, "check")
-    make(ZEOHexClientHexTests, "check")
-    make(ZEOHexClientTests, "check")
 
+    try:
+        from ZODB.tests import hexstorage
+        import zc.zrstests.xformstorage
+
+        make(FileStorageHexTests, "check")
+        make(FileStorageHexTestsWithBlobsEnabled, "check")
+        make(FileStorageHexRecoveryTest, "check")
+        make(ZEOHexTests, "check")
+        make(ZEOHexClientHexTests, "check")
+        make(ZEOHexClientTests, "check")
+
+        suite.addTest(ZODB.tests.testblob.storage_reusable_suite(
+            'BlobFileHexStorage',
+            lambda name, blob_dir:
+            zc.zrstests.xformstorage.HexStorage(
+                ZODB.FileStorage.FileStorage(
+                    '%s.fs' % name, blob_dir=blob_dir)),
+            test_blob_storage_recovery=True,
+            test_packing=True,
+            ))
+    except ImportError:
+        pass # pre wrapper-support ZODB
 
     return suite
 
