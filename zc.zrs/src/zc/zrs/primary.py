@@ -69,7 +69,7 @@ class Primary:
             'getName', 'getSize', 'history', 'isReadOnly', 'lastTransaction',
             '__len__', 'load', 'loadBefore', 'loadSerial', 'new_oid', 'pack',
             'registerDB', 'sortKey', 'store', 'tpc_abort', 'tpc_begin',
-            'tpc_vote',
+            'tpc_vote', 'checkCurrentSerialInTransaction',
             ):
             setattr(self, name, getattr(storage, name))
 

@@ -260,7 +260,7 @@ class Secondary:
         for name in (
             'getName', 'getSize', 'history', 'lastTransaction',
             '__len__', 'load', 'loadBefore', 'loadSerial', 'pack',
-            'sortKey',
+            'sortKey', 'checkCurrentSerialInTransaction',
             ):
             setattr(self, name, getattr(storage, name))
 
