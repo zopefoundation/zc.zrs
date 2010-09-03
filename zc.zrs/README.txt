@@ -10,6 +10,13 @@ replicate data from the primary storage.
 Changes
 *******
 
+2.3.2 (2010-09-03)
+==================
+
+Added proxying for checkCurrentSerialInTransaction, wich was
+introduced in ZODB 3.10.0b5.
+
+
 2.3.1 (2010-05-20)
 ==================
 
