@@ -54,7 +54,7 @@ class Primary:
         if ZODB.interfaces.IBlobStorage.providedBy(storage):
             zope.interface.directlyProvides(self, ZODB.interfaces.IBlobStorage)
             for name in ('storeBlob', 'loadBlob', 'temporaryDirectory',
-                         'restoreBlob', 'openCommittedBlobFile'):
+                         'restoreBlob', 'openCommittedBlobFile', 'fshelper'):
                 setattr(self, name, getattr(storage, name))
 
         if not isinstance(storage, (ZODB.blob.BlobStorage,
