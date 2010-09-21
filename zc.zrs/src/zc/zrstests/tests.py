@@ -575,6 +575,7 @@ It exits with a non-zero exit status:
 And we get something in the log to the effect that it closed unexpectedly.
 
     >>> print open('t.log').read(),
+    using _sigchld
     Main loop terminated.
     The twisted reactor quit unexpectedly
 
@@ -600,6 +601,7 @@ OTOH, if we exit without crashing:
     False
 
     >>> print open('t.log').read(),
+    using _sigchld
     Main loop terminated.
 
     """
@@ -1469,6 +1471,22 @@ class ZEOTests(ZEO.tests.testZEO.FullGenericTests):
         ZEO.tests.testZEO.FullGenericTests.tearDown(self)
         setupstack.tearDown(self)
 
+class BlobWritableCacheTests(ZEO.tests.testZEO.BlobWritableCacheTests):
+
+    def getConfig(self):
+        port = self._ZEOTests_port = ZEO.tests.testZEO.get_port()
+        return """
+        %%import zc.zrs
+
+        <primary 1>
+          address %s
+          <filestorage 1>
+            blob-dir blobs
+            path primary.fs
+          </filestorage>
+        </primary>
+        """ % port
+
 #
 ##############################################################################
 
@@ -1519,6 +1537,7 @@ def test_suite():
         unittest.makeSuite(PrimaryStorageTests, "check"),
         unittest.makeSuite(PrimaryStorageTestsWithBobs, "check"),
         unittest.makeSuite(ZEOTests, "check"),
+        unittest.makeSuite(BlobWritableCacheTests, "check"),
         doctest.DocFileSuite('monitor.test',
                              setUp=monitor_setUp, tearDown=monitor_tearDown,
                              ),
