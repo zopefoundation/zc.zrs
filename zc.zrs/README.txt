@@ -10,6 +10,11 @@ replicate data from the primary storage.
 Changes
 *******
 
+2.3.3 (2010-09-29)
+==================
+
+Added proxying for a new ZODB test method.
+
 2.3.2 (2010-09-03)
 ==================
 
