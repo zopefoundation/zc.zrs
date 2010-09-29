@@ -82,6 +82,7 @@ class Primary:
             'supportsVersions', 'abortVersion', 'commitVersion',
             'versionEmpty', 'modifiedInVersion', 'versions',
             'record_iternext', 'deleteObject',
+            'answer_to_the_ultimate_question',
             ):
             if hasattr(storage, name):
                 setattr(self, name, getattr(storage, name))
