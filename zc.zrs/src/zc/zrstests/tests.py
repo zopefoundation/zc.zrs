@@ -927,6 +927,29 @@ def secondary_replicate_from_old_zrs_that_doesnt_send_checksums():
 
     """
 
+def secondary_gets_extension_data():
+    """
+    >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
+
+    >>> import zc.zrs.secondary
+    >>> ss = zc.zrs.secondary.Secondary(fs, ('', 8000), reactor,
+    ...                                 check_checksums=False)
+    INFO zc.zrs.secondary:
+    Opening Data.fs ('', 8000)
+    INFO zc.zrs.reactor:
+    Starting factory <zc.zrs.secondary.SecondaryFactory instance>
+
+    >>> for n in ss.getExtensionMethods():
+    ...     if getattr(ss, n) != getattr(fs, n):
+    ...         print 'oops'
+
+    >>> ss.close()
+    INFO zc.zrs.secondary:
+    Closing Data.fs ('', 8000)
+    INFO zc.zrs.reactor:
+    Stopping factory <zc.zrs.secondary.SecondaryFactory instance at 0x2bebb00>
+    """
+
 class DelayedCall:
 
     def __init__(self, later, n, delay, func, args, kw):

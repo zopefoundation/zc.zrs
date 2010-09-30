@@ -10,6 +10,13 @@ replicate data from the primary storage.
 Changes
 *******
 
+2.3.4 (2010-09-30)
+==================
+
+Fixed the way extension methods are handled. This is somewhat moot,
+since ZRS only supports file storage at this time, but the ZEO tests
+now exercise the extension method mechanism.
+
 2.3.3 (2010-09-29)
 ==================
 

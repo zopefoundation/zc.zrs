@@ -20,15 +20,13 @@ import os
 import tempfile
 import threading
 import twisted.internet.protocol
+import zc.zrs.primary
 import zc.zrs.reactor
 import zc.zrs.sizedmessage
 import ZODB.blob
 import ZODB.interfaces
 import ZODB.POSException
 import zope.interface
-
-if not hasattr(ZODB.blob.BlobStorage, 'restoreBlob'):
-    import zc.zrs.restoreblob
 
 logger = logging.getLogger(__name__)
 
@@ -217,28 +215,26 @@ class SecondaryFactory(twisted.internet.protocol.ClientFactory):
             self.reactor.callLater(self.reconnect_delay, connector.connect)
 
 
-class Secondary:
+class Secondary(zc.zrs.primary.Base):
 
     factoryClass = SecondaryFactory
     logger = logger
 
     def __init__(self, storage, addr, reactor=None, reconnect_delay=60,
                  check_checksums=True, keep_alive_delay=0):
-        if reactor is None:
-            reactor = zc.zrs.reactor.reactor()
-        self._reactor = reactor
+        zc.zrs.primary.Base.__init__(self, storage, addr, reactor)
 
-        self._storage = storage
+        reactor = self._reactor
 
         zrs_proto = self.copyMethods(storage)
 
         self._factory = self.factoryClass(
             reactor, storage, reconnect_delay,
             check_checksums, zrs_proto, keep_alive_delay)
-        self._addr = addr
         self.logger.info("Opening %s %s", self.getName(), addr)
         if isinstance(addr, basestring):
-            reactor.callFromThread(reactor.connectUNIX, addr, self._factory)
+            reactor.callFromThread(
+                reactor.connectUNIX, addr, self._factory)
         else:
             host, port = addr
             reactor.callFromThread(reactor.connectTCP, host, port,
@@ -259,7 +255,7 @@ class Secondary:
         # required methods
         for name in (
             'getName', 'getSize', 'history', 'lastTransaction',
-            '__len__', 'load', 'loadBefore', 'loadSerial', 'pack',
+            'load', 'loadBefore', 'loadSerial', 'pack',
             'sortKey', 'checkCurrentSerialInTransaction',
             ):
             setattr(self, name, getattr(storage, name))
@@ -267,7 +263,7 @@ class Secondary:
         # Optional methods:
         for name in (
             'iterator', 'cleanup', 'loadEx', 'getSerial',
-            'getExtensionMethods', 'supportsTransactionalUndo',
+            'supportsTransactionalUndo',
             'tpc_transaction', 'getTid', 'lastInvalidations',
             'supportsUndo', 'undoLog', 'undoInfo',
             'supportsVersions',

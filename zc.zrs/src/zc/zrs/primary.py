@@ -42,15 +42,36 @@ if not hasattr(ZODB.blob.BlobStorage, 'restoreBlob'):
 
 logger = logging.getLogger(__name__)
 
-class Primary:
+class Base:
 
-    def __init__(self, storage, addr, reactor=None):
+    def __init__(self, storage, addr, reactor):
         if reactor is None:
             reactor = zc.zrs.reactor.reactor()
 
         self._reactor = reactor
 
         self._storage = storage
+
+        try:
+            fn = storage.getExtensionMethods
+        except AttributeError:
+            pass # no extension methods
+        else:
+            self.getExtensionMethods = storage.getExtensionMethods
+            for name in fn():
+                assert not hasattr(self, name)
+                setattr(self, name, getattr(storage, name))
+
+        self._addr = addr
+
+    def __len__(self):
+        return len(self._storage)
+
+class Primary(Base):
+
+    def __init__(self, storage, addr, reactor=None):
+        Base.__init__(self, storage, addr, reactor)
+
         if ZODB.interfaces.IBlobStorage.providedBy(storage):
             zope.interface.directlyProvides(self, ZODB.interfaces.IBlobStorage)
             for name in ('storeBlob', 'loadBlob', 'temporaryDirectory',
@@ -67,7 +88,7 @@ class Primary:
         # required methods
         for name in (
             'getName', 'getSize', 'history', 'isReadOnly', 'lastTransaction',
-            '__len__', 'load', 'loadBefore', 'loadSerial', 'new_oid', 'pack',
+            'load', 'loadBefore', 'loadSerial', 'new_oid', 'pack',
             'registerDB', 'sortKey', 'store', 'tpc_abort', 'tpc_begin',
             'tpc_vote', 'checkCurrentSerialInTransaction',
             ):
@@ -76,21 +97,19 @@ class Primary:
         # Optional methods:
         for name in (
             'restore', 'iterator', 'cleanup', 'loadEx', 'getSerial',
-            'getExtensionMethods', 'supportsTransactionalUndo',
+            'supportsTransactionalUndo',
             'tpc_transaction', 'getTid', 'lastInvalidations',
             'supportsUndo', 'undoLog', 'undoInfo', 'undo',
             'supportsVersions', 'abortVersion', 'commitVersion',
             'versionEmpty', 'modifiedInVersion', 'versions',
             'record_iternext', 'deleteObject',
-            'answer_to_the_ultimate_question',
             ):
             if hasattr(storage, name):
                 setattr(self, name, getattr(storage, name))
 
         self._factory = PrimaryFactory(storage, self._changed)
-        self._addr = addr
         logger.info("Opening %s %s", self.getName(), addr)
-        reactor.callFromThread(self.cfr_listen)
+        self._reactor.callFromThread(self.cfr_listen)
 
     # StorageServer accesses _transaction directly. :(
     @property
