@@ -256,7 +256,7 @@ class Secondary(zc.zrs.primary.Base):
         for name in (
             'getName', 'getSize', 'history', 'lastTransaction',
             'load', 'loadBefore', 'loadSerial', 'pack',
-            'sortKey', 'checkCurrentSerialInTransaction',
+            'sortKey',
             ):
             setattr(self, name, getattr(storage, name))
 
@@ -268,7 +268,7 @@ class Secondary(zc.zrs.primary.Base):
             'supportsUndo', 'undoLog', 'undoInfo',
             'supportsVersions',
             'versionEmpty', 'modifiedInVersion', 'versions',
-            'record_iternext',
+            'record_iternext', 'checkCurrentSerialInTransaction',
             ):
             if hasattr(storage, name):
                 setattr(self, name, getattr(storage, name))

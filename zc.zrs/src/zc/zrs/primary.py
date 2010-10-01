@@ -90,7 +90,7 @@ class Primary(Base):
             'getName', 'getSize', 'history', 'isReadOnly', 'lastTransaction',
             'load', 'loadBefore', 'loadSerial', 'new_oid', 'pack',
             'registerDB', 'sortKey', 'store', 'tpc_abort', 'tpc_begin',
-            'tpc_vote', 'checkCurrentSerialInTransaction',
+            'tpc_vote',
             ):
             setattr(self, name, getattr(storage, name))
 
@@ -103,6 +103,7 @@ class Primary(Base):
             'supportsVersions', 'abortVersion', 'commitVersion',
             'versionEmpty', 'modifiedInVersion', 'versions',
             'record_iternext', 'deleteObject',
+            'checkCurrentSerialInTransaction',
             ):
             if hasattr(storage, name):
                 setattr(self, name, getattr(storage, name))
