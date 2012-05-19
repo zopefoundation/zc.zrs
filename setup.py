@@ -12,7 +12,6 @@
 # FOR A PARTICULAR PURPOSE
 #
 ##############################################################################
-
 name = 'zc.zrs'
 version = '0'
 
@@ -33,18 +32,21 @@ last-zeo-transaction = zc.zrs.last:main
 
 tests_require = ['zope.testing']
 
+long_description = open('README.txt').read()
+
 setup(
     name = name,
+    long_description = long_description,
+    description = long_description.split('\n')[1],
     version = version,
     author = "Jim Fulton",
     author_email = "jim#zope.com",
-    description = "Zope Replication Server",
-    license = "ZVSL 1.0",
+    license = "ZPL 2.1",
     keywords = "ZODB",
 
     packages = ['zc', 'zc.zrs'],
     include_package_data = True,
-    data_files = [('.', ['LICENSE.txt', 'README.txt', 'zrsversion.cfg'])],
+    data_files = [('.', ['README.txt'])],
     zip_safe = True,
     entry_points = entry_points,
     package_dir = {'':'src'},

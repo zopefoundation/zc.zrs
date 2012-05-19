@@ -1,0 +1,92 @@
+Release History
+===============
+
+At a high level:
+
+- 2.4.x Open-source release.  Removes a number of unused features.
+
+- 2.3.x supported ZODB 3.10
+
+- 2.2.x supported ZODB 3.9, including blobs (but doesn’t support versions).
+
+- 2.0.x supported ZODB 3.8, including versions, but doesn’t support blobs.
+
+- 1.x used spread, had a custom server, and was generally a pain to
+  install and administer. We'd rather not talk about it. :)
+
+Note that only 2.3 was open-sourced initially.  If there's sufficient
+demand, we'll make a 2.0 release for supporting older ZODB clients.
+
+2.3.4 2010-10-01
+----------------
+
+- Added support for ZODB 3.10.
+
+- Added support for layered storages, e.g., zc.zlibstorage.
+
+
+2.3.3 (2010-09-29)
+==================
+
+Added proxying for a new ZODB test method.
+
+2.3.2 (2010-09-03)
+==================
+
+Added proxying for checkCurrentSerialInTransaction, wich was
+introduced in ZODB 3.10.0b5.
+
+
+2.3.1 (2010-05-20)
+==================
+
+- Fixed some spurious test failures.
+
+2.3.0 (2010-03-01)
+==================
+
+- Updated tests to work with Python 2.6 and Twisted 9.
+
+2.2.5 2010-09-21
+----------------
+
+- Fixed a bug in support for shared ZEO blob directories.
+
+2.2.4 2009-09-02
+----------------
+
+- Updated tests to reflect ZODB changes.
+
+2.2.3 2009-06-26
+----------------
+
+- Updated to work with older releases that didn’t send checksum data.
+
+2.2.2 2009-06-04
+----------------
+
+- Support for ZODB 3.9 and blobs
+
+- Updated the configuration syntax.
+
+- Added a replication checksum feature
+
+- Added support for unix-domain sockets for replication.
+
+2.0.4 2009-03-09
+----------------
+
+- Updated the configuration syntax.
+
+2.0.3 2008-12-19
+----------------
+
+- Updated the configuration syntax.
+
+- Added keep-alive option to deal with VPNs that break TCP connections
+  in non-standard ways.
+
+2.0.2 2007-07-16
+----------------
+
+Initial ZRS 2 release.
