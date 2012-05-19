@@ -14,7 +14,7 @@
 ##############################################################################
 
 name = 'zc.zrs'
-version = open('zrsversion.cfg').read().strip().split()[-1]
+version = '0'
 
 from ez_setup import use_setuptools
 use_setuptools()
@@ -30,6 +30,8 @@ entry_points = """
 zrsmonitor-script = zc.zrs.monitor:main
 last-zeo-transaction = zc.zrs.last:main
 """
+
+tests_require = ['zope.testing']
 
 setup(
     name = name,
@@ -52,6 +54,7 @@ setup(
         'ZODB3',
         'Twisted',
         ],
-    tests_require = ['zope.testing'],
+    extras_require = dict(test=tests_require),
+    tests_require = tests_require,
     test_suite = 'zc.zrstests.tests.test_suite',
     )

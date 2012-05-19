@@ -1466,12 +1466,12 @@ class ZEOTests(ZEO.tests.testZEO.FullGenericTests):
         return """
         %%import zc.zrs
 
-        <primary 1>
-          address %s
+        <zrs>
+          replicate-to %s
           <filestorage 1>
             path primary.fs
           </filestorage>
-        </primary>
+        </zrs>
         """ % port
 
     def setUp(self):
@@ -1523,13 +1523,13 @@ class BlobWritableCacheTests(ZEO.tests.testZEO.BlobWritableCacheTests):
         return """
         %%import zc.zrs
 
-        <primary 1>
-          address %s
+        <zrs>
+          replicate-to %s
           <filestorage 1>
             blob-dir blobs
             path primary.fs
           </filestorage>
-        </primary>
+        </zrs>
         """ % port
 
 class ZEOHexTests(ZEOTests):
@@ -1541,12 +1541,12 @@ class ZEOHexTests(ZEOTests):
         %%import zc.zrstests
 
         <hexstorage>
-          <primary 1>
-            address %s
+          <zrs>
+            replicate-to %s
             <filestorage 1>
               path primary.fs
             </filestorage>
-          </primary>
+          </zrs>
         </hexstorage>
         """ % port
 
@@ -1567,12 +1567,12 @@ class ZEOHexClientTests(ZEOHexTests):
         %%import zc.zrstests
 
         <serverhexstorage>
-          <primary 1>
-            address %s
+          <zrs>
+            replicate-to %s
             <filestorage 1>
               path primary.fs
             </filestorage>
-          </primary>
+          </zrs>
         </serverhexstorage>
         """ % port
 
@@ -1678,22 +1678,17 @@ def test_suite():
             'fsiterator.txt',
             'primary.txt', 'primary-blob.txt', 'primary-blobstorage.txt',
             'secondary.txt', 'secondary-blob.txt', 'secondary-blobstorage.txt',
-            'log.txt',
             setUp=setUp, tearDown=setupstack.tearDown,
             checker=renormalizing.RENormalizing([
                 (re.compile(' at 0x[a-fA-F0-9]+'), ''),
                 ]),
             ),
         doctest.DocFileSuite(
-            'config-old.txt', 'config.txt',
+            'config.txt',
             checker=renormalizing.RENormalizing([
                 (re.compile(' at 0x[a-fA-F0-9]+'), ''),
                 ]),
             setUp=setUpTime, tearDown=setupstack.tearDown,
-            ),
-        doctest.DocFileSuite(
-            'log-in-zeo.txt',
-            setUp=ZEO.tests.forker.setUp, tearDown=setupstack.tearDown,
             ),
         doctest.DocTestSuite(
             setUp=setUp, tearDown=setupstack.tearDown,
@@ -1701,9 +1696,6 @@ def test_suite():
                 (re.compile(' at 0x[a-fA-F0-9]+'), ''),
                 ]),
             ),
-        doctest.DocFileSuite('monitor.test',
-                             setUp=monitor_setUp, tearDown=monitor_tearDown,
-                             ),
         ))
 
     def make(class_, *args):
