@@ -131,12 +131,7 @@ A secondary storage can also specify a ``replicate-to`` option.  If this
 option is used, other secondary storages can then replicate from the
 secondary, rather than replicating from the primary.
 
-Secondary storages also support the following optional options:
-
-reconnect-delay SECONDS
-  The time, in seconds, to wait before trying to reconnect to a
-  primary storage after being disconnected.  This defaults to 60
-  seconds.
+Secondary storages also support the following optional option:
 
 keep-alive-delay SECONDS
   In some network configurations, TCP connections are broken after
