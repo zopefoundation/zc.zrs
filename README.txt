@@ -114,7 +114,6 @@ storage::
    replicate-from primary-host:5000
    replicate-to 5000
    keep-alive-delay 60
-   reconnect-delay 10
 
    <filestorage>
        path /path/to/secondary/data/file
