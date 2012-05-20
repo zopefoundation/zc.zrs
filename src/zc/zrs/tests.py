@@ -18,7 +18,7 @@ except ImportError:
     from md5 import new as md5
 from ZODB.TimeStamp import TimeStamp
 from zope.testing import setupstack, renormalizing
-from zc.zrstests import loopback
+from zc.zrs import loopback
 import doctest
 import ZEO.ClientStorage
 import ZEO.tests.forker
@@ -1451,7 +1451,7 @@ class PrimaryStorageTestsWithBobs(PrimaryStorageTests):
 class PrimaryHexStorageTestsWithBobs(PrimaryStorageTestsWithBobs):
 
     def _wrap(self, s):
-        return zc.zrstests.xformstorage.HexStorage(s)
+        return zc.zrs.xformstorage.HexStorage(s)
 
 #
 ##############################################################################
@@ -1538,7 +1538,7 @@ class ZEOHexTests(ZEOTests):
         port = self._ZEOTests_port = ZEO.tests.testZEO.get_port()
         return """
         %%import zc.zrs
-        %%import zc.zrstests
+        %%import zc.zrs.xformstorage
 
         <hexstorage>
           <zrs>
@@ -1551,12 +1551,12 @@ class ZEOHexTests(ZEOTests):
         """ % port
 
     def _wrap(self, s):
-        return zc.zrstests.xformstorage.HexStorage(s)
+        return zc.zrs.xformstorage.HexStorage(s)
 
 class ZEOHexClientHexTests(ZEOHexTests):
 
     def _wrap_client(self, s):
-        return zc.zrstests.xformstorage.HexStorage(s)
+        return zc.zrs.xformstorage.HexStorage(s)
 
 class ZEOHexClientTests(ZEOHexTests):
 
@@ -1564,7 +1564,7 @@ class ZEOHexClientTests(ZEOHexTests):
         port = self._ZEOTests_port = ZEO.tests.testZEO.get_port()
         return """
         %%import zc.zrs
-        %%import zc.zrstests
+        %%import zc.zrs.xformstorage
 
         <serverhexstorage>
           <zrs>
@@ -1577,10 +1577,10 @@ class ZEOHexClientTests(ZEOHexTests):
         """ % port
 
     def _wrap(self, s):
-        return zc.zrstests.xformstorage.HexStorage(s, True)
+        return zc.zrs.xformstorage.HexStorage(s, True)
 
     def _wrap_client(self, s):
-        return zc.zrstests.xformstorage.HexStorage(s)
+        return zc.zrs.xformstorage.HexStorage(s)
 
 
 #
@@ -1609,7 +1609,7 @@ def monitor_tearDown(test):
 
 class FileStorageHexTests(ZODB.tests.testFileStorage.FileStorageTests):
     def open(self, **kwargs):
-        self._storage = zc.zrstests.xformstorage.HexStorage(
+        self._storage = zc.zrs.xformstorage.HexStorage(
             ZODB.FileStorage.FileStorage('FileStorageTests.fs',**kwargs))
 
 class FileStorageHexTestsWithBlobsEnabled(
@@ -1620,15 +1620,15 @@ class FileStorageHexTestsWithBlobsEnabled(
             kwargs = kwargs.copy()
             kwargs['blob_dir'] = 'blobs'
         ZODB.tests.testFileStorage.FileStorageTests.open(self, **kwargs)
-        self._storage = zc.zrstests.xformstorage.HexStorage(self._storage)
+        self._storage = zc.zrs.xformstorage.HexStorage(self._storage)
 
 class FileStorageHexRecoveryTest(
     ZODB.tests.testFileStorage.FileStorageRecoveryTest):
     def setUp(self):
         ZODB.tests.StorageTestBase.StorageTestBase.setUp(self)
-        self._storage = zc.zrstests.xformstorage.HexStorage(
+        self._storage = zc.zrs.xformstorage.HexStorage(
             ZODB.FileStorage.FileStorage("Source.fs", create=True))
-        self._dst = zc.zrstests.xformstorage.HexStorage(
+        self._dst = zc.zrs.xformstorage.HexStorage(
             ZODB.FileStorage.FileStorage("Dest.fs", create=True))
 
 class FileStorageHexTests(ZEO.tests.testZEO.FileStorageTests):
@@ -1645,7 +1645,7 @@ class FileStorageHexTests(ZEO.tests.testZEO.FileStorageTests):
 
     def getConfig(self):
         return """\
-        %import zc.zrstests
+        %import zc.zrs.xformstorage
         <hexstorage>
         <filestorage 1>
         path Data.fs
@@ -1657,7 +1657,7 @@ class FileStorageClientHexTests(FileStorageHexTests):
 
     def getConfig(self):
         return """\
-        %import zc.zrstests
+        %import zc.zrs.xformstorage
         <serverhexstorage>
         <filestorage 1>
         path Data.fs
@@ -1675,16 +1675,17 @@ class FileStorageClientHexTests(FileStorageHexTests):
 def test_suite():
     suite = unittest.TestSuite((
         doctest.DocFileSuite(
-            'fsiterator.txt',
-            'primary.txt', 'primary-blob.txt', 'primary-blobstorage.txt',
-            'secondary.txt', 'secondary-blob.txt', 'secondary-blobstorage.txt',
+            'fsiterator.test',
+            'primary.test', 'primary-blob.test', 'primary-blobstorage.test',
+            'secondary.test', 'secondary-blob.test',
+            'secondary-blobstorage.test',
             setUp=setUp, tearDown=setupstack.tearDown,
             checker=renormalizing.RENormalizing([
                 (re.compile(' at 0x[a-fA-F0-9]+'), ''),
                 ]),
             ),
         doctest.DocFileSuite(
-            'config.txt',
+            'config.test',
             checker=renormalizing.RENormalizing([
                 (re.compile(' at 0x[a-fA-F0-9]+'), ''),
                 ]),
@@ -1710,7 +1711,7 @@ def test_suite():
 
     try:
         from ZODB.tests import hexstorage
-        import zc.zrstests.xformstorage
+        import zc.zrs.xformstorage
 
         make(FileStorageHexTests, "check")
         make(FileStorageHexTestsWithBlobsEnabled, "check")
@@ -1722,7 +1723,7 @@ def test_suite():
         suite.addTest(ZODB.tests.testblob.storage_reusable_suite(
             'BlobFileHexStorage',
             lambda name, blob_dir:
-            zc.zrstests.xformstorage.HexStorage(
+            zc.zrs.xformstorage.HexStorage(
                 ZODB.FileStorage.FileStorage(
                     '%s.fs' % name, blob_dir=blob_dir)),
             test_blob_storage_recovery=True,

@@ -1,14 +1,14 @@
 <component>
   <sectiontype
      name="hexstorage"
-     datatype="zc.zrstests.xformstorage.ZConfigHex"
+     datatype="zc.zrs.xformstorage.ZConfigHex"
      implements="ZODB.storage"
      >
     <section type="ZODB.storage" name="*" attribute="base" required="yes" />
   </sectiontype>
   <sectiontype
      name="serverhexstorage"
-     datatype="zc.zrstests.xformstorage.ZConfigServerHex"
+     datatype="zc.zrs.xformstorage.ZConfigServerHex"
      implements="ZODB.storage"
      >
     <section type="ZODB.storage" name="*" attribute="base" required="yes" />
