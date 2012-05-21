@@ -86,7 +86,6 @@ replicate-from and replicate-to:
     ...      replicate-from ./primary.sock
     ...      replicate-to ./secondary.sock
     ...      keep-alive-delay 60
-    ...      check-checksums false
     ...      <filestorage>
     ...         path secondary.fs
     ...         blob-dir secondary-blobs
@@ -105,9 +104,6 @@ replicate-from and replicate-to:
 
     >>> secondary._factory.keep_alive_delay
     60
-
-    >>> secondary._factory.check_checksums
-    False
 
 Let's create a secondary secondary and commit some data to the primary storage.
 

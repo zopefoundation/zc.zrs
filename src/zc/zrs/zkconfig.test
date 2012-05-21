@@ -28,7 +28,7 @@ Here we essentially created a primary and a secondary.
     >>> zc.zrs.zk.Secondary.assert_called_with(
     ...     zc.zrs.zk.Primary.return_value,
     ...     'zookeeper.example.com:2181', '/from',
-    ...     keep_alive_delay=42, check_checksums=True)
+    ...     keep_alive_delay=42)
 
 Sometimes, you need to use a different zookeeper for the
 replicate-from address than the replication-to address. You might do
@@ -59,6 +59,6 @@ zookeeper option:
     >>> zc.zrs.zk.Secondary.assert_called_with(
     ...     zc.zrs.zk.Primary.return_value,
     ...     'zk.example.com:2181', '/from',
-    ...     keep_alive_delay=42, check_checksums=True)
+    ...     keep_alive_delay=42)
 
 

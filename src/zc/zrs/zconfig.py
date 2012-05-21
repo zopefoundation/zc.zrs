@@ -54,13 +54,11 @@ class ZRS:
                 from zc.zrs.zk import Secondary
                 storage = Secondary(
                     storage, zookeeper, replicate_from.address,
-                    check_checksums=self.config.check_checksums,
                     keep_alive_delay=self.config.keep_alive_delay,
                     )
             else:
                 storage = zc.zrs.secondary.Secondary(
                     storage, replicate_from.address,
-                    check_checksums=self.config.check_checksums,
                     keep_alive_delay=self.config.keep_alive_delay,
                     )
 
