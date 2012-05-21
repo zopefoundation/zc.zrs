@@ -33,7 +33,7 @@ used a unix-domain socket to avoid having to pick an unused port. :)
 The primary storage wraps a file storage.
 
     >>> primary
-    <zc.zrs.primary.Primary instance at 0x2aaaab0c53f8>
+    <zc.zrs.primary.Primary object at 0x2aaaab0c53f8>
 
     >>> from ZEO.tests.forker import wait_until
     >>> wait_until("server starts", lambda: os.path.exists('primary.sock'))
@@ -57,7 +57,7 @@ Defining a secondary storage is similar:
     >>> time.sleep(.01) # Wait for server to start
 
     >>> secondary
-    <zc.zrs.secondary.Secondary instance at 0x2aaaab0e8d40>
+    <zc.zrs.secondary.Secondary object at 0x2aaaab0e8d40>
 
     >>> os.path.exists('secondary.fs')
     True
@@ -96,7 +96,7 @@ replicate-from and replicate-to:
     >>> time.sleep(.01) # Wait for server to start
 
     >>> secondary
-    <zc.zrs.secondary.Secondary instance at 0x2aaaab0f5680>
+    <zc.zrs.secondary.Secondary object at 0x2aaaab0f5680>
 
     >>> os.path.exists('secondary.fs')
     True

@@ -1,0 +1,173 @@
+=================
+ZooKeeper support
+=================
+
+The zc.zrs.zk module provides support for service registration and
+discovery via ZooKeeper.
+
+Registering a replication address
+=================================
+
+Use zc.zrs.zk.Primary to create a Primary storage and register it with
+ZooKeeper, passing a file storage, an addres, a ZooKeeper connection string
+and a path.
+
+    >>> import zc.zk, zc.zrs.zk, ZODB.FileStorage, time
+    >>> connection_string = 'zookeeper.example.com:2181'
+    >>> zk = zc.zk.ZooKeeper(connection_string)
+    >>> zk.import_tree("""
+    ... /db
+    ...   /replication
+    ...      /providers
+    ... """)
+    >>> primary_fs = ZODB.FileStorage.FileStorage('primary.fs')
+    >>> replication_path = '/db/replication/providers'
+    >>> primary_storage = zc.zrs.zk.Primary(
+    ...     primary_fs, ('127.0.0.1', 0), connection_string, replication_path
+    ...     )
+    >>> time.sleep(.1)
+
+    >>> zk.print_tree('/db')
+    /db
+      /replication
+        /providers
+          /127.0.0.1:55083
+            pid = 5340
+
+    >>> primary_db = ZODB.DB(primary_storage)
+
+Getting replication addresses
+=============================
+
+When creating a secondary, we can use ZooKeeper to look up a
+replication address.
+
+    >>> secondary_fs = ZODB.FileStorage.FileStorage('secondary.fs')
+    >>> secondary_storage = zc.zrs.zk.Secondary(
+    ...     secondary_fs, connection_string, replication_path,
+    ...     reconnect_delay=.1); time.sleep(.1)
+    >>> secondary_db = ZODB.DB(secondary_storage)
+
+    >>> with primary_db.transaction() as c:
+    ...     c.root.x = 1
+    >>> time.sleep(.1)
+    >>> with secondary_db.transaction() as c:
+    ...     print c.root.x
+    1
+
+We used an ephemeral port for the primary.
+
+    >>> ephemeral_port = primary_storage._listener.getHost().port
+
+If we reestablish the primary, it will get a different port:
+
+    >>> primary_db.close()
+    >>> primary_fs = ZODB.FileStorage.FileStorage('primary.fs')
+    >>> replication_path = '/db/replication/providers'
+    >>> primary_storage = zc.zrs.zk.Primary(
+    ...     primary_fs, ('127.0.0.1', 0), connection_string, replication_path
+    ...     ); time.sleep(.4)
+
+    >>> primary_storage._listener.getHost().port != ephemeral_port
+    True
+
+But the secondary will still be able to reconnect to it:
+
+    >>> primary_db = ZODB.DB(primary_storage)
+    >>> with primary_db.transaction() as c:
+    ...     c.root.x = 2
+    >>> time.sleep(.1)
+    >>> with secondary_db.transaction() as c:
+    ...     print c.root.x
+    2
+
+We can create a secondary even if the primary is down:
+
+   >>> primary_db.close()
+   >>> secondary_db.close()
+
+    >>> secondary_fs = ZODB.FileStorage.FileStorage('secondary.fs')
+    >>> secondary_storage = zc.zrs.zk.Secondary(
+    ...     secondary_fs, connection_string, replication_path,
+    ...     reconnect_delay=.1); time.sleep(.1)
+    >>> secondary_db = ZODB.DB(secondary_storage)
+
+When we finally get around to starting the primary, the secondary will
+discover it and connect:
+
+    >>> primary_fs = ZODB.FileStorage.FileStorage('primary.fs')
+    >>> replication_path = '/db/replication/providers'
+    >>> primary_storage = zc.zrs.zk.Primary(
+    ...     primary_fs, ('127.0.0.1', 0), connection_string, replication_path
+    ...     )
+    >>> time.sleep(.4)
+    >>> primary_db = ZODB.DB(primary_storage)
+    >>> with primary_db.transaction() as c:
+    ...     c.root.x = 3
+    >>> time.sleep(.4)
+    >>> with secondary_db.transaction() as c:
+    ...     print c.root.x
+    3
+    >>> secondary_db.close()
+
+Let's make sure that:
+
+- secondaried replicating from secondaries works and that
+
+- we can have multiple replication addresses:
+
+    >>> zk.import_tree("""
+    ... /db
+    ...   /replication
+    ...      /providers
+    ...   /secondary
+    ...     /replication
+    ...        /providers
+    ... """)
+    extra path not trimmed: /db/replication/providers/127.0.0.1:55304
+
+    >>> secondary_replication_path = '/db/secondary/replication/providers'
+    >>> secondaries = [
+    ...     zc.zrs.zk.Secondary(
+    ...         zc.zrs.zk.Primary(
+    ...             ZODB.FileStorage.FileStorage('secondary%s.fs' % i),
+    ...             ('127.0.0.1', 0), connection_string,
+    ...             secondary_replication_path),
+    ...         connection_string, replication_path, reconnect_delay=.1)
+    ...     for i in range(3)]
+    >>> time.sleep(.1)
+    >>> secondaries = map(ZODB.DB, secondaries)
+
+    >>> secondary_fs = ZODB.FileStorage.FileStorage('secondary.fs', create=1)
+    >>> secondary_storage = zc.zrs.zk.Secondary(
+    ...     secondary_fs, connection_string, secondary_replication_path,
+    ...     reconnect_delay=.1)
+    >>> time.sleep(.1)
+    >>> secondary_db = ZODB.DB(secondary_storage)
+    >>> with secondary_db.transaction() as c:
+    ...     print c.root.x
+    3
+
+    >>> zk.print_tree('/db')
+    /db
+      /replication
+        /providers
+          /127.0.0.1:55304
+            pid = 5467
+      /secondary
+        /replication
+          /providers
+            /127.0.0.1:55306
+              pid = 5467
+            /127.0.0.1:55308
+              pid = 5467
+            /127.0.0.1:55310
+              pid = 5467
+
+.. cleanup
+
+    >>> secondary_db.close()
+    >>> for db in secondaries:
+    ...     db.close()
+    >>> primary_db.close()
+    >>> zk.close()

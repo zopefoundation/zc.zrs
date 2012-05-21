@@ -184,13 +184,14 @@ class SecondaryFactory(twisted.internet.protocol.ClientFactory):
     instance = None
 
     def __init__(self, reactor, storage, reconnect_delay, check_checksums,
-                 zrs_proto, keep_alive_delay):
+                 zrs_proto, keep_alive_delay, secondary):
         self.reactor = reactor
         self.storage = storage
         self.reconnect_delay = reconnect_delay
         self.check_checksums = check_checksums
         self.zrs_proto = zrs_proto
         self.keep_alive_delay = keep_alive_delay
+        self.secondary = secondary
 
     def close(self, callback):
         self.closed = True
@@ -207,12 +208,21 @@ class SecondaryFactory(twisted.internet.protocol.ClientFactory):
     def clientConnectionFailed(self, connector, reason):
         self.connector = None
         if not self.closed:
-            self.reactor.callLater(self.reconnect_delay, connector.connect)
+            self.reactor.callLater(self.reconnect_delay, self.connect)
 
     def clientConnectionLost(self, connector, reason):
         self.connector = None
         if not self.closed:
-            self.reactor.callLater(self.reconnect_delay, connector.connect)
+            self.reactor.callLater(self.reconnect_delay, self.connect)
+
+    def connect(self):
+        addr = self.secondary._addr
+        reactor = self.reactor
+        if isinstance(addr, basestring):
+            reactor.callFromThread(reactor.connectUNIX, addr, self)
+        else:
+            host, port = addr
+            reactor.callFromThread(reactor.connectTCP, host, port, self)
 
 
 class Secondary(zc.zrs.primary.Base):
@@ -230,15 +240,17 @@ class Secondary(zc.zrs.primary.Base):
 
         self._factory = self.factoryClass(
             reactor, storage, reconnect_delay,
-            check_checksums, zrs_proto, keep_alive_delay)
+            check_checksums, zrs_proto, keep_alive_delay, self)
         self.logger.info("Opening %s %s", self.getName(), addr)
-        if isinstance(addr, basestring):
-            reactor.callFromThread(
-                reactor.connectUNIX, addr, self._factory)
-        else:
-            host, port = addr
-            reactor.callFromThread(reactor.connectTCP, host, port,
-                                   self._factory)
+
+        if addr:
+            self._factory.connect()
+
+    def setReplicationAddress(self, addr):
+        old = self._addr
+        self._addr = addr
+        if not old:
+            self._factory.connect()
 
     def copyMethods(self, storage):
         if (ZODB.interfaces.IBlobStorage.providedBy(storage)

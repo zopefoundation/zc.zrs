@@ -42,7 +42,7 @@ if not hasattr(ZODB.blob.BlobStorage, 'restoreBlob'):
 
 logger = logging.getLogger(__name__)
 
-class Base:
+class Base(object):
 
     def __init__(self, storage, addr, reactor):
         if reactor is None:

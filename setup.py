@@ -30,7 +30,7 @@ zrsmonitor-script = zc.zrs.monitor:main
 last-zeo-transaction = zc.zrs.last:main
 """
 
-tests_require = ['zope.testing']
+tests_require = ['zope.testing', 'zc.zk [static]', 'mock']
 
 long_description = open('README.txt').read()
 

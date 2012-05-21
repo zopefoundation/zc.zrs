@@ -32,6 +32,7 @@ import ZODB.tests.StorageTestBase
 import ZODB.utils
 import cPickle
 import logging
+import mock
 import os
 import re
 import shutil
@@ -46,6 +47,7 @@ import twisted.internet.base
 import twisted.internet.error
 import twisted.python.failure
 import unittest
+import zc.zk.testing
 import zc.zrs.primary
 import zc.zrs.reactor
 import zc.zrs.secondary
@@ -1668,9 +1670,18 @@ class FileStorageClientHexTests(FileStorageHexTests):
     def _wrap_client(self, client):
         return ZODB.tests.hexstorage.HexStorage(client)
 
-
 #
 ##############################################################################
+
+def setUpZK(test):
+    setupstack.setUpDirectory(test)
+    zc.zk.testing.setUp(test)
+
+def setUpZKConfig(test):
+    setupstack.context_manager(test, mock.patch('ZODB.FileStorage.FileStorage'))
+    setupstack.context_manager(test, mock.patch('zc.zrs.zk.Primary'))
+    setupstack.context_manager(test, mock.patch('zc.zrs.zk.Secondary'))
+
 
 def test_suite():
     suite = unittest.TestSuite((
@@ -1683,6 +1694,22 @@ def test_suite():
             checker=renormalizing.RENormalizing([
                 (re.compile(' at 0x[a-fA-F0-9]+'), ''),
                 ]),
+            ),
+        doctest.DocFileSuite(
+            'zk.test',
+            setUp=setUpZK, tearDown=setupstack.tearDown,
+            checker=renormalizing.RENormalizing([
+                (re.compile(r"PrimaryFactory starting on \d+"),
+                 "PrimaryFactory starting on EPORT"),
+                (re.compile(' at 0x[a-fA-F0-9]+'), ''),
+                (re.compile(r"/127.0.0.1:\d+"), "/127.0.0.1:PORT"),
+                (re.compile(r"'127.0.0.1', \d+"), "'127.0.0.1', PORT"),
+                (re.compile(r"pid = \d+"), "pid = PORT"),
+                ]),
+            ),
+        doctest.DocFileSuite(
+            'zkconfig.test',
+            setUp=setUpZKConfig, tearDown=setupstack.tearDown,
             ),
         doctest.DocFileSuite(
             'config.test',

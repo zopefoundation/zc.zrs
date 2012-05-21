@@ -42,5 +42,8 @@
          default="0">
     </key>
 
+    <key name="zookeeper" datatype="string" required="no"></key>
+    <key name="replicate-from-zookeeper" datatype="string" required="no"></key>
+
   </sectiontype>
 </component>

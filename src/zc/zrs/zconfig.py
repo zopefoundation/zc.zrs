@@ -26,6 +26,7 @@ class ZRS:
         config = self.config
         replicate_to = config.replicate_to
         replicate_from = config.replicate_from
+        zookeeper = config.zookeeper
 
         storage = config.base.open()
 
@@ -36,17 +37,31 @@ class ZRS:
                         "Values for replicate-to and "
                         "replicate-from must be different.")
 
-            storage = zc.zrs.primary.Primary(storage, replicate_to.address)
+            if zookeeper:
+                from zc.zrs.zk import Primary
+                storage = Primary(storage, ('', 0),
+                                  zookeeper, replicate_to.address)
+            else:
+                storage = zc.zrs.primary.Primary(storage, replicate_to.address)
 
         elif replicate_from is None:
             raise ValueError(
                 "You must specify replicate-to and/or replicate-from.")
 
         if replicate_from is not None:
-            storage = zc.zrs.secondary.Secondary(
-                storage, replicate_from.address,
-                check_checksums=self.config.check_checksums,
-                keep_alive_delay=self.config.keep_alive_delay,
-                )
+            zookeeper = config.replicate_from_zookeeper or zookeeper
+            if zookeeper:
+                from zc.zrs.zk import Secondary
+                storage = Secondary(
+                    storage, zookeeper, replicate_from.address,
+                    check_checksums=self.config.check_checksums,
+                    keep_alive_delay=self.config.keep_alive_delay,
+                    )
+            else:
+                storage = zc.zrs.secondary.Secondary(
+                    storage, replicate_from.address,
+                    check_checksums=self.config.check_checksums,
+                    keep_alive_delay=self.config.keep_alive_delay,
+                    )
 
         return storage
