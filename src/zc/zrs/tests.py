@@ -1675,6 +1675,8 @@ class FileStorageClientHexTests(FileStorageHexTests):
 
 def setUpZK(test):
     setupstack.setUpDirectory(test)
+    setupstack.context_manager(
+        test, mock.patch('socket.getfqdn')).return_value = 'localhost'
     zc.zk.testing.setUp(test)
 
 def setUpZKConfig(test):
@@ -1703,6 +1705,7 @@ def test_suite():
                  "PrimaryFactory starting on EPORT"),
                 (re.compile(' at 0x[a-fA-F0-9]+'), ''),
                 (re.compile(r"/127.0.0.1:\d+"), "/127.0.0.1:PORT"),
+                (re.compile(r"/localhost:\d+"), "/127.0.0.1:PORT"),
                 (re.compile(r"'127.0.0.1', \d+"), "'127.0.0.1', PORT"),
                 (re.compile(r"pid = \d+"), "pid = PORT"),
                 ]),

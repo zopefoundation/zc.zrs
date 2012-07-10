@@ -27,7 +27,7 @@ class Primary(zc.zrs.primary.Primary):
         super(Primary, self).cfr_listen()
         try:
             addr = self._listener.getHost()
-            self.__zk.register_server(self.__path, (addr.host, addr.port))
+            self.__zk.register_server(self.__path, (self._addr[0], addr.port))
         except:
             import traceback; traceback.print_exc()
             raise

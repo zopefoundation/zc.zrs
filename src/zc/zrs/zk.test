@@ -22,8 +22,12 @@ and a path.
     ... """)
     >>> primary_fs = ZODB.FileStorage.FileStorage('primary.fs')
     >>> replication_path = '/db/replication/providers'
+
+    >>> import socket
+    >>> _ = socket.getfqdn.clear_mock()
+
     >>> primary_storage = zc.zrs.zk.Primary(
-    ...     primary_fs, ('127.0.0.1', 0), connection_string, replication_path
+    ...     primary_fs, ('', 0), connection_string, replication_path
     ...     )
     >>> time.sleep(.1)
 
@@ -31,10 +35,16 @@ and a path.
     /db
       /replication
         /providers
-          /127.0.0.1:55083
+          /localhost:55083
             pid = 5340
 
     >>> primary_db = ZODB.DB(primary_storage)
+
+Note that we passed an empty strings as the host-name part of the address.
+For testing purposes, we've patched socket.getfqdn to return
+``localhost``.
+
+    >>> socket.getfqdn.assert_called_with()
 
 Getting replication addresses
 =============================
