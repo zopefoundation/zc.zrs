@@ -14,8 +14,14 @@ At a high level:
 - 1.x used spread, had a custom server, and was generally a pain to
   install and administer. We'd rather not talk about it. :)
 
-Note that only 2.3 was open-sourced initially.  If there's sufficient
+Note that only 2.4 was open-sourced initially.  If there's sufficient
 demand, we'll make a 2.0 release for supporting older ZODB clients.
+
+2.4.0 2012-07-10
+----------------
+
+- Added support for registering and looking up replication addresses
+  with ZooKeeper.
 
 2.3.4 2010-10-01
 ----------------
