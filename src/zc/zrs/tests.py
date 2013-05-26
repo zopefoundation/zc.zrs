@@ -586,7 +586,6 @@ It exits with a non-zero exit status:
 And we get something in the log to the effect that it closed unexpectedly.
 
     >>> print open('t.log').read(),
-    using set_wakeup_fd
     Main loop terminated.
     The twisted reactor quit unexpectedly
 
@@ -612,7 +611,6 @@ OTOH, if we exit without crashing:
     False
 
     >>> print open('t.log').read(),
-    using set_wakeup_fd
     Main loop terminated.
 
     """
