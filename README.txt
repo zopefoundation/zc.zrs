@@ -12,17 +12,21 @@ running, secondary data is kept updated. In the event of a failure of
 a primary storage, just reconfigure a secondary to be the primary, and
 it can begin handling application requests.
 
+.. contents::
+
 Features
 ========
 
-- Primary/secondary replication.
+- Primary/secondary replication
 
-- Support for read-only secondary storages.
+- Support for read-only secondary storages
+
+- Service registration and discovery with ZooKeeper
 
 Requirements
 ============
 
-- ZODB 3.10 or later.
+- ZODB 3.9 or later.
 
 Installation
 =============
@@ -139,6 +143,14 @@ keep-alive-delay SECONDS
   a client doesn't detect the disconnection.  To prevent this, you can
   use the ``keep-alive-delay`` option to cause the secondary storage
   to send periodic no-operation messages to the server.
+
+ZooKeeper
+=========
+
+Primaries and secondaries can register with ZooKeeper, so Secondaries
+can find primaries to replicate from without needing to configure a
+specific address.  See ``zk.test`` and ``zkconfig.test`` in the source
+directory for more details.
 
 Changes
 =======
