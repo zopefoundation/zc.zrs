@@ -9,7 +9,10 @@ At a high level:
 
 - 2.2.x supported ZODB 3.9, including blobs (but doesn’t support versions).
 
-- 2.0.x supported ZODB 3.8, including versions, but doesn’t support blobs.
+- 2.0.x supported ZODB 3.8, including versions, but doesn’t support blobs
+
+  2.0.5 provides an open-source release for people using older
+        versions of ZODB.
 
 - 1.x used spread, had a custom server, and was generally a pain to
   install and administer. We'd rather not talk about it. :)
