@@ -32,7 +32,7 @@ last-zeo-transaction = zc.zrs.last:main
 
 tests_require = ['zope.testing', 'zc.zk [static]', 'mock']
 
-long_description = open('README.txt').read()
+long_description = open('README.rst').read()
 
 setup(
     name = name,
