@@ -22,7 +22,7 @@ Features
 Requirements
 ============
 
-- ZODB 3.10 or later.
+- ZODB 3.8 or earlier.
 
 Installation
 =============
