@@ -1,6 +1,6 @@
 ##############################################################################
 #
-# Copyright Zope Foundation and Contributors.
+# Copyright (c) 2013 Zope Corporation and Contributors.
 # All Rights Reserved.
 #
 # This software is subject to the provisions of the Zope Public License,
