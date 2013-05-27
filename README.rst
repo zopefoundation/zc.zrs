@@ -152,6 +152,11 @@ can find primaries to replicate from without needing to configure a
 specific address.  See ``zk.test`` and ``zkconfig.test`` in the source
 directory for more details.
 
+Code and contributions
+======================
+
+https://bitbucket.org/zc/zc.zrs/wiki/Project%20Ideas
+
 Changes
 =======
 
