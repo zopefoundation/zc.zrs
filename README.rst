@@ -160,7 +160,14 @@ https://bitbucket.org/zc/zc.zrs/wiki/Project%20Ideas
 Changes
 =======
 
-2.4.0 2012-??-??
+2.4.2 2015-05-27
 ----------------
+
+Initial open-source release for ZODB 3.9 or later.
+
+2.0.5 2015-05-27
+----------------
+
+Initial open-source release for ZODB 3.8 or earlier.
 
 Initial open-source release. Requires ZODB 3.9 or later.
