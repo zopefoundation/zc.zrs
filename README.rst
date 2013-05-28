@@ -160,12 +160,12 @@ https://bitbucket.org/zc/zc.zrs
 Changes
 =======
 
-2.4.2 2015-05-27
+2.4.2 2013-05-27
 ----------------
 
 Initial open-source release for ZODB 3.9 or later.
 
-2.0.5 2015-05-27
+2.0.5 2013-05-27
 ----------------
 
 Initial open-source release for ZODB 3.8.
