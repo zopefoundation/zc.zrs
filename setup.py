@@ -36,7 +36,7 @@ setup(
     version = version,
     author = "Jim Fulton",
     author_email = "jim#zope.com",
-    description = "ZODB Replication Server",
+    description = "ZODB Replication Storage",
     long_description = open('README.rst').read(),
     license = "ZVSL 1.0",
     keywords = "ZODB",
