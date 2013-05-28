@@ -155,7 +155,7 @@ directory for more details.
 Code and contributions
 ======================
 
-https://bitbucket.org/zc/zc.zrs/wiki/Project%20Ideas
+https://bitbucket.org/zc/zc.zrs
 
 Changes
 =======
