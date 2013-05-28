@@ -22,7 +22,10 @@ Features
 Requirements
 ============
 
-- ZODB 3.8 or earlier.
+- ZODB 3.8
+
+  Note that ZEO servers running ZODB 3.8 can serve ZEO clients running
+  ZODB 3.2-3.8.
 
 Installation
 =============
@@ -151,5 +154,5 @@ Initial open-source release for ZODB 3.9 or later.
 2.0.5 2015-05-27
 ----------------
 
-Initial open-source release for ZODB 3.8 or earlier.
+Initial open-source release for ZODB 3.8.
 
