@@ -23,7 +23,7 @@ except ImportError:
 
 try:
     from setuptools import setup, find_packages
-except:
+except ImportError:
     from distutils.core import setup, find_packages
 
 
@@ -59,6 +59,7 @@ setup(
     package_dir = {'':'src'},
     namespace_packages = ['zc'],
     install_requires = [
+        'setuptools',
         'ZODB3',
         'Twisted',
         ],
