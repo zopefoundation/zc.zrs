@@ -46,7 +46,7 @@ setup(
 
     packages = ['zc', 'zc.zrs'],
     include_package_data = True,
-    data_files = [('.', ['README.txt'])],
+    data_files = [('.', ['README.rst'])],
     zip_safe = True,
     entry_points = entry_points,
     package_dir = {'':'src'},
