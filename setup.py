@@ -15,10 +15,17 @@
 name = 'zc.zrs'
 version = '2.4.3dev'
 
-from ez_setup import use_setuptools
-use_setuptools()
+try:
+    from ez_setup import use_setuptools
+    use_setuptools()
+except ImportError:
+    pass
 
-from setuptools import setup, find_packages
+try:
+    from setuptools import setup, find_packages
+except ImportError:
+    from distutils.core import setup, find_packages
+
 
 import os, shutil
 if os.path.isdir('build'):
