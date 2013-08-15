@@ -160,6 +160,11 @@ https://bitbucket.org/zc/zc.zrs
 Changes
 =======
 
+2.4.3 2013-08-15
+----------------
+
+Packaging update: allow installation without setuptools.
+
 2.4.2 2013-05-27
 ----------------
 

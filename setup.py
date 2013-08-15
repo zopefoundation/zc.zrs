@@ -13,7 +13,7 @@
 #
 ##############################################################################
 name = 'zc.zrs'
-version = '2.4.3dev'
+version = '2.4.3'
 
 try:
     from ez_setup import use_setuptools
