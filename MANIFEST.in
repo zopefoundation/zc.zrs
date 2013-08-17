@@ -1,4 +1,5 @@
 recursive-include src/zc *.txt
 recursive-include src/zc *.test
+recursive-include src/zc *.xml
 include *.txt
 include *.rst

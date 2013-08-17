@@ -160,6 +160,11 @@ https://bitbucket.org/zc/zc.zrs
 Changes
 =======
 
+2.4.4 2013-08-17
+----------------
+
+Fixed packaging bug: component.xml was left out.
+
 2.4.3 2013-08-15
 ----------------
 
