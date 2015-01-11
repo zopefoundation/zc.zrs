@@ -1671,11 +1671,28 @@ class FileStorageClientHexTests(FileStorageHexTests):
 #
 ##############################################################################
 
+old_base64 = """
+RlMyMQOsOkgWySW7AAAAAAAAAJYgAAAAGQAAaW5pdGlhbCBkYXRhYmFzZSBjcmVhdGlvbgAAAAAA
+AAAAA6w6SBbJJbsAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAPChjcGVyc2lzdGVudC5tYXBwaW5n
+ClBlcnNpc3RlbnRNYXBwaW5nCnEBTnQufXECVQRkYXRhcQN9cQRzLgAAAAAAAACW
+"""
+current_base64 = """\
+RlMyMQOsOkk7V3+IAAAAAAAAAJYgAAAAGQAAaW5pdGlhbCBkYXRhYmFzZSBjcmVhdGlvbgAAAAAA
+AAAAA6w6STtXf4gAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAPChjcGVyc2lzdGVudC5tYXBwaW5n
+ClBlcnNpc3RlbnRNYXBwaW5nCnEBTnQufXECVQRkYXRhcQN9cQRzLgAAAAAAAACW
+"""
+
 def setUpZK(test):
     setupstack.setUpDirectory(test)
     setupstack.context_manager(
         test, mock.patch('socket.getfqdn')).return_value = 'localhost'
     zc.zk.testing.setUp(test)
+
+def setUpNagios(test):
+    setUpZK(test)
+    for name in 'old', 'current':
+        with open(name+'.fs', 'w') as f:
+            f.write(globals()[name+'_base64'].decode('base64'))
 
 def setUpZKConfig(test):
     setupstack.context_manager(test, mock.patch('ZODB.FileStorage.FileStorage'))
@@ -1718,6 +1735,13 @@ def test_suite():
                 (re.compile(' at 0x[a-fA-F0-9]+'), ''),
                 ]),
             setUp=setUpTime, tearDown=setupstack.tearDown,
+            ),
+        doctest.DocFileSuite(
+            'nagios.rst',
+            checker=renormalizing.RENormalizing([
+                (re.compile(r"localhost:\d+"), "127.0.0.1:PORT"),
+                ]),
+            setUp=setUpNagios, tearDown=setupstack.tearDown,
             ),
         doctest.DocTestSuite(
             setUp=setUp, tearDown=setupstack.tearDown,

@@ -160,6 +160,8 @@ https://bitbucket.org/zc/zc.zrs
 Changes
 =======
 
+Added nagios plugins for monitoring replication.
+
 2.4.4 2013-08-17
 ----------------
 
