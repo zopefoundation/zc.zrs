@@ -201,10 +201,10 @@ Let's create some more interesting blob data.
     >>> root['empty'].__class__
     <class 'ZODB.blob.Blob'>
 
-    >>> root['empty'].open().read()
+    >>> root['empty'].open().read() # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    POSKeyError: 'No blob file'
+    POSKeyError: u'No blob file at ...
 
     >>> proot['empty'].open('w').write('new data')
     >>> commit()

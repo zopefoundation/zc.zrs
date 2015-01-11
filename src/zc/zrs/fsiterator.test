@@ -126,7 +126,7 @@ ZODB.utils.z64 (all nulls) if the database is empty.  Passing an ltid
 that is too high, will cause an error:
 
     >>> def tid_from_time(t):
-    ...     return repr(TimeStamp(*(time.gmtime(t)[:5] + (t%60,))))
+    ...     return eval(repr(TimeStamp(*(time.gmtime(t)[:5] + (t%60,)))))
 
     >>> tid = tid_from_time(time.time()+1)
     >>> zc.zrs.primary.FileStorageIterator(fs, condition, tid)

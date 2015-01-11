@@ -37,7 +37,7 @@ zrsmonitor-script = zc.zrs.monitor:main
 last-zeo-transaction = zc.zrs.last:main
 """
 
-tests_require = ['zope.testing', 'zc.zk [static]', 'mock']
+tests_require = ['zope.testing', 'zc.zk', 'mock', 'zc.zkzeo [monitor]']
 
 long_description = open('README.rst').read()
 
@@ -60,7 +60,7 @@ setup(
     namespace_packages = ['zc'],
     install_requires = [
         'setuptools',
-        'ZODB3',
+        'ZODB',
         'Twisted',
         ],
     extras_require = dict(test=tests_require),

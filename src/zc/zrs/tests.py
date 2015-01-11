@@ -89,7 +89,7 @@ If we try to iterate from the beginning, we'll get an error:
     CorruptedDataError: Error reading unknown oid.  Found '' at 4
 
     >>> def tid_from_time(t):
-    ...     return repr(TimeStamp(*(time.gmtime(t)[:5] + (t%60,))))
+    ...     return eval(repr(TimeStamp(*(time.gmtime(t)[:5] + (t%60,)))))
 
     >>> tid = tid_from_time(time.time()-70)
     >>> zc.zrs.primary.FileStorageIterator(fs, condition, tid)
@@ -403,8 +403,8 @@ There a number of cases to consider when closing a secondary:
     >>> print fs._transaction
     None
 
-    >>> fs._pos
-    4L
+    >>> print fs._pos
+    4
 
 """
 
