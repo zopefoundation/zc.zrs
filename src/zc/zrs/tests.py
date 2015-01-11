@@ -1693,6 +1693,8 @@ def setUpNagios(test):
     for name in 'old', 'current':
         with open(name+'.fs', 'w') as f:
             f.write(globals()[name+'_base64'].decode('base64'))
+    import zc.zk.monitor
+    del zc.zk.monitor._servers[:]
 
 def setUpZKConfig(test):
     setupstack.context_manager(test, mock.patch('ZODB.FileStorage.FileStorage'))
