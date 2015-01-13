@@ -35,6 +35,8 @@ entry_points = """
 [console_scripts]
 zrsmonitor-script = zc.zrs.monitor:main
 last-zeo-transaction = zc.zrs.last:main
+zrs-nagios = zc.zrs.nagios:basic
+zkzrs-nagios = zc.zrs.nagios:zk
 """
 
 tests_require = ['zope.testing', 'zc.zk', 'mock', 'zc.zkzeo [monitor]']
