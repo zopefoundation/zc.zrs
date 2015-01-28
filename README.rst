@@ -160,6 +160,8 @@ https://github.com/zc/zrs
 Changes
 =======
 
+Include src/**/*.rst files in sdist.
+
 2.5.0 2015-01-25
 ----------------
 
