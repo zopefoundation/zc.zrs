@@ -176,7 +176,7 @@ def zk(args=None):
     paddr = find_server(
         zookeeper,
         options.primary if options.primary else path + '/providers',
-        options.zc_monitor_address)
+        None)
     saddr = find_server(
         zookeeper,
         path if options.primary else path + '/secondary/providers',

@@ -160,6 +160,15 @@ https://github.com/zc/zrs
 Changes
 =======
 
+2.5.2 2015-02-07
+----------------
+
+Fixed: the nagios monitor only worked if the primary and secondary ran
+       in the same process (as in they did in the tests.)
+
+2.5.1 2015-01-28
+----------------
+
 Include src/**/*.rst files in sdist.
 
 2.5.0 2015-01-25

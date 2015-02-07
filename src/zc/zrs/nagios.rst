@@ -189,6 +189,27 @@ following options:
     ...     /secondary
     ...       /providers
     ... ''')
+    >>> stop_current = zc.zkzeo.runzeo.test("""
+    ...   <zeo>
+    ...      address 127.0.0.1
+    ...   </zeo>
+    ...
+    ...   <zookeeper>
+    ...      connection zookeeper.example.com:2181
+    ...      path /databases/demo/providers
+    ...   </zookeeper>
+    ...
+    ...   <filestorage>
+    ...      path current.fs
+    ...   </filestorage>
+    ... """)
+    >>> import zc.zk.monitor
+
+    We need to clear the primary server info in memory, bacause normally, the
+    secondary doesn't run in the same process as the primary. :)
+
+    >>> del zc.zk.monitor._servers[:]
+
     >>> stop_old = zc.zkzeo.runzeo.test("""
     ...   <zeo>
     ...      address 127.0.0.1
@@ -202,20 +223,6 @@ following options:
     ...
     ...   <filestorage>
     ...      path old.fs
-    ...   </filestorage>
-    ... """)
-    >>> stop_current = zc.zkzeo.runzeo.test("""
-    ...   <zeo>
-    ...      address 127.0.0.1
-    ...   </zeo>
-    ...
-    ...   <zookeeper>
-    ...      connection zookeeper.example.com:2181
-    ...      path /databases/demo/providers
-    ...   </zookeeper>
-    ...
-    ...   <filestorage>
-    ...      path current.fs
     ...   </filestorage>
     ... """)
 
