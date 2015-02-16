@@ -78,8 +78,8 @@ def get_ts(addr, name):
 
 def check(paddr, saddr, warn, error, output_metrics):
     try:
-        primary   = get_ts(paddr, 'primary')
         secondary = get_ts(saddr, 'secondary')
+        primary   = get_ts(paddr, 'primary')
     except SystemExit as e:
         return e.code
     output = []

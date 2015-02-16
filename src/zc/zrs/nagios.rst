@@ -95,14 +95,14 @@ addresses as positional arguments.
 
     Can't connect
 
-    >>> stop_old()
-    >>> nagios('-w33 -e44 -m'  .split()+addrs)
-    Can't connect to secondary at 'localhost:25441': [Errno 61] Connection refused
-    2
-
     >>> stop_current()
     >>> nagios('-w33 -e44 -m'  .split()+addrs)
-    Can't connect to primary at 'localhost:28234': [Errno 61] Connection refused
+    Can't connect to primary at 'localhost:28234': [Errno 111] Connection refused
+    2
+
+    >>> stop_old()
+    >>> nagios('-w33 -e44 -m'  .split()+addrs)
+    Can't connect to secondary at 'localhost:25441': [Errno 111] Connection refused
     2
 
     Multiple storages (sigh):

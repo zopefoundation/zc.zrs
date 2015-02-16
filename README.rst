@@ -160,6 +160,13 @@ https://github.com/zc/zrs
 Changes
 =======
 
+2.5.3 2015-02-16
+----------------
+
+- Fixed: monitor got the primary last transaction time before before
+  getting the secondary last transaction time, sometimes leading to
+  spurious reports of the primary being behind the secondary.
+
 2.5.2 2015-02-07
 ----------------
 
