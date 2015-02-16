@@ -176,7 +176,7 @@ Fixed: the nagios monitor only worked if the primary and secondary ran
 2.5.1 2015-01-28
 ----------------
 
-Include src/**/*.rst files in sdist.
+Include ``src/**/*.rst`` files in sdist.
 
 2.5.0 2015-01-25
 ----------------
