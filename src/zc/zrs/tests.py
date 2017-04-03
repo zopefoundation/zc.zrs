@@ -1740,7 +1740,7 @@ def test_suite():
         doctest.DocFileSuite(
             'nagios.rst',
             checker=renormalizing.RENormalizing([
-                (re.compile(r"localhost:\d+"), "127.0.0.1:PORT"),
+                (re.compile(r"(localhost|127.0.0.1):\d+"), "127.0.0.1:PORT"),
                 (re.compile(r"\[Errno \d+\]"), "[Errno NN]"),
                 ]),
             setUp=setUpNagios, tearDown=setupstack.tearDown,
