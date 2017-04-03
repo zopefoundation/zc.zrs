@@ -7,4 +7,11 @@ env:
 install:
   - pip install -U pip setuptools zc.buildout
   - buildout parts=test -c $CONFIG
-script: bin/test -vvv
+script: bin/test -vvvt crashing_reactor_logs_as_such
+
+cache:
+  directories:
+    - $HOME/.cache/pip
+    - eggs
+before_cache:
+    - rm -f $HOME/.cache/pip/log/debug.log
