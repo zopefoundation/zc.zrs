@@ -157,7 +157,5 @@ For earlier changes, see the `HISTORY.rst <HISTORY.rst>`_.
 
 - Add support for ZODB 5
 
-- Drop support for earlier ZODB versions
-
 - Drop ZooKeeper support.
 
