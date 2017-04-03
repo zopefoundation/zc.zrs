@@ -23,6 +23,8 @@ logger = logging.getLogger(__name__)
 
 def log_twisted(data):
     message = data['message']
+    if not message:
+        message = [data['log_format'].format(**data)]
     message = '\n'.join([str(m) for m in message])
     if data['isError']:
         logger.error(message)

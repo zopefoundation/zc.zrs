@@ -342,7 +342,7 @@ There a number of cases to consider when closing a secondary:
     INFO zc.zrs.secondary:
     IPv4Address(TCP, '127.0.0.1', 47248):
     Disconnected <twisted.python.failure.Failure
-      <class 'twisted.internet.error.ConnectionDone'>>
+      twisted.internet.error.ConnectionDone: Connection was closed cleanly.>
 
     >>> reactor.later
     []
@@ -392,7 +392,7 @@ There a number of cases to consider when closing a secondary:
     INFO zc.zrs.secondary:
     IPv4Address(TCP, '127.0.0.1', 47249):
     Disconnected <twisted.python.failure.Failure
-      <class 'twisted.internet.error.ConnectionDone'>>
+      twisted.internet.error.ConnectionDone: Connection was closed cleanly.>
 
     >>> reactor.later
     []
@@ -429,7 +429,7 @@ def primary_data_input_errors():
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47245):
     Disconnected <twisted.python.failure.Failure
-    <class 'twisted.internet.error.ConnectionDone'>>
+    twisted.internet.error.ConnectionDone: Connection was closed cleanly.>
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47245): Closed
 
@@ -443,7 +443,7 @@ def primary_data_input_errors():
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47246):
     Disconnected <twisted.python.failure.Failure
-      <class 'twisted.internet.error.ConnectionDone'>>
+      twisted.internet.error.ConnectionDone: Connection was closed cleanly.>
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47246): Closed
 
@@ -458,7 +458,7 @@ def primary_data_input_errors():
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47247):
     Disconnected <twisted.python.failure.Failure
-      <class 'twisted.internet.error.ConnectionDone'>>
+      twisted.internet.error.ConnectionDone: Connection was closed cleanly.>
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47247): Closed
 
@@ -473,7 +473,7 @@ def primary_data_input_errors():
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47248):
     Disconnected <twisted.python.failure.Failure
-      <class 'twisted.internet.error.ConnectionDone'>>
+      twisted.internet.error.ConnectionDone: Connection was closed cleanly.>
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47248): Closed
 
@@ -538,7 +538,7 @@ it does, it should simply close.
     INFO zc.zrs.secondary:
     IPv4Address(TCP, '127.0.0.1', 47245):
     Disconnected <twisted.python.failure.Failure
-      <class 'twisted.internet.error.ConnectionDone'>>
+      twisted.internet.error.ConnectionDone: Connection was closed cleanly.>
 
     >>> reactor.later
     []
@@ -755,7 +755,7 @@ def secondary_gives_a_tid_that_is_too_high():
     IPv4Address(TCP, '127.0.0.1', 47245):
     Disconnected
     <twisted.python.failure.Failure
-      <class 'twisted.internet.error.ConnectionDone'>>
+      twisted.internet.error.ConnectionDone: Connection was closed cleanly.>
 
     """
 
@@ -817,7 +817,7 @@ def scan_control_stops_scans_on_client_disconnects():
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47245): Disconnected
     <twisted.python.failure.Failure
-      <class 'twisted.internet.error.ConnectionDone'>>
+      twisted.internet.error.ConnectionDone: Connection was closed cleanly.>
 
 
     >>> connection = reactor.connect(('', 8000))
@@ -834,7 +834,7 @@ def scan_control_stops_scans_on_client_disconnects():
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47246): Disconnected
     <twisted.python.failure.Failure
-      <class 'twisted.internet.error.ConnectionDone'>>
+      twisted.internet.error.ConnectionDone: Connection was closed cleanly.>
 
     >>> time.sleep(.1)
     >>> zc.zrs.primary.ScanControl = ScanControl

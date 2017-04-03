@@ -245,7 +245,7 @@ When a primary storage is set up with a blob storage, it requires protocol 2.1:
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47246):
     Disconnected <twisted.python.failure.Failure
-    <class 'twisted.internet.error.ConnectionDone'>>
+    twisted.internet.error.ConnectionDone: Connection was closed cleanly.>
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47246): Closed
 
@@ -255,7 +255,7 @@ When a primary storage is set up with a blob storage, it requires protocol 2.1:
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47245):
        Disconnected <twisted.python.failure.Failure
-       <class 'twisted.internet.error.ConnectionDone'>>
+       twisted.internet.error.ConnectionDone: Connection was closed cleanly.>
 
     >>> ps.close() # doctest: +NORMALIZE_WHITESPACE
     INFO zc.zrs.primary:
