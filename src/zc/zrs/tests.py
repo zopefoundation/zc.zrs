@@ -555,6 +555,8 @@ We'll write a silly script that simply starts the reactor and tells it
 to crash:
 
     >>> open('t.py', 'w').write('''
+    ... import sys
+    ... print >>sys.stderr, sys.path
     ... import logging, time
     ... import twisted.internet
     ... import zc.zrs.reactor
