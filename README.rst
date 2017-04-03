@@ -147,8 +147,10 @@ Code and contributions
 
 https://github.com/zc/zrs
 
-Changes
-=======
+Recent Changes
+==============
+
+For earlier changes, see the `HISTORY.rst <HISTORY.rst>`_.
 
 3.0.0 (unreleased)
 ------------------
@@ -159,47 +161,3 @@ Changes
 
 - Drop ZooKeeper support.
 
-2.5.3 2015-02-16
-----------------
-
-- Fixed: monitor got the primary last transaction time before before
-  getting the secondary last transaction time, sometimes leading to
-  spurious reports of the primary being behind the secondary.
-
-2.5.2 2015-02-07
-----------------
-
-Fixed: the nagios monitor only worked if the primary and secondary ran
-       in the same process (as in they did in the tests.)
-
-2.5.1 2015-01-28
-----------------
-
-Include ``src/**/*.rst`` files in sdist.
-
-2.5.0 2015-01-25
-----------------
-
-Added nagios plugins for monitoring replication.
-
-2.4.4 2013-08-17
-----------------
-
-Fixed packaging bug: component.xml was left out.
-
-2.4.3 2013-08-15
-----------------
-
-Packaging update: allow installation without setuptools.
-
-2.4.2 2013-05-27
-----------------
-
-Initial open-source release for ZODB 3.9 or later.
-
-2.0.5 2013-05-27
-----------------
-
-Initial open-source release for ZODB 3.8.
-
-Initial open-source release. Requires ZODB 3.9 or later.

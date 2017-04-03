@@ -1,24 +1,43 @@
 Release History
 ===============
 
-At a high level:
+2.5.3 2015-02-16
+----------------
 
-- 2.4.x Open-source release.  Removes a number of unused features.
+- Fixed: monitor got the primary last transaction time before before
+  getting the secondary last transaction time, sometimes leading to
+  spurious reports of the primary being behind the secondary.
 
-- 2.3.x supported ZODB 3.10
+2.5.2 2015-02-07
+----------------
 
-- 2.2.x supported ZODB 3.9, including blobs (but doesn’t support versions).
+Fixed: the nagios monitor only worked if the primary and secondary ran
+       in the same process (as in they did in the tests.)
 
-- 2.0.x supported ZODB 3.8, including versions, but doesn’t support blobs
+2.5.1 2015-01-28
+----------------
 
-  2.0.5 provides an open-source release for people using older
-        versions of ZODB.
+Include ``src/**/*.rst`` files in sdist.
 
-- 1.x used spread, had a custom server, and was generally a pain to
-  install and administer. We'd rather not talk about it. :)
+2.5.0 2015-01-25
+----------------
 
-Note that only 2.4 was open-sourced initially.  If there's sufficient
-demand, we'll make a 2.0 release for supporting older ZODB clients.
+Added nagios plugins for monitoring replication.
+
+2.4.4 2013-08-17
+----------------
+
+Fixed packaging bug: component.xml was left out.
+
+2.4.3 2013-08-15
+----------------
+
+Packaging update: allow installation without setuptools.
+
+2.4.2 2013-05-27
+----------------
+
+Initial open-source release for ZODB 3.9 or later.
 
 2.4.1 2012-07-10
 ----------------
