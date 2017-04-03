@@ -1210,7 +1210,7 @@ def setUpTime(test):
     setupstack.register(test, join, threading.enumerate())
     setupstack.setUpDirectory(test)
     global now
-    now = time.mktime((2007, 3, 21, 15, 32, 57, 2, 80, 0))
+    now = 1174509177
     oldtime = time.time
     setupstack.register(test, lambda : setattr(time, 'time', oldtime))
     time.time = lambda : now
@@ -1499,7 +1499,7 @@ class ZEOTests(ZEO.tests.testZEO.FullGenericTests):
                                                    read_only=True)
                 comparedbs_packed(self, fsp, self.__sfs)
                 break
-            except:
+            except Exception:
                 # Hm. Maybe we didn't wait long enough before starting
                 # the compare.  Let's wait a tad longer.
                 if i == 999:
