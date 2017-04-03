@@ -21,8 +21,6 @@ Features
 
 - Support for read-only secondary storages
 
-- Service registration and discovery with ZooKeeper
-
 Requirements
 ============
 
@@ -144,14 +142,6 @@ keep-alive-delay SECONDS
   use the ``keep-alive-delay`` option to cause the secondary storage
   to send periodic no-operation messages to the server.
 
-ZooKeeper
-=========
-
-Primaries and secondaries can register with ZooKeeper, so Secondaries
-can find primaries to replicate from without needing to configure a
-specific address.  See ``zk.test`` and ``zkconfig.test`` in the source
-directory for more details.
-
 Code and contributions
 ======================
 
@@ -159,6 +149,15 @@ https://github.com/zc/zrs
 
 Changes
 =======
+
+3.0.0 (unreleased)
+------------------
+
+- Add support for ZODB 5
+
+- Drop support for earlier ZODB versions
+
+- Drop ZooKeeper support.
 
 2.5.3 2015-02-16
 ----------------

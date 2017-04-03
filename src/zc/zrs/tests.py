@@ -47,7 +47,6 @@ import twisted.internet.base
 import twisted.internet.error
 import twisted.python.failure
 import unittest
-import zc.zk.testing
 import zc.zrs.primary
 import zc.zrs.reactor
 import zc.zrs.secondary
@@ -1253,7 +1252,7 @@ class TestPrimary(zc.zrs.primary.Primary):
     _transaction_count = 0
     def tpc_finish(self, *args):
         self._transaction_count += 1
-        zc.zrs.primary.Primary.tpc_finish(self, *args)
+        tid = zc.zrs.primary.Primary.tpc_finish(self, *args)
         if self._transaction_count%20 == 0:
             # be annoying and disconnect our clients every 20 transactions.
             # Hee hee.
@@ -1262,7 +1261,7 @@ class TestPrimary(zc.zrs.primary.Primary):
             self._reactor.doLater()
             for instance in self._factory.instances:
                 instance._stop()
-
+        return tid
 
 class BasePrimaryStorageTests(StorageTestBase.StorageTestBase):
 
@@ -1461,7 +1460,7 @@ class PrimaryHexStorageTestsWithBobs(PrimaryStorageTestsWithBobs):
 class ZEOTests(ZEO.tests.testZEO.FullGenericTests):
 
     def getConfig(self):
-        port = self._ZEOTests_port = ZEO.tests.testZEO.get_port()
+        port = self._ZEOTests_port = ZEO.tests.forker.get_port()
         return """
         %%import zc.zrs
 
@@ -1518,7 +1517,7 @@ class ZEOTests(ZEO.tests.testZEO.FullGenericTests):
 class BlobWritableCacheTests(ZEO.tests.testZEO.BlobWritableCacheTests):
 
     def getConfig(self):
-        port = self._ZEOTests_port = ZEO.tests.testZEO.get_port()
+        port = self._ZEOTests_port = ZEO.tests.forker.get_port()
         return """
         %%import zc.zrs
 
@@ -1534,7 +1533,7 @@ class BlobWritableCacheTests(ZEO.tests.testZEO.BlobWritableCacheTests):
 class ZEOHexTests(ZEOTests):
 
     def getConfig(self):
-        port = self._ZEOTests_port = ZEO.tests.testZEO.get_port()
+        port = self._ZEOTests_port = ZEO.tests.forker.get_port()
         return """
         %%import zc.zrs
         %%import zc.zrs.xformstorage
@@ -1560,7 +1559,7 @@ class ZEOHexClientHexTests(ZEOHexTests):
 class ZEOHexClientTests(ZEOHexTests):
 
     def getConfig(self):
-        port = self._ZEOTests_port = ZEO.tests.testZEO.get_port()
+        port = self._ZEOTests_port = ZEO.tests.forker.get_port()
         return """
         %%import zc.zrs
         %%import zc.zrs.xformstorage
@@ -1681,25 +1680,11 @@ AAAAA6w6STtXf4gAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAPChjcGVyc2lzdGVudC5tYXBwaW5n
 ClBlcnNpc3RlbnRNYXBwaW5nCnEBTnQufXECVQRkYXRhcQN9cQRzLgAAAAAAAACW
 """
 
-def setUpZK(test):
-    setupstack.setUpDirectory(test)
-    setupstack.context_manager(
-        test, mock.patch('socket.getfqdn')).return_value = 'localhost'
-    zc.zk.testing.setUp(test)
-
 def setUpNagios(test):
-    setUpZK(test)
+    setupstack.setUpDirectory(test)
     for name in 'old', 'current':
         with open(name+'.fs', 'w') as f:
             f.write(globals()[name+'_base64'].decode('base64'))
-    import zc.zk.monitor
-    del zc.zk.monitor._servers[:]
-
-def setUpZKConfig(test):
-    setupstack.context_manager(test, mock.patch('ZODB.FileStorage.FileStorage'))
-    setupstack.context_manager(test, mock.patch('zc.zrs.zk.Primary'))
-    setupstack.context_manager(test, mock.patch('zc.zrs.zk.Secondary'))
-
 
 def test_suite():
     suite = unittest.TestSuite((
@@ -1712,23 +1697,6 @@ def test_suite():
             checker=renormalizing.RENormalizing([
                 (re.compile(' at 0x[a-fA-F0-9]+'), ''),
                 ]),
-            ),
-        doctest.DocFileSuite(
-            'zk.test',
-            setUp=setUpZK, tearDown=setupstack.tearDown,
-            checker=renormalizing.RENormalizing([
-                (re.compile(r"PrimaryFactory starting on \d+"),
-                 "PrimaryFactory starting on EPORT"),
-                (re.compile(' at 0x[a-fA-F0-9]+'), ''),
-                (re.compile(r"/127.0.0.1:\d+"), "/127.0.0.1:PORT"),
-                (re.compile(r"/localhost:\d+"), "/127.0.0.1:PORT"),
-                (re.compile(r"'127.0.0.1', \d+"), "'127.0.0.1', PORT"),
-                (re.compile(r"pid = \d+"), "pid = PORT"),
-                ]),
-            ),
-        doctest.DocFileSuite(
-            'zkconfig.test',
-            setUp=setUpZKConfig, tearDown=setupstack.tearDown,
             ),
         doctest.DocFileSuite(
             'config.test',

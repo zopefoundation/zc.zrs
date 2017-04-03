@@ -36,10 +36,9 @@ entry_points = """
 zrsmonitor-script = zc.zrs.monitor:main
 last-zeo-transaction = zc.zrs.last:main
 zrs-nagios = zc.zrs.nagios:basic
-zkzrs-nagios = zc.zrs.nagios:zk
 """
 
-tests_require = ['zope.testing', 'zc.zk', 'mock', 'zc.zkzeo [monitor]']
+tests_require = ['zope.testing', 'mock', 'ZEO']
 
 long_description = open('README.rst').read()
 
@@ -49,7 +48,7 @@ setup(
     description = long_description.split('\n')[1],
     version = version,
     author = "Jim Fulton",
-    author_email = "jim#zope.com",
+    author_email = "jim@jimfulton.info",
     license = "ZPL 2.1",
     keywords = "ZODB",
 
