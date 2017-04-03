@@ -42,6 +42,20 @@ tests_require = ['zope.testing', 'mock', 'ZEO']
 
 long_description = open('README.rst').read()
 
+classifiers = """\
+Intended Audience :: Developers
+License :: OSI Approved :: Zope Public License
+Programming Language :: Python
+Programming Language :: Python :: 2
+Programming Language :: Python :: 2.7
+Programming Language :: Python :: Implementation :: CPython
+Topic :: Database
+Topic :: Software Development :: Libraries :: Python Modules
+Operating System :: Microsoft :: Windows
+Operating System :: Unix
+Framework :: ZODB
+""".strip().split('\n')
+
 setup(
     name = name,
     long_description = long_description,
@@ -51,6 +65,8 @@ setup(
     author_email = "jim@jimfulton.info",
     license = "ZPL 2.1",
     keywords = "ZODB",
+    classifiers = classifiers,
+    url='https://github.com/zc/zrs',
 
     packages = ['zc', 'zc.zrs'],
     include_package_data = True,
