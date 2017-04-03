@@ -8,8 +8,6 @@ env:
 install:
   - pip install -U pip setuptools zc.buildout
   - buildout parts=test -c $CONFIG
-before_script:
-  - export TZ=US/Eastern
 script: bin/test -vvv
 cache:
   directories:
