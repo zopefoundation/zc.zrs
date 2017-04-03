@@ -1,0 +1,17 @@
+language: python
+sudo: false
+python:
+  - 2.7
+env:
+  - CONFIG=buildout.cfg
+  - CONFIG=zodb4.cfg
+install:
+  - pip install -U pip setuptools zc.buildout
+  - buildout parts=test -c $CONFIG
+script: bin/test -vvv
+cache:
+  directories:
+    - $HOME/.cache/pip
+    - eggs
+before_cache:
+    - rm -f $HOME/.cache/pip/log/debug.log
