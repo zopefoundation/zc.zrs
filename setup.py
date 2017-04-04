@@ -40,7 +40,8 @@ zrs-nagios = zc.zrs.nagios:basic
 
 tests_require = ['zope.testing', 'mock', 'ZEO']
 
-long_description = open('README.rst').read()
+long_description = (
+    open('README.rst').read() + '\n\n' + open('CHANGES.rst').read())
 
 classifiers = """\
 Intended Audience :: Developers
