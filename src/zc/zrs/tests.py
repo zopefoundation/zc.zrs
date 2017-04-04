@@ -557,8 +557,6 @@ to crash:
     >>> open('t.py', 'w').write('''
     ... import sys
     ... sys.path = %r
-    ... print >>sys.stderr, sys.path
-    ... print >>sys.stderr, sys.modules
     ... _ = sys.modules.pop('zc', None)
     ... import logging, time
     ... import twisted.internet
@@ -595,6 +593,9 @@ And we get something in the log to the effect that it closed unexpectedly.
 OTOH, if we exit without crashing:
 
     >>> open('t.py', 'w').write('''
+    ... import sys
+    ... sys.path = %r
+    ... _ = sys.modules.pop('zc', None)
     ... import logging, time
     ... import twisted.internet
     ... import zc.zrs.reactor
@@ -604,11 +605,9 @@ OTOH, if we exit without crashing:
     ... logging.getLogger().addHandler(handler)
     ... zc.zrs.reactor.reactor()
     ... time.sleep(0.1)
-    ... ''')
+    ... ''' % sys.path)
 
-    >>> p = subprocess.Popen(
-    ...       [sys.executable, 't.py'],
-    ...       env=env)
+    >>> p = subprocess.Popen([sys.executable, 't.py'])
 
     >>> bool(p.wait())
     False
