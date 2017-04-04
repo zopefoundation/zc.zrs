@@ -1,5 +1,9 @@
-recursive-include src/zc *.rst
-recursive-include src/zc *.test
-recursive-include src/zc *.xml
+recursive-include src *.rst
+recursive-include src *.test
+recursive-include src *.xml
+recursive-include src *.rst
+recursive-include src *.py
 include *.txt
 include *.rst
+include TWISTED-LICENSE
+exclude *.cfg
