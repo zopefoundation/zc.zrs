@@ -561,6 +561,8 @@ to crash:
     ... print >>sys.stderr, sys.modules
     ... import logging, time
     ... import twisted.internet
+    ... import zc
+    ... print >>sys.stderr, __path__
     ... import zc.zrs
     ... import zc.zrs.reactor
     ...
