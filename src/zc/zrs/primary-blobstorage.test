@@ -107,14 +107,12 @@ The next message is a store message for object 0:
 The data are sent as a separate (non-pickle) message:
 
     >>> data = connection.read(raw=True)
-    >>> len(data)
-    60
 
 Finally, there will be a commit record marking the end of the
 transaction:
 
-    >>> connection.read()
-    ('C', ('\x1a\x14\x0e\x11^\xf2\xe3\x15\xdb\xcb[z\x03+\xf2"',))
+    >>> connection.read() # doctest: +ELLIPSIS
+    ('C', (...,))
 
 
 We can continue reading any additional transactions. In this case
@@ -131,8 +129,8 @@ there is only one:
     (0, '2007-03-21 20:32:58.000000', '', 78, None)
     (1, '2007-03-21 20:32:58.000000', '', 57, None)
 
-    >>> connection.read()
-    ('C', ('\x04\xc8\x8d\xd0e\xe2\xdba:\x10uTk\x85\x04\xa7',))
+    >>> connection.read() # doctest: +ELLIPSIS
+    ('C', (...,))
 
     >>> import time
     >>> time.sleep(0.1)
@@ -173,8 +171,8 @@ only one block:
     >>> connection.read(raw=True)
     'test\n'
 
-    >>> connection.read()
-    ('C', ("\x86:\x0f\x97<`\xb5l'\x87/:\xa4\xa5\xc6\x1c",))
+    >>> connection.read() # doctest: +ELLIPSIS
+    ('C', (...,))
 
 
 Let's try some bigger blobs:
@@ -201,35 +199,36 @@ Let's try some bigger blobs:
     ...     print rdata == wdata
     ...     print repr(connection.read())
     ...     print
+    ... # doctest: +ELLIPSIS
     ('2007-03-21 20:33:00.000000', ' ', '', '', {})
     (0, '2007-03-21 20:33:00.000000', '', 120, None)
     ('B', 3, '2007-03-21 20:33:00.000000', '', 21, None, 6L)
     True
-    ('C', ('k\xd1]\xd6\xb3E\xbd\xa6\x0f)`\x9f\xe4 GM',))
+    ('C', (...,))
     <BLANKLINE>
     ('2007-03-21 20:33:01.000000', ' ', '', '', {})
     (0, '2007-03-21 20:33:01.000000', '', 120, None)
     ('B', 4, '2007-03-21 20:33:01.000000', '', 21, None, 1L)
     True
-    ('C', ('W\xbb.\xcd\xab(\xfc\xf5\xf3GQ|B\xedMg',))
+    ('C', (...,))
     <BLANKLINE>
     ('2007-03-21 20:33:02.000000', ' ', '', '', {})
     (0, '2007-03-21 20:33:02.000000', '', 120, None)
     ('B', 5, '2007-03-21 20:33:02.000000', '', 21, None, 3L)
     True
-    ('C', ('2-\x91\xf0\x93T\x9f\xeaLL\xa8\xd6 \xd0\x80)',))
+    ('C', (...,))
     <BLANKLINE>
     ('2007-03-21 20:33:03.000000', ' ', '', '', {})
     (0, '2007-03-21 20:33:03.000000', '', 120, None)
     ('B', 6, '2007-03-21 20:33:03.000000', '', 21, None, 3L)
     True
-    ('C', ('\xe9Cq\xab\xd3\x93\xf6\xe3\x96\x01!U`\r\xad\x10',))
+    ('C', (...,))
     <BLANKLINE>
     ('2007-03-21 20:33:04.000000', ' ', '', '', {})
     (0, '2007-03-21 20:33:04.000000', '', 120, None)
     ('B', 7, '2007-03-21 20:33:04.000000', '', 21, None, 2L)
     True
-    ('C', ('\x18\x92\xa8q\xd7\xf1\x7f\x82Q\xba\xbcW\xe3\xb1\xcc\x85',))
+    ('C', (...,))
     <BLANKLINE>
 
 When a primary storage is set up with a blob storage, it requires protocol 2.1:
@@ -245,7 +244,7 @@ When a primary storage is set up with a blob storage, it requires protocol 2.1:
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47246):
     Disconnected <twisted.python.failure.Failure
-    <class 'twisted.internet.error.ConnectionDone'>>
+    twisted.internet.error.ConnectionDone: Connection was closed cleanly.>
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47246): Closed
 
@@ -255,7 +254,7 @@ When a primary storage is set up with a blob storage, it requires protocol 2.1:
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47245):
        Disconnected <twisted.python.failure.Failure
-       <class 'twisted.internet.error.ConnectionDone'>>
+       twisted.internet.error.ConnectionDone: Connection was closed cleanly.>
 
     >>> ps.close() # doctest: +NORMALIZE_WHITESPACE
     INFO zc.zrs.primary:

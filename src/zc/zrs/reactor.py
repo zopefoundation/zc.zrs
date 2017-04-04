@@ -23,6 +23,8 @@ logger = logging.getLogger(__name__)
 
 def log_twisted(data):
     message = data['message']
+    if not message:
+        message = [data['log_format'].format(**data)]
     message = '\n'.join([str(m) for m in message])
     if data['isError']:
         logger.error(message)
@@ -50,8 +52,13 @@ def _run(reactor):
 
 def reactor():
     global _started
-    if not _started:
-        _started = True
+    if _started != os.getpid():
+        if _started:
+            # We're in a multiprocessing subprocess, likely in a test
+            # and the reactor's state is dirty. Crash it!
+            twisted.internet.reactor.crash()
+
+        _started = os.getpid()
         from twisted.internet import reactor
         thread = threading.Thread(target=_run,
                                   args=(twisted.internet.reactor, ))
@@ -69,7 +76,7 @@ def shutdown():
     global _shutdown_called
     if not _started or _shutdown_called:
         return
-    
+
     _shutdown_called = True
     event = threading.Event()
     twisted.internet.reactor.callFromThread(_shutdown, event)

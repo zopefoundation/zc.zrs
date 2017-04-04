@@ -77,7 +77,7 @@ printing some information.
     >>> thread = threading.Thread(target=list, args=(iterator, event))
     >>> thread.setDaemon(True)
 
-    >>> thread.start(); event.wait(5)
+    >>> thread.start(); _ = event.wait(5)
     2007-03-21 20:32:57.000000 [0L]
     2007-03-21 20:32:58.000000 [0L, 1L]
     2007-03-21 20:32:59.000000 [0L, 2L]
@@ -117,7 +117,7 @@ storage is now using a new file:
 
 Iterators have a stop method that causes iteration to end:
 
-    >>> event.clear(); iterator.stop(); event.wait(5)
+    >>> event.clear(); iterator.stop(); _ = event.wait(5)
     iteration stopped!
 
 When we create iterators, we can pass a starting transaction id. This

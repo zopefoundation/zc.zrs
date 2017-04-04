@@ -21,8 +21,6 @@ Features
 
 - Support for read-only secondary storages
 
-- Service registration and discovery with ZooKeeper
-
 Requirements
 ============
 
@@ -144,63 +142,20 @@ keep-alive-delay SECONDS
   use the ``keep-alive-delay`` option to cause the secondary storage
   to send periodic no-operation messages to the server.
 
-ZooKeeper
-=========
-
-Primaries and secondaries can register with ZooKeeper, so Secondaries
-can find primaries to replicate from without needing to configure a
-specific address.  See ``zk.test`` and ``zkconfig.test`` in the source
-directory for more details.
-
 Code and contributions
 ======================
 
 https://github.com/zc/zrs
 
-Changes
-=======
+Recent Changes
+==============
 
-2.5.3 2015-02-16
-----------------
+For earlier changes, see the `HISTORY.rst <HISTORY.rst>`_.
 
-- Fixed: monitor got the primary last transaction time before before
-  getting the secondary last transaction time, sometimes leading to
-  spurious reports of the primary being behind the secondary.
+3.0.0 (unreleased)
+------------------
 
-2.5.2 2015-02-07
-----------------
+- Add support for ZODB 5
 
-Fixed: the nagios monitor only worked if the primary and secondary ran
-       in the same process (as in they did in the tests.)
+- Drop ZooKeeper support.
 
-2.5.1 2015-01-28
-----------------
-
-Include ``src/**/*.rst`` files in sdist.
-
-2.5.0 2015-01-25
-----------------
-
-Added nagios plugins for monitoring replication.
-
-2.4.4 2013-08-17
-----------------
-
-Fixed packaging bug: component.xml was left out.
-
-2.4.3 2013-08-15
-----------------
-
-Packaging update: allow installation without setuptools.
-
-2.4.2 2013-05-27
-----------------
-
-Initial open-source release for ZODB 3.9 or later.
-
-2.0.5 2013-05-27
-----------------
-
-Initial open-source release for ZODB 3.8.
-
-Initial open-source release. Requires ZODB 3.9 or later.

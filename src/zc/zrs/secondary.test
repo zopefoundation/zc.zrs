@@ -180,7 +180,7 @@ to the secondary constructor.
     INFO zc.zrs.secondary:
     IPv4Address(TCP, '127.0.0.1', 47245):
        Disconnected <twisted.python.failure.Failure
-       <class 'twisted.internet.error.ConnectionDone'>>
+       twisted.internet.error.ConnectionDone: Connection was closed cleanly.>
 
     >>> fs = ZODB.FileStorage.FileStorage('Data.fs')
     >>> ss = zc.zrs.secondary.Secondary(fs, ('', 8000), reactor,

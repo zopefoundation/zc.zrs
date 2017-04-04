@@ -36,12 +36,25 @@ entry_points = """
 zrsmonitor-script = zc.zrs.monitor:main
 last-zeo-transaction = zc.zrs.last:main
 zrs-nagios = zc.zrs.nagios:basic
-zkzrs-nagios = zc.zrs.nagios:zk
 """
 
-tests_require = ['zope.testing', 'zc.zk', 'mock', 'zc.zkzeo [monitor]']
+tests_require = ['zope.testing', 'mock', 'ZEO']
 
 long_description = open('README.rst').read()
+
+classifiers = """\
+Intended Audience :: Developers
+License :: OSI Approved :: Zope Public License
+Programming Language :: Python
+Programming Language :: Python :: 2
+Programming Language :: Python :: 2.7
+Programming Language :: Python :: Implementation :: CPython
+Topic :: Database
+Topic :: Software Development :: Libraries :: Python Modules
+Operating System :: Microsoft :: Windows
+Operating System :: Unix
+Framework :: ZODB
+""".strip().split('\n')
 
 setup(
     name = name,
@@ -49,9 +62,11 @@ setup(
     description = long_description.split('\n')[1],
     version = version,
     author = "Jim Fulton",
-    author_email = "jim#zope.com",
+    author_email = "jim@jimfulton.info",
     license = "ZPL 2.1",
     keywords = "ZODB",
+    classifiers = classifiers,
+    url='https://github.com/zc/zrs',
 
     packages = ['zc', 'zc.zrs'],
     include_package_data = True,

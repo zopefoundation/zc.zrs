@@ -222,7 +222,7 @@ Let's create some more interesting blob data.
     INFO zc.zrs.secondary:
     IPv4Address(TCP, '127.0.0.1', 47245): Disconnected
     <twisted.python.failure.Failure
-     <class 'twisted.internet.error.ConnectionDone'>>
+     twisted.internet.error.ConnectionDone: Connection was closed cleanly.>
 
     >>> reactor.doLater()
     >>> reactor.later

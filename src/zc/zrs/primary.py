@@ -130,10 +130,11 @@ class Primary(Base):
             self._listener.stopListening()
 
     def tpc_finish(self, *args):
-        self._storage.tpc_finish(*args)
+        tid = self._storage.tpc_finish(*args)
         self._changed.acquire()
         self._changed.notifyAll()
         self._changed.release()
+        return tid
 
     def close(self):
         logger.info('Closing %s %s', self.getName(), self._addr)

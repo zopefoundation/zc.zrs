@@ -151,8 +151,7 @@ class SecondaryProtocol(twisted.internet.protocol.Protocol):
                 def invalidate(tid):
                     if self.factory.db is not None:
                         for (tid, version), oids in self.__inval.items():
-                            self.factory.db.invalidate(
-                                tid, oids, version=version)
+                            self.factory.db.invalidate(tid, oids)
 
                 self.factory.storage.tpc_finish(
                     self._zrs_transaction, invalidate)
@@ -311,5 +310,8 @@ class Transaction:
         self.status = status
         self.user = user
         self.description = description
-        self._extension = extension
+        self.extension = extension
 
+    @property
+    def _extension(self):
+        return self.extension
