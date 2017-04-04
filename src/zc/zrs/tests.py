@@ -559,6 +559,7 @@ to crash:
     ... sys.path = %r
     ... print >>sys.stderr, sys.path
     ... print >>sys.stderr, sys.modules
+    ... _ = sys.modules.pop('zc', None)
     ... import logging, time
     ... import twisted.internet
     ... import zc
