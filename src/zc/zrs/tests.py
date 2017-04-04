@@ -557,8 +557,10 @@ to crash:
     >>> open('t.py', 'w').write('''
     ... import sys
     ... sys.path = %r
+    ... print >>sys.stderr, sys.path
     ... import logging, time
     ... import twisted.internet
+    ... import zc.zrs
     ... import zc.zrs.reactor
     ...
     ... logging.getLogger().setLevel(1)
