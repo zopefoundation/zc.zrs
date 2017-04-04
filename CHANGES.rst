@@ -3,6 +3,12 @@ Recent Changes
 
 For earlier changes, see the `HISTORY.rst <HISTORY.rst>`_.
 
+3.0.1 (unreleased)
+------------------
+
+- Nothing changed yet.
+
+
 3.0.0 (2017-04-04)
 ------------------
 
