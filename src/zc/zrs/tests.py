@@ -562,7 +562,7 @@ to crash:
     ... import logging, time
     ... import twisted.internet
     ... import zc
-    ... print >>sys.stderr, __path__
+    ... print >>sys.stderr, zc.__path__
     ... import zc.zrs
     ... import zc.zrs.reactor
     ...
