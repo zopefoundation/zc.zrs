@@ -556,7 +556,7 @@ to crash:
 
     >>> open('t.py', 'w').write('''
     ... import sys
-    ... print >>sys.stderr, sys.path
+    ... sys.path = %r
     ... import logging, time
     ... import twisted.internet
     ... import zc.zrs.reactor
@@ -569,15 +569,11 @@ to crash:
     ... twisted.internet.reactor.callFromThread(twisted.internet.reactor.crash)
     ... time.sleep(0.1)
     ... #logging.error('failed')
-    ... ''')
+    ... ''' % sys.path)
 
 We'll run it:
 
-    >>> env = os.environ.copy()
-    >>> env['PYTHONPATH'] = os.pathsep.join(sys.path)
-    >>> p = subprocess.Popen(
-    ...       [sys.executable, 't.py'],
-    ...       env=env)
+    >>> p = subprocess.Popen([sys.executable, 't.py'])
 
 It exits with a non-zero exit status:
 
