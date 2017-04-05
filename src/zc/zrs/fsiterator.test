@@ -36,7 +36,7 @@ printing some information.
     >>> import zc.zrs.primary
     >>> from ZODB.TimeStamp import TimeStamp
     >>> from ZODB import utils
-    >>> try: long
+    >>> try: _ = long
     ... except NameError: long = lambda n: n
     >>> def list(iterator, event):
     ...     for trans in iterator:

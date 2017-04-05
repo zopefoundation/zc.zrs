@@ -1697,6 +1697,15 @@ def setUpNagios(test):
             f.write(data)
 
 def test_suite():
+    checker = renormalizing.RENormalizing([
+        (re.compile(' (instance|object) at 0x[a-fA-F0-9]+'), ''),
+        (re.compile(r'(\d+)L'), r'\1'),
+        (re.compile(r"b'"), "'"),
+        (re.compile("zc.zrs.primary.TidTooHigh"), "TidTooHigh"),
+        ])
+    optionflags = (doctest.IGNORE_EXCEPTION_DETAIL |
+                   doctest.NORMALIZE_WHITESPACE
+                   )
     suite = unittest.TestSuite((
         doctest.DocFileSuite(
             'fsiterator.test',
@@ -1704,20 +1713,12 @@ def test_suite():
             'secondary.test', 'secondary-blob.test',
             'secondary-blobstorage.test',
             setUp=setUp, tearDown=setupstack.tearDown,
-            checker=renormalizing.RENormalizing([
-                (re.compile(' (instance|object) at 0x[a-fA-F0-9]+'), ''),
-                # (re.compile(r'(\d+):'), '\1'),
-                # (re.compile(r"b'"), "'"),
-                ]),
-            optionflags = (doctest.IGNORE_EXCEPTION_DETAIL |
-                           doctest.NORMALIZE_WHITESPACE
-                           ),
+            checker=checker,
+            optionflags=optionflags,
             ),
         doctest.DocFileSuite(
             'config.test',
-            checker=renormalizing.RENormalizing([
-                (re.compile(' (instance|object) at 0x[a-fA-F0-9]+'), ''),
-                ]),
+            checker=checker,
             setUp=setUpTime, tearDown=setupstack.tearDown,
             ),
         doctest.DocFileSuite(
@@ -1731,12 +1732,8 @@ def test_suite():
             ),
         doctest.DocTestSuite(
             setUp=setUp, tearDown=setupstack.tearDown,
-            checker=renormalizing.RENormalizing([
-                (re.compile(' (instance|object) at 0x[a-fA-F0-9]+'), ''),
-                ]),
-            optionflags = (doctest.IGNORE_EXCEPTION_DETAIL |
-                           doctest.NORMALIZE_WHITESPACE
-                           ),
+            checker=checker,
+            optionflags=optionflags,
             ),
         ))
 
