@@ -1,7 +1,6 @@
 language: python
 sudo: false
 python:
-  - pypy-5.4.1
   - 2.7
 env:
   - CONFIG=buildout.cfg
