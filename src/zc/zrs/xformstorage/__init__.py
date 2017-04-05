@@ -16,9 +16,8 @@ import ZODB.blob
 import ZODB.interfaces
 import zope.interface
 
+@zope.interface.implementer(ZODB.interfaces.IStorageWrapper)
 class XformStorage(object):
-
-    zope.interface.implements(ZODB.interfaces.IStorageWrapper)
 
     copied_methods = (
         'close', 'getName', 'getSize', 'history', 'isReadOnly',
@@ -35,7 +34,7 @@ class XformStorage(object):
     def __init__(self, base, transform, untransform, prefix, server=False):
         if len(prefix) != 1:
             raise ValueError("Must give a 1-character prefix", prefix)
-        prefix = '.' + prefix
+        prefix = b'.' + prefix
 
         for name in self.copied_methods:
             v = getattr(base, name, None)
@@ -118,7 +117,7 @@ class XformStorage(object):
 
             def record_iternext(next=None):
                 oid, tid, data, next = self.base.record_iternext(next)
-                return oid, tid, data[2:].decode('hex'), next
+                return oid, tid, binascii.a2b_hex(data[2:]), next
             self.record_iternext = record_iternext
 
         zope.interface.directlyProvides(self, zope.interface.providedBy(base))
@@ -188,7 +187,7 @@ class Transaction(object):
         return getattr(self.__transaction, name)
 
 def HexStorage(base, server=False):
-    return XformStorage(base, binascii.b2a_hex, binascii.a2b_hex, 'h', server)
+    return XformStorage(base, binascii.b2a_hex, binascii.a2b_hex, b'h', server)
 
 
 class ZConfigHex:

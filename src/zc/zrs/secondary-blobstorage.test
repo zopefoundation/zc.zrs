@@ -30,7 +30,7 @@ Let's create a secondary storage:
     INFO zc.zrs.secondary:
     Opening Data.fs ('', 8000)
     INFO zc.zrs.reactor:
-    Starting factory <zc.zrs.secondary.SecondaryFactory instance>
+    Starting factory <zc.zrs.secondary.SecondaryFactory>
 
 We can't use a secondary storage until it has gotten some data.  Our
 demo reactor doesn't make any network connections, so of course, the
@@ -48,7 +48,7 @@ the interaction with the server.  The first is the ZRS protocol
 identifier:
 
     >>> connection.read()
-    'zrs2.1'
+    b'zrs2.1'
 
 Because a blob storage is used, the 2.1 proocol is presented.
 
@@ -57,7 +57,7 @@ the client.  This client doesn't have any data, so we'll get a
 transaction id consisting of all zeros:
 
     >>> connection.read()
-    '\x00\x00\x00\x00\x00\x00\x00\x00'
+    b'\x00\x00\x00\x00\x00\x00\x00\x00'
 
 This is all the data sent by the client.  From this point on, the
 client passively waits for data sent by the server.  We'll pass it
@@ -167,26 +167,26 @@ connection, after a sync:
 Now, let's create some blob data:
 
     >>> proot['blob'] = ZODB.blob.Blob()
-    >>> proot['blob'].open('w').write('test\n')
+    >>> _ = proot['blob'].open('w').write(b'test\n')
     >>> commit()
     >>> send_transaction()
 
     >>> conn.sync(); root['blob'].open().read()
-    'test\n'
+    b'test\n'
 
 Let's create some more interesting blob data.
 
     >>> import random, struct
     >>> random.seed(0)
     >>> for i in range(5):
-    ...     wdata = ''.join(struct.pack(">I", random.randint(0, 1<<32))
+    ...     wdata = b''.join(struct.pack(">I", random.randint(0, 1<<32))
     ...                     for i in range(random.randint(1000, 100000)))
     ...     proot[i] = ZODB.blob.Blob()
-    ...     proot[i].open('w').write(wdata)
+    ...     _ = proot[i].open('w').write(wdata)
     ...     commit()
     ...     send_transaction()
     ...     conn.sync()
-    ...     print root[i].open().read() == proot[i].open().read()
+    ...     print_(root[i].open().read() == proot[i].open().read())
     True
     True
     True
@@ -206,12 +206,12 @@ Let's create some more interesting blob data.
     ...
     POSKeyError: u'No blob file at ...
 
-    >>> proot['empty'].open('w').write('new data')
+    >>> _ = proot['empty'].open('w').write(b'new data')
     >>> commit()
     >>> send_transaction()
     >>> conn.sync()
     >>> root['empty'].open().read()
-    'new data'
+    b'new data'
 
 
 .. cleanup

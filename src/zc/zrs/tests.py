@@ -1,3 +1,4 @@
+from __future__ import print_function
 ##############################################################################
 #
 # Copyright (c) 2013 Zope Corporation and Contributors.
@@ -18,7 +19,8 @@ except ImportError:
     from md5 import new as md5
 from ZODB.TimeStamp import TimeStamp
 from zope.testing import setupstack, renormalizing
-from zc.zrs import loopback
+from . import loopback
+import binascii
 import doctest
 import ZEO.ClientStorage
 import ZEO.tests.forker
@@ -30,12 +32,13 @@ import ZODB.tests.testblob
 import ZODB.tests.testFileStorage
 import ZODB.tests.StorageTestBase
 import ZODB.utils
-import cPickle
+from six.moves import cPickle
 import logging
 import mock
 import os
 import re
 import shutil
+import six
 import struct
 import subprocess
 import sys
@@ -73,8 +76,8 @@ Create the database:
 
 Now, be evil, and muck up the beginning: :)
 
-    >>> fs._file.seek(12)
-    >>> fs._file.write('\xff'*8)
+    >>> _ = fs._file.seek(12)
+    >>> _ = fs._file.write(b'\xff'*8)
     >>> conn.root()[100] = persistent.dict.PersistentDict()
     >>> commit()
 
@@ -103,20 +106,20 @@ But, if we iterate from near the end, we'll be OK:
     >>> it = zc.zrs.primary.FileStorageIterator(fs, condition, tid)
     >>> trans = it.next()
     >>> from ZODB import utils
-    >>> print TimeStamp(trans.tid), [int(utils.u64(r.oid)) for r in trans]
+    >>> print(TimeStamp(trans.tid), [int(utils.u64(r.oid)) for r in trans])
     2007-03-21 20:34:09.000000 [0, 72]
 
-    >>> print TimeStamp(tid)
+    >>> print(TimeStamp(tid))
     2007-03-21 20:34:08.000000
 
     >>> tid = tid_from_time(time.time()-29.5)
     >>> it = zc.zrs.primary.FileStorageIterator(fs, condition, tid)
     >>> trans = it.next()
     >>> from ZODB import utils
-    >>> print TimeStamp(trans.tid), [int(utils.u64(r.oid)) for r in trans]
+    >>> print(TimeStamp(trans.tid), [int(utils.u64(r.oid)) for r in trans])
     2007-03-21 20:34:09.000000 [0, 72]
 
-    >>> print TimeStamp(tid)
+    >>> print(TimeStamp(tid))
     2007-03-21 20:34:08.500000
 
     """
@@ -147,13 +150,13 @@ Now, we'll create a special transport that will output data when it is called:
     ...             message = cPickle.loads(message)
     ...             if type(message) is tuple:
     ...                 message = message[0]
-    ...         print message
+    ...         print(message)
     ...     def registerProducer(self, producer, streaming):
-    ...         print 'registered producer'
+    ...         print('registered producer')
     ...     def unregisterProducer(self):
-    ...         print 'unregistered producer'
+    ...         print('unregistered producer')
     ...     def loseConnection(self):
-    ...         print 'loseConnection'
+    ...         print('loseConnection')
 
 And a producer based on the file storage and transport:
 
@@ -260,7 +263,7 @@ There a number of cases to consider when closing a secondary:
     INFO zc.zrs.secondary:
     Opening Data.fs ('', 8000)
     INFO zc.zrs.reactor:
-    Starting factory <zc.zrs.secondary.SecondaryFactory instance>
+    Starting factory <zc.zrs.secondary.SecondaryFactory>
 
     >>> len(reactor.clients)
     1
@@ -269,7 +272,7 @@ There a number of cases to consider when closing a secondary:
     INFO zc.zrs.secondary:
     Closing Data.fs ('', 8000)
     INFO zc.zrs.reactor:
-    Stopping factory <zc.zrs.secondary.SecondaryFactory instance>
+    Stopping factory <zc.zrs.secondary.SecondaryFactory>
 
     >>> reactor.clients
     []
@@ -287,11 +290,11 @@ There a number of cases to consider when closing a secondary:
     INFO zc.zrs.secondary:
     Opening Data.fs ('', 8000)
     INFO zc.zrs.reactor:
-    Starting factory <zc.zrs.secondary.SecondaryFactory instance>
+    Starting factory <zc.zrs.secondary.SecondaryFactory>
 
     >>> reactor.reject()
     INFO zc.zrs.reactor:
-    Stopping factory <zc.zrs.secondary.SecondaryFactory instance>
+    Stopping factory <zc.zrs.secondary.SecondaryFactory>
 
     >>> reactor.clients
     []
@@ -305,9 +308,9 @@ There a number of cases to consider when closing a secondary:
 
     >>> reactor.doLater()
     INFO zc.zrs.reactor:
-    Starting factory <zc.zrs.secondary.SecondaryFactory instance>
+    Starting factory <zc.zrs.secondary.SecondaryFactory>
     INFO zc.zrs.reactor:
-    Stopping factory <zc.zrs.secondary.SecondaryFactory instance at 0xb662b5cc>
+    Stopping factory <zc.zrs.secondary.SecondaryFactory>
 
     >>> reactor.later
     []
@@ -323,7 +326,7 @@ There a number of cases to consider when closing a secondary:
     INFO zc.zrs.secondary:
     Opening Data.fs ('', 8000)
     INFO zc.zrs.reactor:
-    Starting factory <zc.zrs.secondary.SecondaryFactory instance>
+    Starting factory <zc.zrs.secondary.SecondaryFactory>
 
     >>> connection = reactor.accept()
     INFO zc.zrs.secondary:
@@ -357,16 +360,16 @@ There a number of cases to consider when closing a secondary:
     INFO zc.zrs.secondary:
     Opening Data.fs ('', 8000)
     INFO zc.zrs.reactor:
-    Starting factory <zc.zrs.secondary.SecondaryFactory instance>
+    Starting factory <zc.zrs.secondary.SecondaryFactory>
 
     >>> connection = reactor.accept()
     INFO zc.zrs.secondary:
     IPv4Address(TCP, '127.0.0.1', 47249): Connected
 
     >>> connection.read()
-    'zrs2.0'
+    b'zrs2.0'
     >>> connection.read()
-    '\x00\x00\x00\x00\x00\x00\x00\x00'
+    b'\x00\x00\x00\x00\x00\x00\x00\x00'
 
     >>> reactor.later
     [<3 60 keep_alive () {}>]
@@ -381,8 +384,8 @@ There a number of cases to consider when closing a secondary:
     >>> trans = primary_data.next()
     >>> connection.send(('T', (trans.tid, trans.status, trans.user,
     ...                        trans.description, trans._extension)))
-    >>> record = trans.next
-    ... connection.send(('S', (record.oid, record.tid, record.version,
+    >>> record = trans.next()
+    >>> connection.send(('S', (record.oid, record.tid, record.version,
     ...                        record.data, record.data_txn)))
 
     >>> ss.close() # doctest: +NORMALIZE_WHITESPACE
@@ -399,10 +402,10 @@ There a number of cases to consider when closing a secondary:
     >>> reactor.clients
     []
 
-    >>> print fs._transaction
+    >>> print(fs._transaction)
     None
 
-    >>> print fs._pos
+    >>> print(fs._pos)
     4
 
 """
@@ -422,9 +425,9 @@ def primary_data_input_errors():
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47245): Connected
 
-    >>> connection.send("Hi") # doctest: +NORMALIZE_WHITESPACE
+    >>> connection.send(b"Hi") # doctest: +NORMALIZE_WHITESPACE
     ERROR zc.zrs.primary:
-    IPv4Address(TCP, '127.0.0.1', 47245): Invalid protocol 'Hi'
+    IPv4Address(TCP, '127.0.0.1', 47245): Invalid protocol b'Hi'
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47245):
     Disconnected <twisted.python.failure.Failure
@@ -436,9 +439,9 @@ def primary_data_input_errors():
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47246): Connected
 
-    >>> connection.send("xxxxxxxxxxxxxxx") # doctest: +NORMALIZE_WHITESPACE
+    >>> connection.send(b"xxxxxxxxxxxxxxx") # doctest: +NORMALIZE_WHITESPACE
     ERROR zc.zrs.primary:
-    IPv4Address(TCP, '127.0.0.1', 47246): message too large: (8, 15L)
+    IPv4Address(TCP, '127.0.0.1', 47246): message too large: (8, 15)
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47246):
     Disconnected <twisted.python.failure.Failure
@@ -450,10 +453,10 @@ def primary_data_input_errors():
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47247): Connected
 
-    >>> connection.send("zrs2.0")
-    >>> connection.send("xxxxxxxxxxxxxxx") # doctest: +NORMALIZE_WHITESPACE
+    >>> connection.send(b"zrs2.0")
+    >>> connection.send(b"xxxxxxxxxxxxxxx") # doctest: +NORMALIZE_WHITESPACE
     ERROR zc.zrs.primary:
-    IPv4Address(TCP, '127.0.0.1', 47247): message too large: (8, 15L)
+    IPv4Address(TCP, '127.0.0.1', 47247): message too large: (8, 15)
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47247):
     Disconnected <twisted.python.failure.Failure
@@ -465,10 +468,10 @@ def primary_data_input_errors():
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47248): Connected
 
-    >>> connection.send("zrs2.0")
-    >>> connection.send("xxxxxxx") # doctest: +NORMALIZE_WHITESPACE
+    >>> connection.send(b"zrs2.0")
+    >>> connection.send(b"xxxxxxx") # doctest: +NORMALIZE_WHITESPACE
     ERROR zc.zrs.primary:
-    IPv4Address(TCP, '127.0.0.1', 47248): Invalid transaction id, 'xxxxxxx'
+    IPv4Address(TCP, '127.0.0.1', 47248): Invalid transaction id, b'xxxxxxx'
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47248):
     Disconnected <twisted.python.failure.Failure
@@ -483,20 +486,20 @@ def primary_data_input_errors():
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47249): Connected
 
-    >>> connection.send("zrs2.0")
-    >>> connection.send("\0"*8) # doctest: +NORMALIZE_WHITESPACE
+    >>> connection.send(b"zrs2.0")
+    >>> connection.send(b"\0"*8) # doctest: +NORMALIZE_WHITESPACE
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47249):
-    start '\x00\x00\x00\x00\x00\x00\x00\x00' (1900-01-01 00:00:00.000000)
+    start b'\x00\x00\x00\x00\x00\x00\x00\x00' (1900-01-01 00:00:00.000000)
 
-    >>> connection.send("")
+    >>> connection.send(b"")
     DEBUG zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47249): keep-alive
-    >>> connection.send("")
+    >>> connection.send(b"")
     DEBUG zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47249): keep-alive
 
-    >>> connection.send("Hi") # doctest: +ELLIPSIS
+    >>> connection.send(b"Hi") # doctest: +ELLIPSIS
     ERROR zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47249): Too many messages
     ...
@@ -516,24 +519,24 @@ it does, it should simply close.
     INFO zc.zrs.secondary:
     Opening Data.fs ('', 8000)
     INFO zc.zrs.reactor:
-    Starting factory <zc.zrs.secondary.SecondaryFactory instance>
+    Starting factory <zc.zrs.secondary.SecondaryFactory>
 
     >>> connection = reactor.accept()
     INFO zc.zrs.secondary:
     IPv4Address(TCP, '127.0.0.1', 47245): Connected
 
     >>> connection.read()
-    'zrs2.0'
+    b'zrs2.0'
     >>> connection.read()
-    '\x00\x00\x00\x00\x00\x00\x00\x00'
+    b'\x00\x00\x00\x00\x00\x00\x00\x00'
 
-    >>> connection.send('hi', raw=True)
+    >>> connection.send(b'hi', raw=True)
     ... # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
     CRITICAL zc.zrs.secondary:
     IPv4Address(TCP, '127.0.0.1', 47245): Input data error
     Traceback (most recent call last):
     ...
-    BadPickleGet: 105
+    ...: 105
     INFO zc.zrs.secondary:
     IPv4Address(TCP, '127.0.0.1', 47245):
     Disconnected <twisted.python.failure.Failure
@@ -554,14 +557,13 @@ def crashing_reactor_logs_as_such():
 We'll write a silly script that simply starts the reactor and tells it
 to crash:
 
-    >>> open('t.py', 'w').write('''
+    >>> _ = open('t.py', 'w').write('''
     ... import sys
     ... sys.path = %r
     ... _ = sys.modules.pop('zc', None)
     ... import logging, time
     ... import twisted.internet
     ... import zc
-    ... print >>sys.stderr, zc.__path__
     ... import zc.zrs
     ... import zc.zrs.reactor
     ...
@@ -586,13 +588,13 @@ It exits with a non-zero exit status:
 
 And we get something in the log to the effect that it closed unexpectedly.
 
-    >>> print open('t.log').read().replace('using set_wakeup_fd\n', ''),
+    >>> print(open('t.log').read().replace('using set_wakeup_fd\n', ''), end='')
     Main loop terminated.
     The twisted reactor quit unexpectedly
 
 OTOH, if we exit without crashing:
 
-    >>> open('t.py', 'w').write('''
+    >>> _ = open('t.py', 'w').write('''
     ... import sys
     ... sys.path = %r
     ... _ = sys.modules.pop('zc', None)
@@ -612,7 +614,7 @@ OTOH, if we exit without crashing:
     >>> bool(p.wait())
     False
 
-    >>> print open('t.log').read().replace('using set_wakeup_fd\n', ''),
+    >>> print(open('t.log').read().replace('using set_wakeup_fd\n', ''), end='')
     Main loop terminated.
 
     """
@@ -639,8 +641,8 @@ def leaking_file_handles_when_secondaries_disconnect():
 
     >>> for i in range(10):
     ...     connection = reactor.connect(('', 8000))
-    ...     connection.send("zrs2.0")
-    ...     connection.send("\0"*8)
+    ...     connection.send(b"zrs2.0")
+    ...     connection.send(b"\0"*8)
     ...     _ = connection.read()
     ...     connection.close()
     ...     # doctest: +ELLIPSIS
@@ -680,8 +682,8 @@ def close_writes_new_transactions():
     >>> connections = []
     >>> for i in range(nconnections):
     ...     connection = reactor.connect(('', 8000))
-    ...     connection.send("zrs2.0")
-    ...     connection.send("\0"*8)
+    ...     connection.send(b"zrs2.0")
+    ...     connection.send(b"\0"*8)
     ...     connections.append(connection)
     ...     # doctest: +ELLIPSIS
     INFO zc.zrs.primary:...
@@ -711,7 +713,7 @@ def close_writes_new_transactions():
     ...         elif message_type == 'S':
     ...             x = connection.read(True)
     ...     if message_type != 'C' or ntrans != committed:
-    ...         print i, message_type, ntrans
+    ...         print(i, message_type, ntrans)
 
     """
 
@@ -742,17 +744,17 @@ def secondary_gives_a_tid_that_is_too_high():
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47245): Connected
 
-    >>> connection.send("zrs2.0") # doctest: +NORMALIZE_WHITESPACE
+    >>> connection.send(b"zrs2.0") # doctest: +NORMALIZE_WHITESPACE
     >>> connection.send(too_high_tid); time.sleep(.01) # wait for thread :(
     ... # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47245):
-    start '\x03lk\x90\xf7wwx' (2007-03-21 20:32:58.000000)
+    start b'\x03lk\x90\xf7wwx' (2007-03-21 20:32:58.000000)
     ERROR zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47245):
     Traceback (most recent call last):
     ...
-    TidTooHigh: '\x03lk\x90\xf7wwx'
+    zc.zrs.primary.TidTooHigh: b'\x03lk\x90\xf7wwx'
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47245):
     Disconnected
@@ -770,7 +772,7 @@ class FauxScanControl(object):
         if self._n > 10:
             time.sleep(.01)
         if self._n > 20:
-           print self._n
+           print(self._n)
         return self._v
     def set(self, v):
         self._v = v
@@ -810,11 +812,11 @@ def scan_control_stops_scans_on_client_disconnects():
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47245): Connected
 
-    >>> connection.send("zrs2.0") # doctest: +NORMALIZE_WHITESPACE
+    >>> connection.send(b"zrs2.0") # doctest: +NORMALIZE_WHITESPACE
     >>> connection.send(tid1) # doctest: +NORMALIZE_WHITESPACE
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47245):
-    start '\x03lk\x92\x9d\xdd\xdd\xdd' (2007-03-21 20:34:37.000000)
+    start b'\x03lk\x92\x9d\xdd\xdd\xdd' (2007-03-21 20:34:37.000000)
     >>> connection.loseConnection() # doctest: +NORMALIZE_WHITESPACE
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47245): Disconnected
@@ -826,11 +828,11 @@ def scan_control_stops_scans_on_client_disconnects():
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47246): Connected
 
-    >>> connection.send("zrs2.0") # doctest: +NORMALIZE_WHITESPACE
+    >>> connection.send(b"zrs2.0") # doctest: +NORMALIZE_WHITESPACE
     >>> connection.send(tid2) # doctest: +NORMALIZE_WHITESPACE
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47246):
-    start '\x03lk\x94H\x88\x88\x88' (2007-03-21 20:36:17.000000)
+    start b'\x03lk\x94H\x88\x88\x88' (2007-03-21 20:36:17.000000)
 
     >>> connection.loseConnection() # doctest: +NORMALIZE_WHITESPACE
     INFO zc.zrs.primary:
@@ -894,17 +896,17 @@ def secondary_replicate_from_old_zrs_that_doesnt_send_checksums():
     INFO zc.zrs.secondary:
     Opening Data.fs ('', 8000)
     INFO zc.zrs.reactor:
-    Starting factory <zc.zrs.secondary.SecondaryFactory instance>
+    Starting factory <zc.zrs.secondary.SecondaryFactory>
 
     >>> connection = reactor.accept()
     INFO zc.zrs.secondary:
     IPv4Address(TCP, '127.0.0.1', 47245): Connected
 
     >>> connection.read()
-    'zrs2.0'
+    b'zrs2.0'
 
     >>> connection.read()
-    '\x00\x00\x00\x00\x00\x00\x00\x00'
+    b'\x00\x00\x00\x00\x00\x00\x00\x00'
 
     >>> primary_fs = ZODB.FileStorage.FileStorage('primary.fs')
     >>> import zc.zrs.primary
@@ -925,7 +927,7 @@ def secondary_replicate_from_old_zrs_that_doesnt_send_checksums():
 
     >>> connection.send(('C', ()))
 
-    >>> _ = fs.load('\0'*8, '')
+    >>> _ = fs.load(b'\0'*8, '')
 
     """
 
@@ -939,11 +941,11 @@ def secondary_gets_extension_data():
     INFO zc.zrs.secondary:
     Opening Data.fs ('', 8000)
     INFO zc.zrs.reactor:
-    Starting factory <zc.zrs.secondary.SecondaryFactory instance>
+    Starting factory <zc.zrs.secondary.SecondaryFactory>
 
     >>> for n in ss.getExtensionMethods():
     ...     if getattr(ss, n) != getattr(fs, n):
-    ...         print 'oops'
+    ...         print('oops')
 
     >>> ss.close()
     INFO zc.zrs.secondary:
@@ -1047,14 +1049,14 @@ close_reason = twisted.python.failure.Failure(
 class MessageTransport:
 
     def __init__(self, reactor, addr, port, proto=None):
-        self.data = ''
+        self.data = b''
         self.cond = threading.Condition()
         self.closed = False
         self.reactor = reactor
         self.addr = addr
         self.peer = "IPv4Address(TCP, '127.0.0.1', %s)" % port
         self.proto = proto
-        self.init_md5('\x00\x00\x00\x00\x00\x00\x00\x00')
+        self.init_md5(b'\x00\x00\x00\x00\x00\x00\x00\x00')
 
     def getPeer(self):
         return self.peer
@@ -1066,7 +1068,7 @@ class MessageTransport:
         self.cond.release()
 
     def writeSequence(self, data):
-        self.write(''.join(data))
+        self.write(b''.join(data))
 
     def read(self):
         self.cond.acquire()
@@ -1137,7 +1139,7 @@ class SecondaryTransport(MessageTransport):
     def send(self, data, raw=False):
         if not raw:
             data = cPickle.dumps(data)
-        MessageTransport.send(self, data or '')
+        MessageTransport.send(self, data or b'')
 
     def fail(self):
         self.connectionLost('failed')
@@ -1227,6 +1229,7 @@ def setUp(test):
     setUpTime(test)
 
     test.globs['reactor'] = TestReactor()
+    test.globs['print_'] = print
 
     logger = logging.getLogger('zc.zrs')
     logger.setLevel(1)
@@ -1420,10 +1423,11 @@ def tsr(tid):
 
 def show_fs(fs):
     for t in fs.iterator():
-        print tsr(t.tid), repr(t.status), repr(t.description), t._pos
+        print(tsr(t.tid), repr(t.status), repr(t.description), t._pos)
         for r in t:
-            print ' ', ZODB.utils.u64(r.oid), tsr(r.tid), repr(r.version),
-            print r.data and len(r.data), r.data_txn and tsr(r.data_txn), r.pos
+            print(' ', ZODB.utils.u64(r.oid), tsr(r.tid), repr(r.version),
+                  end='')
+            print(r.data and len(r.data), r.data_txn and tsr(r.data_txn), r.pos)
 
 class PrimaryStorageTests(
     BasePrimaryStorageTests,
@@ -1672,12 +1676,12 @@ class FileStorageClientHexTests(FileStorageHexTests):
 #
 ##############################################################################
 
-old_base64 = """
+old_base64 = b"""
 RlMyMQOsOkgWySW7AAAAAAAAAJYgAAAAGQAAaW5pdGlhbCBkYXRhYmFzZSBjcmVhdGlvbgAAAAAA
 AAAAA6w6SBbJJbsAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAPChjcGVyc2lzdGVudC5tYXBwaW5n
 ClBlcnNpc3RlbnRNYXBwaW5nCnEBTnQufXECVQRkYXRhcQN9cQRzLgAAAAAAAACW
 """
-current_base64 = """\
+current_base64 = b"""\
 RlMyMQOsOkk7V3+IAAAAAAAAAJYgAAAAGQAAaW5pdGlhbCBkYXRhYmFzZSBjcmVhdGlvbgAAAAAA
 AAAAA6w6STtXf4gAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAPChjcGVyc2lzdGVudC5tYXBwaW5n
 ClBlcnNpc3RlbnRNYXBwaW5nCnEBTnQufXECVQRkYXRhcQN9cQRzLgAAAAAAAACW
@@ -1686,8 +1690,11 @@ ClBlcnNpc3RlbnRNYXBwaW5nCnEBTnQufXECVQRkYXRhcQN9cQRzLgAAAAAAAACW
 def setUpNagios(test):
     setupstack.setUpDirectory(test)
     for name in 'old', 'current':
-        with open(name+'.fs', 'w') as f:
-            f.write(globals()[name+'_base64'].decode('base64'))
+        with open(name+'.fs', 'wb') as f:
+            data = binascii.a2b_base64(globals()[name + '_base64'])
+            if six.PY3:
+                data = b'FS30' + data[4:]
+            f.write(data)
 
 def test_suite():
     suite = unittest.TestSuite((
@@ -1698,13 +1705,18 @@ def test_suite():
             'secondary-blobstorage.test',
             setUp=setUp, tearDown=setupstack.tearDown,
             checker=renormalizing.RENormalizing([
-                (re.compile(' at 0x[a-fA-F0-9]+'), ''),
+                (re.compile(' (instance|object) at 0x[a-fA-F0-9]+'), ''),
+                # (re.compile(r'(\d+):'), '\1'),
+                # (re.compile(r"b'"), "'"),
                 ]),
+            optionflags = (doctest.IGNORE_EXCEPTION_DETAIL |
+                           doctest.NORMALIZE_WHITESPACE
+                           ),
             ),
         doctest.DocFileSuite(
             'config.test',
             checker=renormalizing.RENormalizing([
-                (re.compile(' at 0x[a-fA-F0-9]+'), ''),
+                (re.compile(' (instance|object) at 0x[a-fA-F0-9]+'), ''),
                 ]),
             setUp=setUpTime, tearDown=setupstack.tearDown,
             ),
@@ -1713,14 +1725,18 @@ def test_suite():
             checker=renormalizing.RENormalizing([
                 (re.compile(r"(localhost|127.0.0.1):\d+"), "127.0.0.1:PORT"),
                 (re.compile(r"\[Errno \d+\]"), "[Errno NN]"),
+                (re.compile(r"u'"), "'"),
                 ]),
             setUp=setUpNagios, tearDown=setupstack.tearDown,
             ),
         doctest.DocTestSuite(
             setUp=setUp, tearDown=setupstack.tearDown,
             checker=renormalizing.RENormalizing([
-                (re.compile(' at 0x[a-fA-F0-9]+'), ''),
+                (re.compile(' (instance|object) at 0x[a-fA-F0-9]+'), ''),
                 ]),
+            optionflags = (doctest.IGNORE_EXCEPTION_DETAIL |
+                           doctest.NORMALIZE_WHITESPACE
+                           ),
             ),
         ))
 

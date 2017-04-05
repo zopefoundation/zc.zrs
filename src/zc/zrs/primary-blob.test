@@ -54,16 +54,16 @@ The first message is the protocol, which must be "zrs2.1" if blobs are
 supported.  The second message is the starting transaction.  We'll
 send the messages by calling the send method on the connection:
 
-    >>> connection.send("zrs2.1")
+    >>> connection.send(b"zrs2.1")
 
 The second message is the identifier of the last transaction seen by
 the client.  We'll pass a transaction id of all zeros, indicating that
 we have no data and want all of the data the storage has:
 
-    >>> connection.send("\0"*8) # doctest: +NORMALIZE_WHITESPACE
+    >>> connection.send(b"\0"*8) # doctest: +NORMALIZE_WHITESPACE
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47245):
-       start '\x00\x00\x00\x00\x00\x00\x00\x00' (1900-01-01 00:00:00.000000)
+       start b'\x00\x00\x00\x00\x00\x00\x00\x00' (1900-01-01 00:00:00.000000)
 
 The server will send back a numer of sized messages.  Most of these
 messages will be a pickles.  The testing reactor set up a transpoer
@@ -89,7 +89,7 @@ case. :)
     >>> def ts(v):
     ...     return str(TimeStamp(v))
     >>> ts(tid), status, user, description, extension
-    ('2007-03-21 20:32:57.000000', ' ', '', 'initial database creation', {})
+    ('2007-03-21 20:32:57.000000', ' ', b'', b'initial database creation', {})
 
 The next message is a store message for object 0:
 
@@ -110,7 +110,7 @@ Finally, there will be a commit record marking the end of the
 transaction:
 
     >>> connection.read() # doctest: +ELLIPSIS
-    ('C', ('...',))
+    ('C', (...,))
 
 
 We can continue reading any additional transactions. In this case
@@ -118,17 +118,17 @@ there is only one:
 
     >>> tid, status, user, description, extension = connection.read()[1]
     >>> ts(tid), status, user, description, extension
-    ('2007-03-21 20:32:58.000000', ' ', '', '', {})
+    ('2007-03-21 20:32:58.000000', ' ', b'', b'', {})
 
     >>> for i in range(2):
     ...     oid, serial, version, data_txn = connection.read()[1]
     ...     data = connection.read(raw=True)
-    ...     print (int(u64(oid)), ts(serial), version, len(data), data_txn)
-    (0, '2007-03-21 20:32:58.000000', '', 78, None)
-    (1, '2007-03-21 20:32:58.000000', '', 57, None)
+    ...     print_((int(u64(oid)), ts(serial), version, data_txn))
+    (0, '2007-03-21 20:32:58.000000', '', None)
+    (1, '2007-03-21 20:32:58.000000', '', None)
 
     >>> connection.read() # doctest: +ELLIPSIS
-    ('C', ('...',))
+    ('C', (...,))
 
     >>> import time
     >>> time.sleep(0.1)
@@ -140,17 +140,17 @@ available.  We'll add some blob data.
 
     >>> root = conn.root()
     >>> root['blob'] = ZODB.blob.Blob()
-    >>> root['blob'].open('w').write('test\n')
+    >>> _ = root['blob'].open('w').write(b'test\n')
     >>> commit()
 
     >>> tid, status, user, description, extension = connection.read()[1]
     >>> ts(tid), status, user, description, extension
-    ('2007-03-21 20:32:59.000000', ' ', '', '', {})
+    ('2007-03-21 20:32:59.000000', ' ', b'', b'', {})
 
     >>> oid, serial, version, data_txn = connection.read()[1]
     >>> data = connection.read(raw=True)
-    >>> print (int(u64(oid)), ts(serial), version, len(data), data_txn)
-    (0, '2007-03-21 20:32:59.000000', '', 120, None)
+    >>> print_((int(u64(oid)), ts(serial), version, data_txn))
+    (0, '2007-03-21 20:32:59.000000', '', None)
 
 The next message is a store blob message:
 
@@ -158,15 +158,15 @@ The next message is a store blob message:
     ...                                ) = connection.read()
 
     >>> data = connection.read(raw=True)
-    >>> message_type, int(u64(oid)), ts(serial), version, len(data), data_txn, blocks
-    ('B', 2, '2007-03-21 20:32:59.000000', '', 21, None, 1L)
+    >>> message_type, int(u64(oid)), ts(serial), version, data_txn, blocks
+    ('B', 2, '2007-03-21 20:32:59.000000', '', None, 1)
 
 The store blob message is like a store message, but also contains the
 number of blocks to follow. This blob was rather small, so there's
 only one block:
 
     >>> connection.read(raw=True)
-    'test\n'
+    b'test\n'
 
     >>> connection.read() # doctest: +ELLIPSIS
     ('C', (...,))
@@ -177,53 +177,52 @@ Let's try some bigger blobs:
     >>> import random, struct
     >>> random.seed(0)
     >>> for i in range(5):
-    ...     wdata = ''.join(struct.pack(">I", random.randint(0, 1<<32))
-    ...                     for i in range(random.randint(1000, 100000)))
+    ...     wdata = b''.join(struct.pack(">I", random.randint(0, 1<<32))
+    ...                      for i in range(random.randint(1000, 100000)))
     ...     root['blob'] = ZODB.blob.Blob()
-    ...     root['blob'].open('w').write(wdata)
+    ...     _ = root['blob'].open('w').write(wdata)
     ...     commit()
     ...     tid, status, user, description, extension = connection.read()[1]
-    ...     print (ts(tid), status, user, description, extension)
+    ...     print_((ts(tid), status, user, description, extension))
     ...     oid, serial, version, data_txn = connection.read()[1]
     ...     data = connection.read(raw=True)
-    ...     print (int(u64(oid)), ts(serial), version, len(data), data_txn)
+    ...     print_((int(u64(oid)), ts(serial), version, data_txn))
     ...     message_type, (oid, serial, version, data_txn, blocks
     ...                              ) = connection.read()
     ...     data = connection.read(raw=True)
-    ...     print (message_type, int(u64(oid)), ts(serial), version, len(data),
-    ...            data_txn, blocks)
-    ...     rdata = ''.join(connection.read(raw=True) for i in range(blocks))
-    ...     print rdata == wdata
-    ...     print repr(connection.read())
-    ...     print
+    ...     print_((message_type, int(u64(oid)), ts(serial), version, data_txn))
+    ...     rdata = b''.join(connection.read(raw=True) for i in range(blocks))
+    ...     print_(rdata == wdata)
+    ...     print_(repr(connection.read()))
+    ...     print_()
     ... # doctest: +ELLIPSIS
-    ('2007-03-21 20:33:00.000000', ' ', '', '', {})
-    (0, '2007-03-21 20:33:00.000000', '', 120, None)
-    ('B', 3, '2007-03-21 20:33:00.000000', '', 21, None, 6L)
+    ('2007-03-21 20:33:00.000000', ' ', b'', b'', {})
+    (0, '2007-03-21 20:33:00.000000', '', None)
+    ('B', 3, '2007-03-21 20:33:00.000000', '', None)
     True
     ('C', (...,))
     <BLANKLINE>
-    ('2007-03-21 20:33:01.000000', ' ', '', '', {})
-    (0, '2007-03-21 20:33:01.000000', '', 120, None)
-    ('B', 4, '2007-03-21 20:33:01.000000', '', 21, None, 1L)
+    ('2007-03-21 20:33:01.000000', ' ', b'', b'', {})
+    (0, '2007-03-21 20:33:01.000000', '', None)
+    ('B', 4, '2007-03-21 20:33:01.000000', '', None)
     True
     ('C', (...,))
     <BLANKLINE>
-    ('2007-03-21 20:33:02.000000', ' ', '', '', {})
-    (0, '2007-03-21 20:33:02.000000', '', 120, None)
-    ('B', 5, '2007-03-21 20:33:02.000000', '', 21, None, 3L)
+    ('2007-03-21 20:33:02.000000', ' ', b'', b'', {})
+    (0, '2007-03-21 20:33:02.000000', '', None)
+    ('B', 5, '2007-03-21 20:33:02.000000', '', None)
     True
     ('C', (...,))
     <BLANKLINE>
-    ('2007-03-21 20:33:03.000000', ' ', '', '', {})
-    (0, '2007-03-21 20:33:03.000000', '', 120, None)
-    ('B', 6, '2007-03-21 20:33:03.000000', '', 21, None, 3L)
+    ('2007-03-21 20:33:03.000000', ' ', b'', b'', {})
+    (0, '2007-03-21 20:33:03.000000', '', None)
+    ('B', 6, '2007-03-21 20:33:03.000000', '', None)
     True
     ('C', (...,))
     <BLANKLINE>
-    ('2007-03-21 20:33:04.000000', ' ', '', '', {})
-    (0, '2007-03-21 20:33:04.000000', '', 120, None)
-    ('B', 7, '2007-03-21 20:33:04.000000', '', 21, None, 2L)
+    ('2007-03-21 20:33:04.000000', ' ', b'', b'', {})
+    (0, '2007-03-21 20:33:04.000000', '', None)
+    ('B', 7, '2007-03-21 20:33:04.000000', '', None)
     True
     ('C', (...,))
     <BLANKLINE>
@@ -234,10 +233,10 @@ When a primary storage is set up with a blob storage, it requires protocol 2.1:
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47246): Connected
 
-    >>> connection2.send("zrs2.0") # doctest: +NORMALIZE_WHITESPACE
+    >>> connection2.send(b"zrs2.0") # doctest: +NORMALIZE_WHITESPACE
     ERROR zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47246):
-    Invalid protocol 'zrs2.0'. Require >= 2.1
+    Invalid protocol b'zrs2.0'. Require >= 2.1
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47246):
     Disconnected <twisted.python.failure.Failure

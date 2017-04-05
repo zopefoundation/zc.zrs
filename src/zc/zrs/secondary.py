@@ -12,9 +12,9 @@
 #
 ##############################################################################
 
-import cPickle
+from six.moves import cPickle
 import logging
-import md5
+from hashlib import md5
 import os
 import tempfile
 import threading
@@ -45,7 +45,7 @@ class SecondaryProtocol(twisted.internet.protocol.Protocol):
         self.transport.write(zc.zrs.sizedmessage.marshal(
             self.factory.zrs_proto))
         tid = self.factory.storage.lastTransaction()
-        self._replication_stream_md5 = md5.new(tid)
+        self._replication_stream_md5 = md5(tid)
         self.transport.write(zc.zrs.sizedmessage.marshal(tid))
         self.info("Connected")
         if self.factory.keep_alive_delay > 0:
@@ -71,7 +71,7 @@ class SecondaryProtocol(twisted.internet.protocol.Protocol):
 
     def keep_alive(self):
         if self.keep_alive_delayed_call is not None:
-            self.transport.write("\0\0\0\0")
+            self.transport.write(b"\0\0\0\0")
         self.keep_alive_delayed_call = self.factory.reactor.callLater(
             self.factory.keep_alive_delay,
             self.keep_alive,
@@ -216,7 +216,7 @@ class SecondaryFactory(twisted.internet.protocol.ClientFactory):
     def connect(self):
         addr = self.secondary._addr
         reactor = self.reactor
-        if isinstance(addr, basestring):
+        if isinstance(addr, str):
             reactor.callFromThread(reactor.connectUNIX, addr, self)
         else:
             host, port = addr
@@ -231,6 +231,7 @@ class Secondary(zc.zrs.primary.Base):
     def __init__(self, storage, addr, reactor=None, reconnect_delay=60,
                  check_checksums=True, keep_alive_delay=0):
         zc.zrs.primary.Base.__init__(self, storage, addr, reactor)
+        storage = self._storage
 
         reactor = self._reactor
 
@@ -258,9 +259,9 @@ class Secondary(zc.zrs.primary.Base):
             for name in ('loadBlob', 'openCommittedBlobFile',
                          'temporaryDirectory', 'restoreBlob'):
                 setattr(self, name, getattr(storage, name))
-            zrs_proto = 'zrs2.1'
+            zrs_proto = b'zrs2.1'
         else:
-            zrs_proto = 'zrs2.0'
+            zrs_proto = b'zrs2.0'
 
         # required methods
         for name in (

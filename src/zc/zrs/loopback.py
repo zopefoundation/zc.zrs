@@ -7,9 +7,8 @@ This is derived from and will eventually feed back to
 twisted.protocols.loopback.
 """
 
-
 # system imports
-from zope.interface import implements
+import zope.interface
 
 # Twisted Imports
 from twisted.internet import interfaces, protocol, main, defer
@@ -29,29 +28,27 @@ class _LoopbackQueue(object):
     def __init__(self):
         self._queue = []
 
-
     def put(self, v):
         self._queue.append(v)
         if self._notificationDeferred is not None:
             d, self._notificationDeferred = self._notificationDeferred, None
             d.callback(None)
 
-
-    def __nonzero__(self):
+    def __bool__(self):
         return bool(self._queue)
-
+    __nonzero__ = __bool__
 
     def get(self):
         return self._queue.pop(0)
 
 
 
+@zope.interface.implementer(IAddress)
 class _LoopbackAddress(object):
-    implements(IAddress)
+    pass
 
-
+@zope.interface.implementer(interfaces.ITransport, interfaces.IConsumer)
 class _LoopbackTransport(object):
-    implements(interfaces.ITransport, interfaces.IConsumer)
 
     disconnecting = False
     producer = None
@@ -65,11 +62,11 @@ class _LoopbackTransport(object):
         self.q.put(bytes)
 
     def writeSequence(self, iovec):
-        self.q.put(''.join(iovec))
+        self.q.put(b''.join(iovec))
 
     def loseConnection(self):
         self.q.disconnect = True
-        self.q.put('')
+        self.q.put(b'')
 
     def getPeer(self):
         return _LoopbackAddress()
@@ -118,8 +115,6 @@ def loopbackAsync(server, client, connector):
     client.makeConnection(clientToServer)
 
     _loopbackAsyncBody(serverToClient, clientToServer)
-
-
 
 def _loopbackAsyncBody(serverToClient, clientToServer):
 

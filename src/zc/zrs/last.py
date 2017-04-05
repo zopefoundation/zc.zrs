@@ -1,3 +1,4 @@
+from __future__ import print_function
 ##############################################################################
 #
 # Copyright (c) 2013 Zope Corporation and Contributors.
@@ -28,10 +29,10 @@ def main(args=None):
     for a in args:
         a = a.split(':')
         a = a[0], int(a[1])
-        print a,
+        print(a, end='')
         sys.stdout.flush()
         cs = ZEO.ClientStorage.ClientStorage(a, read_only=True)
-        print time.ctime(
+        print(time.ctime(
             ZODB.TimeStamp.TimeStamp(cs._server.lastTransaction()).timeTime()
-            ), '(local)'
+            ), '(local)')
 

@@ -51,21 +51,21 @@ The first message is the protocol, which must be "zrs2.0".
 The second message is the starting transaction.  We'll send the
 messages by calling the send method on the connection:
 
-    >>> connection.send("zrs2.0")
+    >>> connection.send(b"zrs2.0")
 
 The second message is the identifier of the last transaction seen by
 the client.  We'll pass a transaction id of all zeros, indicating that
 we have no data and want all of the data the storage has:
 
-    >>> connection.send("\0"*8) # doctest: +NORMALIZE_WHITESPACE
+    >>> connection.send(b"\0"*8) # doctest: +NORMALIZE_WHITESPACE
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47245):
-       start '\x00\x00\x00\x00\x00\x00\x00\x00' (1900-01-01 00:00:00.000000)
+       start b'\x00\x00\x00\x00\x00\x00\x00\x00' (1900-01-01 00:00:00.000000)
 
 The client may send empty messages, and only empty messages, after the
 initial messages:
 
-    >>> connection.send("")
+    >>> connection.send(b"")
     DEBUG zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47245): keep-alive
 
@@ -83,6 +83,7 @@ in the database, which is the one that creates the root object.
 let's look at the first message:
 
     >>> message_type, data = connection.read()
+
     >>> message_type
     'T'
     >>> tid, status, user, description, extension = data
@@ -95,7 +96,7 @@ case. :)
     >>> def ts(v):
     ...     return str(TimeStamp(v))
     >>> ts(tid), status, user, description, extension
-    ('2007-03-21 20:32:57.000000', ' ', '', 'initial database creation', {})
+    ('2007-03-21 20:32:57.000000', ' ', b'', b'initial database creation', {})
 
 The next message is a store message for object 0:
 
@@ -116,7 +117,7 @@ Finally, there will be a commit record marking the end of the
 transaction:
 
     >>> connection.read() # doctest: +ELLIPSIS
-    ('C', ('...',))
+    ('C', (...,))
 
 The data for the commit contains a md5 checksup of the
 identifier of the last transaction seen by the client sent during
@@ -128,17 +129,17 @@ there is only one:
 
     >>> tid, status, user, description, extension = connection.read()[1]
     >>> ts(tid), status, user, description, extension
-    ('2007-03-21 20:32:58.000000', ' ', '', '', {})
+    ('2007-03-21 20:32:58.000000', ' ', b'', b'', {})
 
     >>> for i in range(2):
     ...     oid, serial, version, data_txn = connection.read()[1]
     ...     data = connection.read(raw=True)
-    ...     print (int(u64(oid)), ts(serial), version, len(data), data_txn)
-    (0, '2007-03-21 20:32:58.000000', '', 78, None)
-    (1, '2007-03-21 20:32:58.000000', '', 57, None)
+    ...     print_((int(u64(oid)), ts(serial), version, data_txn))
+    (0, '2007-03-21 20:32:58.000000', '', None)
+    (1, '2007-03-21 20:32:58.000000', '', None)
 
     >>> connection.read()  # doctest: +ELLIPSIS
-    ('C', ('...',))
+    ('C', (...,))
 
     >>> import time
     >>> time.sleep(0.1)
@@ -154,17 +155,17 @@ available:
 
     >>> tid, status, user, description, extension = connection.read()[1]
     >>> ts(tid), status, user, description, extension
-    ('2007-03-21 20:32:59.000000', ' ', '', '', {})
+    ('2007-03-21 20:32:59.000000', ' ', b'', b'', {})
 
     >>> for i in range(2):
     ...     oid, serial, version, data_txn = connection.read()[1]
     ...     data = connection.read(raw=True)
-    ...     print (int(u64(oid)), ts(serial), version, len(data), data_txn)
-    (1, '2007-03-21 20:32:59.000000', '', 78, None)
-    (2, '2007-03-21 20:32:59.000000', '', 57, None)
+    ...     print_((int(u64(oid)), ts(serial), version, data_txn))
+    (1, '2007-03-21 20:32:59.000000', '', None)
+    (2, '2007-03-21 20:32:59.000000', '', None)
 
     >>> connection.read() # doctest: +ELLIPSIS
-    ('C', ('...',))
+    ('C', (...,))
 
 In all of the examples we've seen, the data_txn is None.  Let's undo
 the last transaction:
@@ -176,18 +177,18 @@ Now, the undo transaction will be available:
 
     >>> tid, status, user, description, extension = connection.read()[1]
     >>> ts(tid), status, user, description, extension
-    ('2007-03-21 20:33:00.000000', ' ', '', '', {})
+    ('2007-03-21 20:33:00.000000', ' ', b'', b'', {})
 
     >>> for i in range(2):
     ...     oid, serial, version, data_txn = connection.read()[1]
     ...     data = connection.read(raw=True)
-    ...     print (int(u64(oid)), ts(serial), version, len(data),
-    ...            data_txn and ts(data_txn))
-    (1, '2007-03-21 20:33:00.000000', '', 57, '2007-03-21 20:32:58.000000')
-    (2, '2007-03-21 20:33:00.000000', '', 0, None)
+    ...     print_((int(u64(oid)), ts(serial), version,
+    ...            data_txn and ts(data_txn)))
+    (1, '2007-03-21 20:33:00.000000', '', '2007-03-21 20:32:58.000000')
+    (2, '2007-03-21 20:33:00.000000', '', None)
 
     >>> connection.read() # doctest: +ELLIPSIS
-    ('C', ('...',))
+    ('C', (...,))
 
 Let's save the transaction id and then commit some new data:
 
@@ -200,17 +201,17 @@ Of course, we'll see this new data:
 
     >>> tid, status, user, description, extension = connection.read()[1]
     >>> ts(tid), status, user, description, extension
-    ('2007-03-21 20:33:01.000000', ' ', '', '', {})
+    ('2007-03-21 20:33:01.000000', ' ', b'', b'', {})
 
     >>> for i in range(2):
     ...     oid, serial, version, data_txn = connection.read()[1]
     ...     data = connection.read(raw=True)
-    ...     print (int(u64(oid)), ts(serial), version, len(data), data_txn)
-    (0, '2007-03-21 20:33:01.000000', '', 98, None)
-    (3, '2007-03-21 20:33:01.000000', '', 57, None)
+    ...     print_((int(u64(oid)), ts(serial), version, data_txn))
+    (0, '2007-03-21 20:33:01.000000', '', None)
+    (3, '2007-03-21 20:33:01.000000', '', None)
 
     >>> connection.read() # doctest: +ELLIPSIS
-    ('C', ('...',))
+    ('C', (...,))
 
 Let's create another connection.  This time though, we'll send our
 saved transaction as the starting transaction:
@@ -219,28 +220,28 @@ saved transaction as the starting transaction:
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47246): Connected
 
-    >>> connection2.send("zrs2.0")
+    >>> connection2.send(b"zrs2.0")
     >>> connection2.send(saved_tid) # doctest: +NORMALIZE_WHITESPACE
     INFO zc.zrs.primary:
     IPv4Address(TCP, '127.0.0.1', 47246):
-        start '\x03lk\x91\x00\x00\x00\x00' (2007-03-21 20:33:00.000000)
+        start b'\x03lk\x91\x00\x00\x00\x00' (2007-03-21 20:33:00.000000)
 
 When we get data from this connection, we'll only get the data written
 after the saved transaction:
 
     >>> tid, status, user, description, extension = connection2.read()[1]
     >>> ts(tid), status, user, description, extension
-    ('2007-03-21 20:33:01.000000', ' ', '', '', {})
+    ('2007-03-21 20:33:01.000000', ' ', b'', b'', {})
 
     >>> for i in range(2):
     ...     oid, serial, version, data_txn = connection2.read()[1]
     ...     data = connection2.read(raw=True)
-    ...     print (int(u64(oid)), ts(serial), version, len(data), data_txn)
-    (0, '2007-03-21 20:33:01.000000', '', 98, None)
-    (3, '2007-03-21 20:33:01.000000', '', 57, None)
+    ...     print_((int(u64(oid)), ts(serial), version, data_txn))
+    (0, '2007-03-21 20:33:01.000000', '', None)
+    (3, '2007-03-21 20:33:01.000000', '', None)
 
-    >>> connection2.read()
-    ('C', ('_\x95\x8a\xcb\r\xb9/\x1cz\x88\x1d\x1bm\xd0h\x86',))
+    >>> connection2.read() # doctest: +ELLIPSIS
+    ('C', (...,))
 
 The servers will spew data for ever, or until their connections are
 closed:
