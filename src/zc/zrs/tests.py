@@ -1488,7 +1488,7 @@ class ZEOTests(ZEO.tests.testZEO.FullGenericTests):
         self.__s = zc.zrs.secondary.Secondary(
             self._wrap(self.__sfs),
             ('', self._ZEOTests_port), reconnect_delay=0.1, keep_alive_delay=1)
-        zc.zrs.reactor.reactor().callLater(1.0, self.__breakConnection)
+        # zc.zrs.reactor.reactor().callLater(1.0, self.__breakConnection)
 
     def __breakConnection(self):
         try:
