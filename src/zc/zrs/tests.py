@@ -1487,8 +1487,8 @@ class ZEOTests(ZEO.tests.testZEO.FullGenericTests):
         self.__sfs = ZODB.FileStorage.FileStorage('secondary.fs')
         self.__s = zc.zrs.secondary.Secondary(
             self._wrap(self.__sfs),
-            ('', self._ZEOTests_port), reconnect_delay=0.1)
-        zc.zrs.reactor.reactor().callLater(0.1, self.__breakConnection)
+            ('', self._ZEOTests_port), reconnect_delay=0.1, keep_alive_delay=1)
+        #zc.zrs.reactor.reactor().callLater(0.1, self.__breakConnection)
 
     def __breakConnection(self):
         try:
