@@ -1472,7 +1472,7 @@ class ZEOTests(ZEO.tests.testZEO.FullGenericTests):
         %%import zc.zrs
 
         <zrs>
-          replicate-to %s
+          replicate-to 127.0.0.1:%s
           <filestorage 1>
             path primary.fs
           </filestorage>
@@ -1487,8 +1487,9 @@ class ZEOTests(ZEO.tests.testZEO.FullGenericTests):
         self.__sfs = ZODB.FileStorage.FileStorage('secondary.fs')
         self.__s = zc.zrs.secondary.Secondary(
             self._wrap(self.__sfs),
-            ('', self._ZEOTests_port), reconnect_delay=0.1, keep_alive_delay=1)
-        # zc.zrs.reactor.reactor().callLater(1.0, self.__breakConnection)
+            ('127.0.0.1', self._ZEOTests_port),
+            reconnect_delay=0.1, keep_alive_delay=1)
+        zc.zrs.reactor.reactor().callLater(0.1, self.__breakConnection)
 
     def __breakConnection(self):
         try:
@@ -1529,7 +1530,7 @@ class BlobWritableCacheTests(ZEO.tests.testZEO.BlobWritableCacheTests):
         %%import zc.zrs
 
         <zrs>
-          replicate-to %s
+          replicate-to 127.0.0.1:%s
           <filestorage 1>
             blob-dir blobs
             path primary.fs
@@ -1547,7 +1548,7 @@ class ZEOHexTests(ZEOTests):
 
         <hexstorage>
           <zrs>
-            replicate-to %s
+            replicate-to 127.0.0.1:%s
             <filestorage 1>
               path primary.fs
             </filestorage>
@@ -1573,7 +1574,7 @@ class ZEOHexClientTests(ZEOHexTests):
 
         <serverhexstorage>
           <zrs>
-            replicate-to %s
+            replicate-to 127.0.0.1:%s
             <filestorage 1>
               path primary.fs
             </filestorage>
