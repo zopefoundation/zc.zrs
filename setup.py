@@ -49,6 +49,9 @@ License :: OSI Approved :: Zope Public License
 Programming Language :: Python
 Programming Language :: Python :: 2
 Programming Language :: Python :: 2.7
+Programming Language :: Python :: 3
+Programming Language :: Python :: 3.4
+Programming Language :: Python :: 3.5
 Programming Language :: Python :: Implementation :: CPython
 Topic :: Database
 Topic :: Software Development :: Libraries :: Python Modules
@@ -76,11 +79,7 @@ setup(
     entry_points = entry_points,
     package_dir = {'':'src'},
     namespace_packages = ['zc'],
-    install_requires = [
-        'setuptools',
-        'ZODB',
-        'Twisted',
-        ],
+    install_requires = ['setuptools', 'six', 'Twisted', 'ZODB'],
     extras_require = dict(test=tests_require),
     tests_require = tests_require,
     test_suite = 'zc.zrstests.tests.test_suite',

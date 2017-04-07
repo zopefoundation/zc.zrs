@@ -126,18 +126,18 @@ addresses as positional arguments.
     >>> addrs = ["%s:%s" % addr_current, "%s:%s" % addr_old]
     >>> nagios('-w33 -e99 -m'  .split()+addrs)
     Secondary up to date.|'lag'=0.0000seconds
-    Secondary (u'first') behind primary by 68.5678 seconds > 33
-    Storage u'friday' in primary, but not secondary
-    Secondary (u'second') up to date.
-    Storage u'thursday' in secondary, but not primary| 'lagfirst'=68.5678seconds
+    Secondary ('first') behind primary by 68.5678 seconds > 33
+    Storage 'friday' in primary, but not secondary
+    Secondary ('second') up to date.
+    Storage 'thursday' in secondary, but not primary| 'lagfirst'=68.5678seconds
      'lagsecond'=0.0000seconds
     2
     >>> nagios('-w33 -e44'  .split()+addrs)
     Secondary up to date.
-    Secondary (u'first') behind primary by 68.5678 seconds > 44
-    Storage u'friday' in primary, but not secondary
-    Secondary (u'second') up to date.
-    Storage u'thursday' in secondary, but not primary
+    Secondary ('first') behind primary by 68.5678 seconds > 44
+    Storage 'friday' in primary, but not secondary
+    Secondary ('second') up to date.
+    Storage 'thursday' in secondary, but not primary
     2
 
     >>> stop_old(); stop_current()

@@ -125,7 +125,7 @@ Let's create a secondary secondary and commit some data to the primary storage.
     >>> conn = db.open()
     >>> conn.root()[1] = conn.root().__class__()
     >>> conn.root()[2] = ZODB.blob.Blob()
-    >>> conn.root()[2].open('w').write("some blob data")
+    >>> _ = conn.root()[2].open('w').write(b"some blob data")
     >>> transaction.commit()
 
     >>> conn.root()
@@ -144,7 +144,7 @@ secondary:
     {1: {}, 2: <ZODB.blob.Blob object at 0xb63c8c6c>}
 
     >>> conn.root()[2].open().read()
-    'some blob data'
+    b'some blob data'
 
     >>> os.path.getsize('primary.fs') == os.path.getsize('secondary2.fs')
     True

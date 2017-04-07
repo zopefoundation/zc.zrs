@@ -11,8 +11,12 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-
 import struct
+
+try:
+    long
+except NameError:
+    long = lambda n: n
 
 def marshal(message):
     return struct.pack(">I", len(message)) + message
@@ -41,7 +45,7 @@ class Stream:
                 if self.size < self.length:
                     return
 
-                data = ''.join(self.data)
+                data = b''.join(self.data)
                 result = data[:self.length]
                 data = data[self.length:]
                 self.data = [data]
@@ -53,13 +57,13 @@ class Stream:
                 return
 
             if len(self.data[0]) < 4:
-                self.data = [''.join(self.data)]
+                self.data = [b''.join(self.data)]
 
             self.length, = struct.unpack(">I", self.data[0][:4])
             self.data[0] = self.data[0][4:]
             self.size -= 4
             if self.length == 0:
-                self._callback('')
+                self._callback(b'')
             elif self.length > self.limit:
                 raise LimitExceeded(self.limit, long(self.length))
 

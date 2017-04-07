@@ -12,7 +12,9 @@
 #
 ##############################################################################
 
-import cPickle
+from hashlib import md5
+from six import BytesIO
+from six.moves import cPickle
 import logging
 import os
 import sys
@@ -31,19 +33,24 @@ import ZODB.TimeStamp
 import ZODB.utils
 import zope.interface
 
-if sys.version_info > (2, 5):
-    from hashlib import md5
-else:
-    from md5 import md5
+try:
+    long
+except NameError:
+    long = lambda n: n
 
 if not hasattr(ZODB.blob.BlobStorage, 'restoreBlob'):
     import zc.zrs.restoreblob
 
 logger = logging.getLogger(__name__)
 
+
 class Base(object):
 
     def __init__(self, storage, addr, reactor):
+        if isinstance(storage, str):
+            import ZODB.FileStorage
+            storage = ZODB.FileStorage.FileStorage(storage)
+
         if reactor is None:
             reactor = zc.zrs.reactor.reactor()
 
@@ -70,6 +77,7 @@ class Primary(Base):
 
     def __init__(self, storage, addr, reactor=None):
         Base.__init__(self, storage, addr, reactor)
+        storage = self._storage
 
         if ZODB.interfaces.IBlobStorage.providedBy(storage):
             zope.interface.directlyProvides(self, ZODB.interfaces.IBlobStorage)
@@ -118,7 +126,7 @@ class Primary(Base):
 
     _listener = None
     def cfr_listen(self):
-        if isinstance(self._addr, basestring):
+        if isinstance(self._addr, str):
             self._listener = self._reactor.listenUNIX(self._addr, self._factory)
         else:
             interface, port = self._addr
@@ -203,17 +211,17 @@ class PrimaryProtocol(twisted.internet.protocol.Protocol):
     def dataReceived(self, data):       # cfr
         try:
             self.__stream(data)
-        except zc.zrs.sizedmessage.LimitExceeded, v:
+        except zc.zrs.sizedmessage.LimitExceeded as v:
             self.error('message too large: '+str(v))
 
     def messageReceived(self, data):    # cfr
         if self.__protocol is None:
-            if data == 'zrs2.0':
+            if data == b'zrs2.0':
                 if ZODB.interfaces.IBlobStorage.providedBy(
                     self.factory.storage):
                     return self.error("Invalid protocol %r. Require >= 2.1",
                                       data)
-            elif data != 'zrs2.1':
+            elif data != b'zrs2.1':
                 return self.error("Invalid protocol %r", data)
             self.__protocol = data
         else:
@@ -235,9 +243,8 @@ class PrimaryProtocol(twisted.internet.protocol.Protocol):
 PrimaryFactory.protocol = PrimaryProtocol
 
 
+@zope.interface.implementer(twisted.internet.interfaces.IPushProducer)
 class PrimaryProducer:
-
-    zope.interface.implements(twisted.internet.interfaces.IPushProducer)
 
     # stopped indicates that we should stop sending output to a client
     stopped = False
@@ -339,8 +346,15 @@ class PrimaryProducer:
             # have been called while we were creating the iterator.
             self.iterator.stop()
 
-        pickler = cPickle.Pickler(1)
+        picklerf = BytesIO()
+        pickler = cPickle.Pickler(picklerf, 1)
         pickler.fast = 1
+        def dump(data):
+            picklerf.seek(0)
+            picklerf.truncate()
+            pickler.dump(data)
+            return picklerf.getvalue()
+
         self.md5 = md5(self.start_tid)
 
         blob_block_size = 1 << 16
@@ -348,10 +362,8 @@ class PrimaryProducer:
         try:
             for trans in self.iterator:
                 self.write(
-                    pickler.dump(('T', (trans.tid, trans.status, trans.user,
-                                        trans.description, trans._extension)),
-                                 1)
-                    )
+                    dump(('T', (trans.tid, trans.status, trans.user,
+                                        trans.description, trans._extension))))
                 for record in trans:
                     if record.data and is_blob_record(record.data):
                         try:
@@ -368,12 +380,9 @@ class PrimaryProducer:
                                 blocks += 1
 
                             self.write(
-                                pickler.dump(
-                                    ('B',
-                                     (record.oid, record.tid, record.version,
-                                      record.data_txn, long(blocks))),
-                                    1)
-                                )
+                                dump(('B',
+                                      (record.oid, record.tid, record.version,
+                                       record.data_txn, long(blocks)))))
                             self.write(record.data or '')
                             f.seek(0)
                             while blocks > 0:
@@ -387,16 +396,14 @@ class PrimaryProducer:
                             continue
 
                     self.write(
-                        pickler.dump(('S',
-                                       (record.oid, record.tid, record.version,
-                                        record.data_txn)),
-                                     1)
+                        dump(('S', (record.oid, record.tid, record.version,
+                                    record.data_txn)))
                         )
-                    self.write(record.data or '')
+                    self.write(record.data or b'')
 
-                self.write(pickler.dump(('C', (self.md5.digest(), )), 1))
+                self.write(dump(('C', (self.md5.digest(), ))))
 
-        except:
+        except Exception as exc:
             logger.exception(self.peer)
 
         self.iterator = None
@@ -433,7 +440,7 @@ class FileStorageIterator(ZODB.FileStorage.format.FileStorageFormatter):
         self._old_file = self._fs._file
         try:
             file = open(self._fs._file_name, 'rb', 0)
-        except IOError, v:
+        except IOError as v:
             if os.path.exists(self._fs._file_name):
                 raise
 
@@ -447,7 +454,7 @@ class FileStorageIterator(ZODB.FileStorage.format.FileStorageFormatter):
             return
 
         self._file = file
-        self._pos = 4L
+        self._pos = 4
         ltid = self._ltid
         if ltid > ZODB.utils.z64:
             # We aren't starting at the beginning.  We need to find the
@@ -493,7 +500,7 @@ class FileStorageIterator(ZODB.FileStorage.format.FileStorageFormatter):
             # Read the transaction record
             try:
                 h = self._read_txn_header(pos)
-            except ZODB.FileStorage.format.CorruptedDataError, err:
+            except ZODB.FileStorage.format.CorruptedDataError as err:
                 # If buf is empty, we've reached EOF.
                 if not err.buf:
                     # end of file.
@@ -544,7 +551,7 @@ class FileStorageIterator(ZODB.FileStorage.format.FileStorageFormatter):
         self._condition.notifyAll()
         self._condition.release()
 
-    def next(self):
+    def __next__(self):
         self._condition.acquire()
         try:
             while 1:
@@ -558,6 +565,8 @@ class FileStorageIterator(ZODB.FileStorage.format.FileStorageFormatter):
                 self._condition.wait()
         finally:
             self._condition.release()
+
+    next = __next__
 
     def _next(self):
 
@@ -573,7 +582,7 @@ class FileStorageIterator(ZODB.FileStorage.format.FileStorageFormatter):
             # Read the transaction record
             try:
                 h = self._read_txn_header(pos)
-            except ZODB.FileStorage.format.CorruptedDataError, err:
+            except ZODB.FileStorage.format.CorruptedDataError as err:
                 # If buf is empty, we've reached EOF.
                 if not err.buf:
                     return None
@@ -657,7 +666,7 @@ class RecordIterator(ZODB.FileStorage.format.FileStorageFormatter):
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         pos = self._pos
         if pos < self._tend:
             # Read the data records for this transaction
@@ -691,6 +700,8 @@ class RecordIterator(ZODB.FileStorage.format.FileStorageFormatter):
             return Record(h.oid, h.tid, '', data, prev_txn, pos)
 
         raise StopIteration
+
+    next = __next__
 
 class Record:
     """An abstract database record."""

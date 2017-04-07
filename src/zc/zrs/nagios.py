@@ -12,7 +12,7 @@ from __future__ import print_function
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-
+import binascii
 import optparse
 import json
 import re
@@ -38,7 +38,7 @@ def connect(addr):
                 s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 
     s.connect(addr)
-    fp = s.makefile()
+    fp = s.makefile('wb')
     return fp, s
 
 def _standard_options(parser):
@@ -61,8 +61,8 @@ def get_ts(addr, name):
     except socket.error as err:
         print("Can't connect to %s at %r: %s" % (name, addr, err))
         sys.exit(2)
-    fp = s.makefile()
-    fp.write('\x00\x00\x00\x04ruok')
+    fp = s.makefile('rwb')
+    fp.write(b'\x00\x00\x00\x04ruok')
     fp.flush()
     proto = fp.read(struct.unpack(">I", fp.read(4))[0])
     datas = fp.read(struct.unpack(">I", fp.read(4))[0])
@@ -71,9 +71,9 @@ def get_ts(addr, name):
     return dict(
         (sid,
          ZODB.TimeStamp.TimeStamp(
-             sdata['last-transaction'].decode('hex')
+             binascii.a2b_hex(sdata['last-transaction'])
              ).timeTime())
-        for (sid, sdata) in json.loads(datas).items()
+        for (sid, sdata) in json.loads(datas.decode('ascii')).items()
         )
 
 def check(paddr, saddr, warn, error, output_metrics):

@@ -29,7 +29,7 @@ Let's create a secondary storage:
     INFO zc.zrs.secondary:
     Opening Data.fs ('', 8000)
     INFO zc.zrs.reactor:
-    Starting factory <zc.zrs.secondary.SecondaryFactory instance>
+    Starting factory <zc.zrs.secondary.SecondaryFactory>
 
 We can't use a secondary storage until it has gotten some data.  Our
 demo reactor doesn't make any network connections, so of course, the
@@ -47,14 +47,14 @@ the interaction with the server.  The first is the ZRS protocol
 identifier:
 
     >>> connection.read()
-    'zrs2.0'
+    b'zrs2.0'
 
 The second message is the identifier of the last transaction seen by
 the client.  This client doesn't have any data, so we'll get a
 transaction id consisting of all zeros:
 
     >>> connection.read()
-    '\x00\x00\x00\x00\x00\x00\x00\x00'
+    b'\x00\x00\x00\x00\x00\x00\x00\x00'
 
 This is all the data sent by the client.  From this point on, the
 client passively waits for data sent by the server.  We'll pass it
@@ -82,7 +82,7 @@ recieved correctly.  The test connection also keeps track of md5
 checksums for us, but we have to initialize the checksum with the
 last transaction:
 
-    >>> connection.init_md5('\x00\x00\x00\x00\x00\x00\x00\x00')
+    >>> connection.init_md5(b'\x00\x00\x00\x00\x00\x00\x00\x00')
 
 (We could actually skip this in this case, as the test connection
 initializes itself with a zero transaction id.  We won't be able to
@@ -198,10 +198,10 @@ to the secondary constructor.
     IPv4Address(TCP, '127.0.0.1', 47246): Connected
 
     >>> connection.read()
-    'zrs2.0'
+    b'zrs2.0'
 
     >>> connection.read()
-    '\x03lk\x90\xfb\xbb\xbb\xbb'
+    b'\x03lk\x90\xfb\xbb\xbb\xbb'
 
 The secondary periodically sends a keep-alive message to the primary.
 It does this by scheduling a method with the reactor. Let's look at
@@ -218,7 +218,7 @@ to flush it's qeueue
 Now an empty strings has been semd to the primary:
 
     >>> connection.read()
-    ''
+    b''
 
 And a new keep alive has been scheduled:
 
@@ -236,7 +236,7 @@ this by asking our test conection to fail:
     INFO zc.zrs.secondary:
     IPv4Address(TCP, '127.0.0.1', 47246): Disconnected 'failed'
     INFO zc.zrs.reactor:
-    Stopping factory <zc.zrs.secondary.SecondaryFactory instance>
+    Stopping factory <zc.zrs.secondary.SecondaryFactory>
 
 Our test reactor just queues later attempts:
 
@@ -250,7 +250,7 @@ We'll simulate calling these later:
 
     >>> reactor.doLater()
     INFO zc.zrs.reactor:
-    Starting factory <zc.zrs.secondary.SecondaryFactory instance>
+    Starting factory <zc.zrs.secondary.SecondaryFactory>
 
     >>> reactor.later # doctest: +NORMALIZE_WHITESPACE
     []
@@ -266,11 +266,11 @@ This causes a connection to be attempted, which we'll accept:
 The secondary will send the protocol and a transaction, as before:
 
     >>> connection.read()
-    'zrs2.0'
+    b'zrs2.0'
 
     >>> tid = connection.read()
     >>> tid
-    '\x03lk\x90\xfb\xbb\xbb\xbb'
+    b'\x03lk\x90\xfb\xbb\xbb\xbb'
 
     >>> connection.init_md5(tid)
 
@@ -300,7 +300,7 @@ and then break the connection:
     INFO zc.zrs.secondary:
     IPv4Address(TCP, '127.0.0.1', 47247): Disconnected 'failed'
     INFO zc.zrs.reactor:
-    Stopping factory <zc.zrs.secondary.SecondaryFactory instance>
+    Stopping factory <zc.zrs.secondary.SecondaryFactory>
 
 The secondary still shows the old data:
 
@@ -318,7 +318,7 @@ record was added, but then removed when we disconnected.
 
     >>> reactor.doLater()
     INFO zc.zrs.reactor:
-    Starting factory <zc.zrs.secondary.SecondaryFactory instance>
+    Starting factory <zc.zrs.secondary.SecondaryFactory>
 
     >>> reactor.later
     []
@@ -328,7 +328,7 @@ record was added, but then removed when we disconnected.
     IPv4Address(TCP, '127.0.0.1', 47248): Connected
 
     >>> connection.read()
-    'zrs2.0'
+    b'zrs2.0'
 
     >>> connection.read() == trans.tid
     True
@@ -370,21 +370,21 @@ attempt:
     INFO zc.zrs.secondary:
     IPv4Address(TCP, '127.0.0.1', 47248): Disconnected 'failed'
     INFO zc.zrs.reactor:
-    Stopping factory <zc.zrs.secondary.SecondaryFactory instance>
+    Stopping factory <zc.zrs.secondary.SecondaryFactory>
 
     >>> reactor.later # doctest: +NORMALIZE_WHITESPACE
     [<7 60 connect () {}>]
 
     >>> reactor.doLater()
     INFO zc.zrs.reactor:
-    Starting factory <zc.zrs.secondary.SecondaryFactory instance>
+    Starting factory <zc.zrs.secondary.SecondaryFactory>
 
     >>> reactor.later
     []
 
     >>> connection = reactor.reject()
     INFO zc.zrs.reactor:
-    Stopping factory <zc.zrs.secondary.SecondaryFactory instance>
+    Stopping factory <zc.zrs.secondary.SecondaryFactory>
 
 As with failed connections, the secondary just tries again, waiting a
 minute between attempts.
@@ -401,9 +401,9 @@ minute between attempts.
 
     >>> reactor.doLater()
     INFO zc.zrs.reactor:
-    Starting factory <zc.zrs.secondary.SecondaryFactory instance>
+    Starting factory <zc.zrs.secondary.SecondaryFactory>
     INFO zc.zrs.reactor:
-    Stopping factory <zc.zrs.secondary.SecondaryFactory instance>
+    Stopping factory <zc.zrs.secondary.SecondaryFactory>
 
     >>> reactor.later
     []
