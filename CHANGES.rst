@@ -3,7 +3,7 @@ Recent Changes
 
 For earlier changes, see the `HISTORY.rst <HISTORY.rst>`_.
 
-3.1.0 (unreleased)
+3.1.0 (2017-04-07)
 ------------------
 
 - Python 3 (3.4 amd 3.5) support.
