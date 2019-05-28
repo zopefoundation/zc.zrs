@@ -1,6 +1,4 @@
 language: python
-sudo: false
-language: python
 matrix:
   - python: '2.7'
   - python: '3.5'
