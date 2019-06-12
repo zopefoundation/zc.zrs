@@ -6,13 +6,13 @@ For earlier changes, see the `HISTORY.rst <HISTORY.rst>`_.
 3.1.1 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Drop support for Python 3.4.
 
 
 3.1.0 (2017-04-07)
 ------------------
 
-- Python 3 (3.4 amd 3.5) support.
+- Python 3 (3.4 and 3.5) support.
 
   3.6 support will be added when Twisted supports Python 3.6.
   (There are worrying test failures under Python 3.6.)
