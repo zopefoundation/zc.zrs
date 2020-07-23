@@ -38,7 +38,7 @@ last-zeo-transaction = zc.zrs.last:main
 zrs-nagios = zc.zrs.nagios:basic
 """
 
-tests_require = ['zope.testing', 'mock', 'ZEO']
+tests_require = ['zope.testing', 'mock <4', 'ZEO']
 
 long_description = (
     open('README.rst').read() + '\n\n' + open('CHANGES.rst').read())

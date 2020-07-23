@@ -33,8 +33,8 @@ import ZODB.tests.testFileStorage
 import ZODB.tests.StorageTestBase
 import ZODB.utils
 from six.moves import cPickle
+from six import PY3
 import logging
-import mock
 import os
 import re
 import shutil
@@ -56,8 +56,14 @@ import zc.zrs.reactor
 import zc.zrs.secondary
 import zc.zrs.sizedmessage
 
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 
-warnings.simplefilter('ignore', ResourceWarning)
+
+if six.PY3:
+    warnings.simplefilter('ignore', ResourceWarning)
 
 
 # start the reactor thread so that it isn't reported as left over:
@@ -1704,6 +1710,8 @@ def setUpNagios(test):
 def test_suite():
     checker = renormalizing.RENormalizing([
         (re.compile(' (instance|object) at 0x[a-fA-F0-9]+'), ''),
+        (re.compile(
+            ' oid 0x[a-fA-F0-9]+ in <Connection at [a-fA-F0-9]+>'), ''),
         (re.compile(r'(\d+)L'), r'\1'),
         (re.compile(r"b'"), "'"),
         (re.compile("zc.zrs.primary.TidTooHigh"), "TidTooHigh"),
