@@ -50,10 +50,14 @@ import twisted.internet.base
 import twisted.internet.error
 import twisted.python.failure
 import unittest
+import warnings
 import zc.zrs.primary
 import zc.zrs.reactor
 import zc.zrs.secondary
 import zc.zrs.sizedmessage
+
+
+warnings.simplefilter('ignore', ResourceWarning)
 
 
 # start the reactor thread so that it isn't reported as left over:
