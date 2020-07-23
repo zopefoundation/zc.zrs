@@ -1,21 +1,29 @@
 language: python
 matrix:
-  - python: '2.7'
-  - python: '3.5'
-  - python: '3.6'
-  - python: '3.7'
-    dist: xenial
-env:
-  - CONFIG=buildout.cfg
+    include:
+        - python: "2.7"
+          env: TOXENV=py27
+        - python: "3.5"
+          env: TOXENV=py35
+        - python: "3.6"
+          env: TOXENV=py36
+        - python: "3.7"
+          env: TOXENV=py37
+        - python: "3.8"
+          env: TOXENV=py38
+
 install:
-  - pip install -U pip setuptools zc.buildout
-  - buildout parts=test -c $CONFIG
-before_script:
-  - export TZ=US/Eastern
-script: bin/test -vvv
+    - pip install -U pip setuptools
+    - pip install -U tox coveralls coverage
+
+script:
+    - tox
+
+after_success:
+    - coverage combine
+    - coveralls
+
 cache:
+  pip: true
   directories:
-    - $HOME/.cache/pip
-    - eggs
-before_cache:
-    - rm -f $HOME/.cache/pip/log/debug.log
+    - eggs/
