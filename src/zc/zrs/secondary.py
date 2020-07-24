@@ -26,6 +26,7 @@ import ZODB.blob
 import ZODB.interfaces
 import ZODB.POSException
 import zope.interface
+from ZODB.Connection import TransactionMetaData
 
 logger = logging.getLogger(__name__)
 
@@ -133,8 +134,12 @@ class SecondaryProtocol(twisted.internet.protocol.Protocol):
                 assert self._zrs_transaction is None
                 assert self.__record is None
                 transaction = Transaction(*data)
+                #(tid, status, user, description, extension) = data
+                #transaction = TransactionMetaData(user=user,
+                #                                  description=description,
+                #                                  extension=extension)
                 self.__inval = {}
-                self.factory.storage.tpc_begin(
+                self.factory.storage.tpc_begin(  #transaction, tid=tid)
                     transaction, transaction.id, transaction.status)
                 self._zrs_transaction = transaction
             elif message_type == 'S':
@@ -304,15 +309,17 @@ class Secondary(zc.zrs.primary.Base):
         self._storage.close()
 
 
-class Transaction:
+class Transaction(TransactionMetaData):
 
     def __init__(self, tid, status, user, description, extension):
+        super().__init__(user=user, description=description,
+                         extension=extension)
         self.id = tid
         self.status = status
-        self.user = user
-        self.description = description
-        self.extension = extension
+        ##self.user = user
+        ##self.description = description
+        ##self.extension = extension
 
-    @property
-    def _extension(self):
-        return self.extension
+##    @property
+##    def _extension(self):
+##        return self.extension
