@@ -11,6 +11,7 @@ __pycache__/
 bin/
 build/
 coverage.xml
+develop/
 develop-eggs/
 dist/
 docs/_build
@@ -20,4 +21,3 @@ lib/
 lib64
 parts/
 pyvenv.cfg
-src/ZEO
