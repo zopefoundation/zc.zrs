@@ -1457,7 +1457,7 @@ class PrimaryStorageTests(
     MTStorage.MTStorage,
     ReadOnlyStorage.ReadOnlyStorage
     ):
-    pass
+    use_extension_bytes = True
 
 class PrimaryStorageTestsWithBlobs(PrimaryStorageTests):
 
@@ -1571,10 +1571,14 @@ class ZEOHexTests(ZEOTests):
 
 class ZEOHexClientHexTests(ZEOHexTests):
 
+    use_extension_bytes = True
+
     def _wrap_client(self, s):
         return zc.zrs.xformstorage.HexStorage(s)
 
 class ZEOHexClientTests(ZEOHexTests):
+
+    use_extension_bytes = True
 
     def getConfig(self):
         port = self._ZEOTests_port = ZEO.tests.forker.get_port()
