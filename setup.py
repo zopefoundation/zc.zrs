@@ -13,7 +13,7 @@
 #
 ##############################################################################
 name = 'zc.zrs'
-version = '3.1.1.dev0'
+version = '4.0.0.dev0'
 
 try:
     from ez_setup import use_setuptools
@@ -47,8 +47,6 @@ classifiers = """\
 Intended Audience :: Developers
 License :: OSI Approved :: Zope Public License
 Programming Language :: Python
-Programming Language :: Python :: 2
-Programming Language :: Python :: 2.7
 Programming Language :: Python :: 3
 Programming Language :: Python :: 3.5
 Programming Language :: Python :: 3.6

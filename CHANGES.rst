@@ -3,8 +3,10 @@ Recent Changes
 
 For earlier changes, see the `HISTORY.rst <HISTORY.rst>`_.
 
-3.1.1 (unreleased)
+4.0.0 (unreleased)
 ------------------
+
+- Drop support for Python 2.7
 
 - Drop support for Python 3.4.
 
