@@ -1459,11 +1459,11 @@ class PrimaryStorageTests(
     ):
     pass
 
-class PrimaryStorageTestsWithBobs(PrimaryStorageTests):
+class PrimaryStorageTestsWithBlobs(PrimaryStorageTests):
 
     use_blob_storage = True
 
-class PrimaryHexStorageTestsWithBobs(PrimaryStorageTestsWithBobs):
+class PrimaryHexStorageTestsWithBlobs(PrimaryStorageTestsWithBlobs):
 
     def _wrap(self, s):
         return zc.zrs.xformstorage.HexStorage(s)
@@ -1756,7 +1756,7 @@ def test_suite():
         suite.addTest(s)
 
     make(PrimaryStorageTests, "check")
-    make(PrimaryStorageTestsWithBobs, "check")
+    make(PrimaryStorageTestsWithBlobs, "check")
     make(ZEOTests, "check")
     make(BlobWritableCacheTests, "check")
 
