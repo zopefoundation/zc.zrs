@@ -36,6 +36,7 @@ from six.moves import cPickle
 from six import PY3
 import logging
 import os
+import pickle
 import re
 import shutil
 import six
@@ -62,10 +63,7 @@ except ImportError:
     import mock
 
 
-if six.PY3:
-    warnings.simplefilter('ignore', ResourceWarning)
-
-
+warnings.simplefilter('ignore', ResourceWarning)
 # start the reactor thread so that it isn't reported as left over:
 zc.zrs.reactor.reactor()
 
@@ -1374,6 +1372,61 @@ class BasePrimaryStorageTests(StorageTestBase.StorageTestBase):
         self._storage.close = close
 
     _wrap = lambda self, s: s
+
+    def compare(self, storage1, storage2):
+        """ Method copied from ZODB.tests.IteratorStorage.IteratorDeepCompare
+
+        As mentioned in https://github.com/zopefoundation/ZEO/pull/159 the
+        direct comparison of pickles is misleading in cases involving msgpack.
+        Representations will look different but they unpickle to the same
+        object. This test implementation accounts for that.
+        """
+        eq = self.assertEqual
+        iter1 = storage1.iterator()
+        iter2 = storage2.iterator()
+        for txn1, txn2 in zip(iter1, iter2):
+            eq(txn1.tid,         txn2.tid)
+            eq(txn1.status,      txn2.status)
+            eq(txn1.user,        txn2.user)
+            eq(txn1.description, txn2.description)
+            eq(txn1.extension,  txn2.extension)
+            # This attempts graceful failure if the pickle representation
+            # is different, but the resulting object is not.
+            try:
+                eq(txn1.extension_bytes, txn2.extension_bytes)
+            except AssertionError:
+                eq(pickle.loads(txn1.extension_bytes),
+                   pickle.loads(txn2.extension_bytes))
+            itxn1 = iter(txn1)
+            itxn2 = iter(txn2)
+            for rec1, rec2 in zip(itxn1, itxn2):
+                eq(rec1.oid,     rec2.oid)
+                eq(rec1.tid,  rec2.tid)
+                eq(rec1.data,    rec2.data)
+                if ZODB.blob.is_blob_record(rec1.data):
+                    try:
+                        fn1 = storage1.loadBlob(rec1.oid, rec1.tid)
+                    except ZODB.POSException.POSKeyError:
+                        self.assertRaises(
+                            ZODB.POSException.POSKeyError,
+                            storage2.loadBlob, rec1.oid, rec1.tid)
+                    else:
+                        fn2 = storage2.loadBlob(rec1.oid, rec1.tid)
+                        self.assertTrue(fn1 != fn2)
+                        with open(fn1, 'rb') as fp1:
+                            with open(fn2, 'rb') as fp2:
+                                eq(fp1.read(), fp2.read())
+
+            # Make sure there are no more records left in rec1 and rec2,
+            # meaning they were the same length.
+            # Additionally, check that we're backwards compatible to the
+            # IndexError we used to raise before.
+            self.assertRaises(StopIteration, next, itxn1)
+            self.assertRaises(StopIteration, next, itxn2)
+        # Make sure ther are no more records left in txn1 and txn2, meaning
+        # they were the same length
+        self.assertRaises(StopIteration, next, iter1)
+        self.assertRaises(StopIteration, next, iter2)
 
     def __comparedbs(self, fs1, fs2):
         if fs1._pos != fs2._pos:
