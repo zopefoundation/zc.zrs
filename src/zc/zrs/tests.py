@@ -33,7 +33,6 @@ import ZODB.tests.testFileStorage
 import ZODB.tests.StorageTestBase
 import ZODB.utils
 from six.moves import cPickle
-from six import PY3
 import logging
 import os
 import pickle
@@ -56,11 +55,6 @@ import zc.zrs.primary
 import zc.zrs.reactor
 import zc.zrs.secondary
 import zc.zrs.sizedmessage
-
-try:
-    from unittest import mock
-except ImportError:
-    import mock
 
 
 warnings.simplefilter('ignore', ResourceWarning)
