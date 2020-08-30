@@ -12,6 +12,9 @@ install:
     - pip install -U pip setuptools
     - pip install -U tox coveralls coverage
 
+before_script:
+  - export TZ=US/Eastern
+
 script:
     - tox
 
