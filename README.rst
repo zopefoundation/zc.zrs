@@ -24,7 +24,8 @@ Features
 Requirements
 ============
 
-- ZODB 3.9 or later.
+- ZODB 3.9 or later up to ZODB 4.4.x. **This package is not compatible with
+  ZODB 5.6 and up.**
 
 Installation
 =============

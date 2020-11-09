@@ -69,7 +69,7 @@ setup(
     author = "Jim Fulton",
     author_email = "jim@jimfulton.info",
     license = "ZPL 2.1",
-    keywords = "ZODB",
+    keywords = "ZODB <5.6",
     classifiers = classifiers,
     url='https://github.com/zc/zrs',
 
