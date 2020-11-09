@@ -69,7 +69,7 @@ setup(
     author = "Jim Fulton",
     author_email = "jim@jimfulton.info",
     license = "ZPL 2.1",
-    keywords = "ZODB <5.6",
+    keywords = "ZODB",
     classifiers = classifiers,
     url='https://github.com/zc/zrs',
 
@@ -80,7 +80,7 @@ setup(
     entry_points = entry_points,
     package_dir = {'':'src'},
     namespace_packages = ['zc'],
-    install_requires = ['setuptools', 'six', 'Twisted', 'ZODB'],
+    install_requires = ['setuptools', 'six', 'Twisted', 'ZODB <5.6'],
     extras_require = dict(test=tests_require),
     tests_require = tests_require,
     test_suite = 'zc.zrstests.tests.test_suite',
