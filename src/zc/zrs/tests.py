@@ -1569,7 +1569,7 @@ class ZEOTests(ZEO.tests.testZEO.FullGenericTests):
                 # the compare.  Let's wait a tad longer.
                 if i == 999:
                     raise
-                time.sleep(.1)
+                time.sleep(.3)
 
         fsp.close()
         self.__s.close()
