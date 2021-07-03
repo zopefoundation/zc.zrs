@@ -1521,6 +1521,10 @@ class PrimaryHexStorageTestsWithBlobs(PrimaryStorageTestsWithBlobs):
 ##############################################################################
 # ZEO Tests
 
+
+@unittest.skipIf(
+    os.getenv("CI", "false") == "true",
+    "Tests fail on Github Actions")
 class ZEOTests(ZEO.tests.testZEO.FullGenericTests):
 
     def getConfig(self):
@@ -1595,6 +1599,10 @@ class BlobWritableCacheTests(ZEO.tests.testZEO.BlobWritableCacheTests):
         </zrs>
         """ % port
 
+
+@unittest.skipIf(
+    os.getenv("CI", "false") == "true",
+    "Tests fail on Github Actions")
 class ZEOHexTests(ZEOTests):
 
     def getConfig(self):
@@ -1616,37 +1624,10 @@ class ZEOHexTests(ZEOTests):
     def _wrap(self, s):
         return zc.zrs.xformstorage.HexStorage(s)
 
-    @unittest.skipIf(
-        os.getenv("CI", "false") == "true",
-        "Test fails on Github Actions")
-    def check2StorageThreads(self):
-        super(ZEOHexTests, self).check2StorageThreads()
 
-    @unittest.skipIf(
-        os.getenv("CI", "false") == "true",
-        "Test fails on Github Actions")
-    def check7StorageThreads(self):
-        super(ZEOHexTests, self).check7StorageThreads()
-
-    @unittest.skipIf(
-        os.getenv("CI", "false") == "true",
-        "Test fails on Github Actions")
-    def check2ZODBThreads(self):
-        super(ZEOHexTests, self).check2ZODBThreads()
-
-    @unittest.skipIf(
-        os.getenv("CI", "false") == "true",
-        "Test fails on Github Actions")
-    def check7ZODBThreads(self):
-        super(ZEOHexTests, self).check7ZODBThreads()
-
-    @unittest.skipIf(
-        os.getenv("CI", "false") == "true",
-        "Test fails on Github Actions")
-    def check4ExtStorageThread(self):
-        super(ZEOHexTests, self).check4ExtStorageThread()
-
-
+@unittest.skipIf(
+    os.getenv("CI", "false") == "true",
+    "Tests fail on Github Actions")
 class ZEOHexClientHexTests(ZEOHexTests):
 
     use_extension_bytes = True
@@ -1654,6 +1635,10 @@ class ZEOHexClientHexTests(ZEOHexTests):
     def _wrap_client(self, s):
         return zc.zrs.xformstorage.HexStorage(s)
 
+
+@unittest.skipIf(
+    os.getenv("CI", "false") == "true",
+    "Tests fail on Github Actions")
 class ZEOHexClientTests(ZEOHexTests):
 
     use_extension_bytes = True
