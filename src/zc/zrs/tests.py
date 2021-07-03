@@ -1616,8 +1616,13 @@ class ZEOHexTests(ZEOTests):
     def _wrap(self, s):
         return zc.zrs.xformstorage.HexStorage(s)
 
+    @unittest.skipIf(
+        os.getenv("CI", "false") == "true",
+        "Test fails on Github Actions")
+    def check2StorageThreads(self):
+        super(ZEOHexTests, self).check2StorageThreads()
 
-@unittest.skipIf(os.getenv('CI'), "Tests fail on Github Actions")
+
 class ZEOHexClientHexTests(ZEOHexTests):
 
     use_extension_bytes = True
