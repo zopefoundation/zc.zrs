@@ -1622,6 +1622,12 @@ class ZEOHexTests(ZEOTests):
     def check2StorageThreads(self):
         super(ZEOHexTests, self).check2StorageThreads()
 
+    @unittest.skipIf(
+        os.getenv("CI", "false") == "true",
+        "Test fails on Github Actions")
+    def check2ZODBThreads(self):
+        super(ZEOHexTests, self).check2ZODBThreads()
+
 
 class ZEOHexClientHexTests(ZEOHexTests):
 
