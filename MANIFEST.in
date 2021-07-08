@@ -1,9 +1,18 @@
+include *.txt
+include *.rst
+include buildout.cfg
+include zodb4.cfg
+include TWISTED-LICENSE
+
+include *.yml
+exclude *.yml
+
+include .gitignore
+exclude .gitignore
+
+exclude MANIFEST.in
+
 recursive-include src *.rst
 recursive-include src *.test
 recursive-include src *.xml
-recursive-include src *.rst
 recursive-include src *.py
-include *.txt
-include *.rst
-include TWISTED-LICENSE
-exclude *.cfg

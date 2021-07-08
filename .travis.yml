@@ -1,21 +1,25 @@
+dist: focal
 language: python
-matrix:
-  - python: '2.7'
-  - python: '3.5'
-  - python: '3.6'
-  - python: '3.7'
-    dist: xenial
-env:
-  - CONFIG=buildout.cfg
+python:
+    - 3.5
+    - 3.6
+    - 3.7
+
 install:
-  - pip install -U pip setuptools zc.buildout
-  - buildout parts=test -c $CONFIG
+    - pip install tox-travis
+
 before_script:
   - export TZ=US/Eastern
-script: bin/test -vvv
+
+script:
+    - tox
+
+after_success:
+    - coverage combine
+    - coveralls
+
 cache:
+  pip: true
   directories:
-    - $HOME/.cache/pip
-    - eggs
-before_cache:
-    - rm -f $HOME/.cache/pip/log/debug.log
+    - eggs/
+
