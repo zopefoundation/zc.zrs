@@ -79,7 +79,7 @@ setup(
     entry_points = entry_points,
     package_dir = {'':'src'},
     namespace_packages = ['zc'],
-    install_requires = ['setuptools', 'six', 'Twisted', 'ZODB <5.6'],
+    install_requires = ['setuptools', 'six', 'Twisted', 'ZODB'],
     extras_require = dict(test=tests_require),
     tests_require = tests_require,
     test_suite = 'zc.zrstests.tests.test_suite',
