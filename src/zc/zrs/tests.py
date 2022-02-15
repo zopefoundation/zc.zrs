@@ -1459,6 +1459,10 @@ def comparedbs_packed(self, fs1, fs2):
 
     current1 = {}
     for trans in fs1.iterator():
+        try:
+            data2[trans.tid]
+        except KeyError: 
+            print(data2)
         self.assertEqual(
             data2[trans.tid][:3],
             (trans.user, trans.description, trans._extension),
