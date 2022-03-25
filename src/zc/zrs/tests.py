@@ -538,7 +538,7 @@ it does, it should simply close.
     IPv4Address(TCP, '127.0.0.1', 47245): Input data error
     Traceback (most recent call last):
     ...
-    ...: 105
+    ... 105
     INFO zc.zrs.secondary:
     IPv4Address(TCP, '127.0.0.1', 47245):
     Disconnected <twisted.python.failure.Failure

@@ -38,7 +38,7 @@ last-zeo-transaction = zc.zrs.last:main
 zrs-nagios = zc.zrs.nagios:basic
 """
 
-tests_require = ['zope.testing', 'mock <4', 'ZEO']
+tests_require = ['zope.testing', 'mock', 'ZEO']
 
 long_description = (
     open('README.rst').read() + '\n\n' + open('CHANGES.rst').read())
@@ -49,9 +49,10 @@ License :: OSI Approved :: Zope Public License
 Programming Language :: Python
 Programming Language :: Python :: 3
 Programming Language :: Python :: 3 :: Only
-Programming Language :: Python :: 3.5
 Programming Language :: Python :: 3.6
 Programming Language :: Python :: 3.7
+Programming Language :: Python :: 3.8
+Programming Language :: Python :: 3.9
 Programming Language :: Python :: Implementation :: CPython
 Topic :: Database
 Topic :: Software Development :: Libraries :: Python Modules
@@ -67,11 +68,16 @@ setup(
     version = version,
     author = "Jim Fulton",
     author_email = "jim@jimfulton.info",
+    maintainer = "Zope Foundation and Contributors",
+    maintainer_email = "zodb@googlegroups.com",
     license = "ZPL 2.1",
     keywords = "ZODB",
     classifiers = classifiers,
-    url='https://github.com/zc/zrs',
-
+    url='https://github.com/zopefoundation/zc.zrs',
+    project_urls={
+        'Issue Tracker': 'https://github.com/zopefoundation/zc.zrs/issues',
+        'Sources': 'https://github.com/zopefoundation/zc.zrs',
+    },
     packages = ['zc', 'zc.zrs'],
     include_package_data = True,
     data_files = [('.', ['README.rst'])],
@@ -79,7 +85,7 @@ setup(
     entry_points = entry_points,
     package_dir = {'':'src'},
     namespace_packages = ['zc'],
-    install_requires = ['setuptools', 'six', 'Twisted', 'ZODB <5.6'],
+    install_requires = ['setuptools', 'six', 'Twisted', 'ZODB >=5.6.0'],
     extras_require = dict(test=tests_require),
     tests_require = tests_require,
     test_suite = 'zc.zrstests.tests.test_suite',
