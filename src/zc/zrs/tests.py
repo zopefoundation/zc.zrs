@@ -1558,7 +1558,7 @@ class ZEOTests(ZEO.tests.testZEO.FullGenericTests):
     def tearDown(self):
 
         # Check whether secondary has same data as primary:
-        for i in range(2000):
+        for i in range(1000):
             try:
                 fsp = ZODB.FileStorage.FileStorage('primary.fs',
                                                    read_only=True)
@@ -1567,7 +1567,7 @@ class ZEOTests(ZEO.tests.testZEO.FullGenericTests):
             except Exception:
                 # Hm. Maybe we didn't wait long enough before starting
                 # the compare.  Let's wait a tad longer.
-                if i == 1999:
+                if i == 999:
                     raise
                 time.sleep(.1)
 
