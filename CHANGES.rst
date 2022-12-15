@@ -6,7 +6,7 @@ For earlier changes, see the `HISTORY.rst <HISTORY.rst>`_.
 4.0.0 (unreleased)
 ------------------
 
-- Add support for Python 3.8 and 3.9.
+- Add support for Python 3.8, 3.9, 3.10 and 3.11.
 
 - Reach compatibility with ZODB 5.6
 
