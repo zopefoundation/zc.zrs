@@ -12,7 +12,7 @@ For earlier changes, see the `HISTORY.rst <HISTORY.rst>`_.
 
 - Drop support for Python 2.7
 
-- Drop support for Python 3.4 and Python 3.5.
+- Drop support for Python 3.4, 3.5 and 3.6.
 
 
 3.1.0 (2017-04-07)
