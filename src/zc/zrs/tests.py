@@ -1567,6 +1567,7 @@ class ZEOTests(ZEO.tests.testZEO.FullGenericTests):
             except Exception:
                 # Hm. Maybe we didn't wait long enough before starting
                 # the compare.  Let's wait a tad longer.
+                print(f'it failed, retrying {i}')
                 if i == 999:
                     raise
                 time.sleep(.1)
